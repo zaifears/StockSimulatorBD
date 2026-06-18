@@ -61,11 +61,7 @@ const TypingHeroSection = () => {
                     </Link>
                 </div>
 
-                {/* Typing Animation */}
-                <div className="text-gray-500 dark:text-gray-400 text-lg sm:text-xl font-medium pb-8 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-                    <span>Build skills in</span>
-                    <TypingWordRotator initialWord="Potential" />
-                </div>
+                
             </div>
         </section>
     );
