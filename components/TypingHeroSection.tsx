@@ -1,22 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 const TypingHeroSection = () => {
     return (
         <section className="hero-background-container relative py-16 sm:py-18 md:py-6 px-6 text-center overflow-hidden bg-cover bg-center bg-no-repeat min-h-[450px] sm:min-h-[550px] md:min-h-[700px] flex items-center justify-center">
-            <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-                <Image
-                    src="/homepage/discover-talent.png"
-                    alt="SkillDash hero illustration"
-                    fill
-                    priority={true}
-                    fetchPriority="high"
-                    sizes="100vw"
-                    className="object-cover object-center opacity-20 dark:opacity-25"
-                />
-            </div>
-
             {/* Dark overlay for light mode and gradient for dark mode */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/85 via-white/75 to-white/60 dark:from-black/70 dark:via-black/60 dark:to-black/50 pointer-events-none"></div>
 
