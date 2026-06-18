@@ -23,8 +23,8 @@
   :root {
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
-    --bg-primary: #111113;  /* ✅ OLED-safe: Not pure black to prevent burn-in */
-    --bg-secondary: #1f2937;
+    --bg-primary: #000000;  /* ✅ Pure black */
+    --bg-secondary: #1a1a1a;
   }
 }
 

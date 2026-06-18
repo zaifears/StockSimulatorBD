@@ -1,5 +1,4 @@
 import React from 'react';
-import TypingHeroSection from '../components/TypingHeroSection';
 import HomeDeferredSections from '@/components/HomeDeferredSections';
 
 export default function HomePage() {
@@ -7,7 +6,7 @@ export default function HomePage() {
     <div className="min-h-screen overflow-x-hidden flex flex-col pb-20 lg:pb-0 w-full">
       
       {/* ✅ TOP SECTION: Light background with transparent navbar area */}
-      <div className="relative bg-white dark:bg-gray-900 transition-colors duration-300 flex-1">
+      <div className="relative bg-white dark:bg-black transition-colors duration-300 flex-1">
         
         {/* ✅ Optimized Floating Circles - Reduced for performance */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -18,7 +17,6 @@ export default function HomePage() {
         
         {/* Hero Section */}
         <section className="relative z-10" role="banner">
-          <TypingHeroSection />
         </section>
         
         {/* Core Features Section */}
@@ -27,7 +25,7 @@ export default function HomePage() {
       </div>
       
       {/* ✅ GRADIENT SECTION: Starts from "Your Path to Success" */}
-      <div className="relative bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+      <div className="relative bg-white dark:bg-black transition-colors duration-300">
         
         {/* Optimized background decorations */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
