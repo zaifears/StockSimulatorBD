@@ -334,18 +334,18 @@ export const useSimulator = () => {
 
   // Check if market is open (10:00 AM - 2:15 PM Dhaka Time)
   const isMarketOpen = useCallback(() => {
-    // Create a date in Bangladesh timezone (UTC+6)
+    // Create a date in Bangladesh timezone (UTC+6) safely
     const now = new Date();
-    const bdTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+    const bdTime = new Date(now.getTime() + (6 * 60 * 60 * 1000));
     
-    const hour = bdTime.getHours();
-    const minute = bdTime.getMinutes();
-    const dayOfWeek = bdTime.getDay();
+    const hour = bdTime.getUTCHours();
+    const minute = bdTime.getUTCMinutes();
+    const dayOfWeek = bdTime.getUTCDay();
     
-    // Format date as YYYY-MM-DD without timezone conversion issues
-    const year = bdTime.getFullYear();
-    const month = String(bdTime.getMonth() + 1).padStart(2, '0');
-    const day = String(bdTime.getDate()).padStart(2, '0');
+    // Format date as YYYY-MM-DD safely
+    const year = bdTime.getUTCFullYear();
+    const month = String(bdTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(bdTime.getUTCDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
 
     // Market is closed on Friday and Saturday

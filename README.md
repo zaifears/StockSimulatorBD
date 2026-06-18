@@ -129,7 +129,7 @@ SkillDash Simulator is a **state-of-the-art, risk-free environment** designed to
 
 ### Prerequisites
 
-- **[Node.js](https://nodejs.org/)** v18.17+ 
+- **[Node.js](https://nodejs.org/)** LTS (use `.nvmrc`)
 - **[pnpm](https://pnpm.io/)** (package manager)
 - **Git**
 

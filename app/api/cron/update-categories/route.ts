@@ -39,7 +39,14 @@ function getDb() {
 async function scrapeGroup(group: string) {
   const url = `https://www.dsebd.org/latest_share_price_scroll_group.php?group=${group}`;
   try {
-    const response = await fetch(url, { next: { revalidate: 0 } });
+    const response = await fetch(url, { 
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      next: { revalidate: 0 } 
+    });
     const html = await response.text();
     const $ = cheerio.load(html);
     const symbols: string[] = [];
@@ -95,6 +102,11 @@ export async function GET(req: NextRequest) {
     const categoryObject: Record<string, string> = {};
     for (const [symbol, group] of categoryMap.entries()) {
       categoryObject[symbol] = group;
+    }
+
+    // SAFETY GUARD: Prevent wiping data if scrape fails
+    if (categoryMap.size < 50) {
+      throw new Error(`Scrape returned unusually low results (${categoryMap.size}). Aborting DB write to prevent data loss.`);
     }
 
     await categoriesRef.set({

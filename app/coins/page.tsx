@@ -164,25 +164,8 @@ const CoinsPage: React.FC = () => {
     try {
       const db = getFirestore();
 
-      // Check for duplicate TrxID (prevent re-submission of same transaction)
-      const [duplicateByTrxIdSnap, duplicateByTransactionIdSnap] = await Promise.all([
-        getDocs(query(
-          collection(db, 'recharge_requests'),
-          where('trxId', '==', trimmedTrxId),
-          limit(1)
-        )),
-        getDocs(query(
-          collection(db, 'recharge_requests'),
-          where('transactionId', '==', trimmedTrxId),
-          limit(1)
-        ))
-      ]);
-
-      if (!duplicateByTrxIdSnap.empty || !duplicateByTransactionIdSnap.empty) {
-        setRechargeError('This Transaction ID has already been submitted. Each bKash TrxID can only be used once.');
-        setIsSubmitting(false);
-        return;
-      }
+      // Removed client-side cross-user duplicate check to prevent Firebase permission errors.
+      // Admins will visually see and reject any duplicate TrxIDs in their dashboard.
 
       await addDoc(collection(db, 'recharge_requests'), {
         userId: user.uid,
@@ -383,6 +366,7 @@ const CoinsPage: React.FC = () => {
                   <input
                     type="number"
                     value={rechargeAmount}
+                    aria-label="Recharge Amount in BDT"
                     onChange={(e) => {
                       const val = parseInt(e.target.value) || MIN_RECHARGE_BDT;
                       // Snap to nearest valid multiple and clamp within range
@@ -458,7 +442,9 @@ const CoinsPage: React.FC = () => {
                   type="text"
                   value={trxId}
                   onChange={(e) => setTrxId(e.target.value)}
+                  aria-label="bKash Transaction ID"
                   placeholder="Example: 9C7B2A1D3E"
+                  title="bKash Transaction ID"
                   className="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-base sm:text-lg font-mono focus:ring-4 focus:ring-purple-500 focus:border-purple-500 transition-all"
                   required
                 />

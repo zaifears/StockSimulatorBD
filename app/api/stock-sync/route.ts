@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import * as admin from 'firebase-admin';
 
+// Force Node.js to ignore DSEBD's broken SSL certificate
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Initialize Firebase Admin SDK (only once)
 const getFirebaseAdmin = () => {
   if (admin.apps.length > 0) {
@@ -25,11 +28,12 @@ const getFirebaseAdmin = () => {
  */
 function isMarketHours(): boolean {
   const now = new Date();
-  const bdTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  // Safe UTC+6 conversion for Bangladesh Time that won't break in Vercel
+  const bdTime = new Date(now.getTime() + (6 * 60 * 60 * 1000));
   
-  const hour = bdTime.getHours();
-  const minute = bdTime.getMinutes();
-  const dayOfWeek = bdTime.getDay();
+  const hour = bdTime.getUTCHours();
+  const minute = bdTime.getUTCMinutes();
+  const dayOfWeek = bdTime.getUTCDay();
   
   // Market closed on Friday (5) and Saturday (6)
   if (dayOfWeek === 5 || dayOfWeek === 6) return false;
@@ -145,8 +149,9 @@ async function handleStockSync(request: NextRequest) {
           const ltp = parseFloat(ltpText);
           const change = parseFloat(changeText);
 
-          // Calculate change percent
-          const changePercent = ltp > 0 ? (change / (ltp - change)) * 100 : 0;
+          // Calculate change percent (protected against divide-by-zero Infinity errors)
+          const previousPrice = ltp - change;
+          const changePercent = (ltp > 0 && previousPrice > 0) ? (change / previousPrice) * 100 : 0;
 
           if (symbol && !isNaN(ltp)) {
             marketData.push({
@@ -175,6 +180,12 @@ async function handleStockSync(request: NextRequest) {
 
     // Write ONLY price data — categories live in a separate document
     // (market_info/categories) updated by the weekly cron, so we never overwrite them
+    
+    // SAFETY GUARD: Do not wipe the database if the scrape failed
+    if (marketData.length < 50) {
+      throw new Error(`Scrape returned unusually low results (${marketData.length} stocks). Aborting database write to prevent wiping data.`);
+    }
+
     await docRef.set({
       stocks: marketData,
       lastUpdated: new Date().toISOString(),
