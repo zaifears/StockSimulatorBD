@@ -8,7 +8,6 @@ import Footer from '@/components/shared/Footer';
 import { LoadingScreen } from '@/lib/components/shared';
 import { ROUTES } from '@/lib/constants';
 import { getFirestore, doc, onSnapshot, collection, query, where, orderBy, addDoc, getDocs, limit } from 'firebase/firestore';
-import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 const BKASH_NUMBER = '01865333143';
 const PRICE_PER_10K_COINS = 10; // 10 BDT = 10,000 Coins
@@ -19,7 +18,6 @@ const COINS_PER_10_BDT = 10000;
 const CoinsPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { verifyRecaptcha } = useRecaptcha();
 
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -164,15 +162,6 @@ const CoinsPage: React.FC = () => {
     setRechargeSuccess('');
 
     try {
-      // 🤖 Verify with reCAPTCHA before submitting
-      const recaptchaResult = await verifyRecaptcha('submit_recharge');
-      
-      if (!recaptchaResult.success) {
-        setRechargeError(recaptchaResult.error || 'Security verification failed. Please try again.');
-        setIsSubmitting(false);
-        return;
-      }
-
       const db = getFirestore();
 
       // Removed client-side cross-user duplicate check to prevent Firebase permission errors.
