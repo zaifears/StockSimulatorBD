@@ -60,11 +60,17 @@ export async function POST(request: NextRequest) {
 
     const { requestId, userName, userEmail, amount, coins, transactionId, bkashNumber, createdAt } = emailData;
 
+    // Use the actual domain, or fallback to Resend's testing email if env var is missing
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'SkillDash <noreply@skilldash.live>';
+
+    // Safely parse CC emails if they exist
+    const ccEmails = process.env.ADMIN_EMAIL_CC ? process.env.ADMIN_EMAIL_CC.split(',').map(e => e.trim()) : undefined;
+
     // Send email via Resend
     const emailResponse = await resend.emails.send({
-      from: 'SkillDash <noreply@skilldash.com>', // Change to your Resend verified domain
+      from: senderEmail,
       to: ADMIN_EMAIL,
-      cc: process.env.ADMIN_EMAIL_CC ? process.env.ADMIN_EMAIL_CC.split(',') : [],
+      ...(ccEmails && ccEmails.length > 0 && { cc: ccEmails }),
       subject: `💰 New Coin Recharge Request - ${coins.toLocaleString()} coins from ${userName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
