@@ -1,124 +1,21 @@
 {
-  "name": "SkillDash - DSE Simulator & Utilities",
-  "short_name": "SkillDash",
-  "description": "Master the DSE market with SkillDash. Trade virtual stocks with live data, shorten links with Go, manage your profile, and track your coins. All-in-one platform for financial simulation and digital utilities.",
-  "id": "/",
-  "start_url": "/simulator/trade",
-  "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "theme_color": "#8b5cf6",
-  "background_color": "#ffffff",
-  "lang": "en",
-  "dir": "ltr",
-  "categories": [
-    "education",
-    "finance",
-    "simulation",
-    "productivity",
-    "utilities"
-  ],
-  "prefer_related_applications": false,
+  "name": "Stock Simulator BD",
+  "short_name": "StockSim",
   "icons": [
     {
-      "src": "/favicon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/web-app-manifest-192x192.png",
+      "src": "/web-app-manifest-192x192.png?v=20260619",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/web-app-manifest-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/web-app-manifest-512x512.png",
+      "src": "/web-app-manifest-512x512.png?v=20260619",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/web-app-manifest-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/mobile-home.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Trade Stocks on the Go"
-    },
-    {
-      "src": "/screenshots/desktop-dashboard.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Comprehensive Dashboard Analysis"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Trade Stocks",
-      "short_name": "Trade",
-      "url": "/simulator/trade",
-      "description": "Go directly to the trading floor",
-      "icons": [
-        {
-          "src": "/web-app-manifest-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Create Short Links",
-      "short_name": "Go",
-      "url": "/go",
-      "description": "Create smart short links with delays & expiration",
-      "icons": [
-        {
-          "src": "/web-app-manifest-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Manage Coins",
-      "short_name": "Coins",
-      "url": "/coins",
-      "description": "View and manage your virtual coins",
-      "icons": [
-        {
-          "src": "/web-app-manifest-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "My Profile",
-      "short_name": "Profile",
-      "url": "/profile",
-      "description": "Manage your account and preferences",
-      "icons": [
-        {
-          "src": "/web-app-manifest-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ]
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
 }

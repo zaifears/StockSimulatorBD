@@ -4,7 +4,7 @@ import type { Dirent } from 'node:fs';
 import path from 'node:path';
 import { getAllDseStocks } from '@/lib/dseStocks';
 
-const BASE_URL = (process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://skilldash.live').replace(/\/$/, '');
+const BASE_URL = (process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://www.stocksimulator.tech').replace(/\/$/, '');
 
 function withBaseUrl(path: string): string {
   return `${BASE_URL}${path}`;

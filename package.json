@@ -1,5 +1,5 @@
 {
-  "name": "skilldash",
+  "name": "stock-simulator-bd",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,8 +11,8 @@
     "type-check": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
     "bundle-size": "node scripts/analyze-bundle.js",
-    "lighthouse": "lighthouse https://skilldash.live --output html --output-path ./lighthouse-report.html --chrome-flags=\"--headless\"",
-    "lighthouse-ci": "lighthouse https://skilldash.live --output json --output-path ./lighthouse-report.json",
+    "lighthouse": "lighthouse https://www.stocksimulator.tech --output html --output-path ./lighthouse-report.html --chrome-flags=\"--headless\"",
+    "lighthouse-ci": "lighthouse https://www.stocksimulator.tech --output json --output-path ./lighthouse-report.json",
     "perf-test": "pnpm run lighthouse && pnpm run bundle-size",
     "clean": "rimraf .next out",
     "prebuild": "pnpm run clean",

@@ -8,7 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Admin email from environment
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'niqqahigga1@gmail.com';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://skilldash.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.stocksimulator.tech';
 
 interface EmailData {
   requestId: string;
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { requestId, userName, userEmail, amount, coins, transactionId, bkashNumber, createdAt } = emailData;
 
     // Use the actual domain, or fallback to Resend's testing email if env var is missing
-    const senderEmail = process.env.RESEND_FROM_EMAIL || 'SkillDash <noreply@skilldash.live>';
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'StockSimulatorBD <noreply@stocksimulator.tech>';
 
     // Safely parse CC emails if they exist
     const ccEmails = process.env.ADMIN_EMAIL_CC ? process.env.ADMIN_EMAIL_CC.split(',').map(e => e.trim()) : undefined;
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
           </div>
 
           <div style="background: #f7fafc; padding: 15px; font-size: 12px; color: #718096; text-align: center; border: 1px solid #e2e8f0; border-top: none;">
-            <p style="margin: 0;">This is an automated notification from SkillDash.</p>
+            <p style="margin: 0;">This is an automated notification from StockSimulatorBD.</p>
             <p style="margin: 5px 0 0 0;">Request ID: <code style="background: #edf2f7; padding: 2px 6px; border-radius: 3px;">${requestId}</code></p>
           </div>
         </div>

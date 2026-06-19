@@ -18,18 +18,18 @@ const ModernNavbar = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Mobile bottom nav items - Only simulator and home
+  // Mobile bottom nav items
   const bottomNavItems = [
-    { name: 'Home', href: '/', icon: 'home', label: 'Home' },
-    { name: 'Simulator', href: '/simulator', icon: 'simulator', label: 'Simulator' },
-    { name: 'Blog', href: '/blog', icon: 'blog', label: 'Blog' }
+    { name: 'Home', href: '/', label: 'Home' },
+    { name: 'Simulator', href: '/simulator', label: 'Simulator' },
+    { name: 'Blog', href: '/blog', label: 'Blog' }
   ]
 
-  // Desktop nav items - Only simulator (home is logo)
+  // Desktop nav items
   const desktopNavItems = [
-    { name: 'About Us', href: '/about-us', icon: 'about', label: 'About Us' },
-    { name: 'Simulator', href: '/simulator', icon: 'simulator', label: 'Simulator' },
-    { name: 'Blog', href: '/blog', icon: 'blog', label: 'Blog' }
+    { name: 'About Us', href: '/about-us', label: 'About Us' },
+    { name: 'Simulator', href: '/simulator', label: 'Simulator' },
+    { name: 'Blog', href: '/blog', label: 'Blog' }
   ]
 
   const isActive = (href) => pathname === href
@@ -47,14 +47,14 @@ const ModernNavbar = () => {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 text-xl font-bold text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               <Image
-                src="/skilldash-logo.png"
-                alt="SkillDash"
+                src="/favicon.svg"
+                alt="Stock Simulator BD"
                 width={32}
                 height={32}
                 className="h-8 w-8 object-contain"
                 priority
               />
-              <span>SkillDash</span>
+              <span>Stock Simulator BD</span>
             </Link>
 
             {/* Desktop Navigation - Hidden on mobile */}
@@ -69,15 +69,6 @@ const ModernNavbar = () => {
                       : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-gray-300'
                   }`}
                 >
-                  {item.hasAI && (
-                    <Image
-                      src="/homepage/ai-icon.png"
-                      alt="AI"
-                      width={16}
-                      height={16}
-                      className="w-4 h-4 object-contain"
-                    />
-                  )}
                   {item.name}
                 </Link>
               ))}

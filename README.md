@@ -1,15 +1,15 @@
 <div align="center">
 
-  <img src="public/skilldash-logo.png" alt="SkillDash Logo" width="140" />
+  <img src="public/favicon.svg" alt="Stock Simulator BD Logo" width="140" />
 
-  <h1>SkillDash Simulator</h1>
+  <h1>Stock Simulator BD</h1>
 
   <h3>The Ultimate AI-Powered Stock Market Simulation for DSE</h3>
 
   <br/>
 
-  <a href="https://skilldash.live/simulator"><img src="https://img.shields.io/badge/🚀_Live_Demo-skilldash.live-8b5cf6?style=for-the-badge" alt="Live Demo"/></a>
-  <a href="https://www.skilldash.live/skilldash-simulator.apk"><img src="https://img.shields.io/badge/📱_Download-APK-34D399?style=for-the-badge" alt="Download APK"/></a>
+  <a href="https://www.stocksimulator.tech/simulator"><img src="https://img.shields.io/badge/🚀_Live_Demo-skilldash.live-8b5cf6?style=for-the-badge" alt="Live Demo"/></a>
+  <a href="https://www.stocksimulator.tech/skilldash-simulator.apk"><img src="https://img.shields.io/badge/📱_Download-APK-34D399?style=for-the-badge" alt="Download APK"/></a>
 
   <br/><br/>
 
@@ -33,7 +33,7 @@
 
 <br/>
 
-SkillDash Simulator is a **state-of-the-art, risk-free environment** designed to master the Dhaka Stock Exchange (DSE). Powered by advanced AI insights and real-time data sync, it transforms complex market dynamics into an engaging, gamified experience for both students and aspiring investors.
+Stock Simulator BD is a **state-of-the-art, risk-free environment** designed to master the Dhaka Stock Exchange (DSE). Powered by real-time data sync, it transforms complex market dynamics into an engaging, gamified experience for both students and aspiring investors.
 
 <br/>
 
@@ -43,8 +43,8 @@ SkillDash Simulator is a **state-of-the-art, risk-free environment** designed to
 
 <div align="center">
   <br/>
-  <a href="https://www.skilldash.live/skilldash-simulator.apk">
-    <img src="https://img.shields.io/badge/📥_Download_SkillDash_Simulator-APK-8b5cf6?style=for-the-badge&logoColor=white" alt="Download APK" />
+  <a href="https://www.stocksimulator.tech/skilldash-simulator.apk">
+    <img src="https://img.shields.io/badge/📥_Download_StockSimBD-APK-8b5cf6?style=for-the-badge&logoColor=white" alt="Download APK" />
   </a>
   <br/><br/>
 </div>
@@ -137,7 +137,7 @@ SkillDash Simulator is a **state-of-the-art, risk-free environment** designed to
 
 ```bash
 # 1. Clone & enter
-git clone https://github.com/zaifears/SkillDash.git
+git clone https://github.com/zaifears/StockSimulatorBD.git
 cd SkillDash
 
 # 2. Install dependencies
@@ -185,7 +185,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
   <br/><br/>
 
-  <a href="https://skilldash.live/simulator">Visit Live Simulator</a> &nbsp;·&nbsp; <a href="https://github.com/zaifears/SkillDash/issues">Report Issue</a> &nbsp;·&nbsp; <a href="mailto:alshahoriar.hossain@gmail.com">Contact</a>
+  <a href="https://www.stocksimulator.tech/simulator">Visit Live Simulator</a> &nbsp;·&nbsp; <a href="https://github.com/zaifears/StockSimulatorBD/issues">Report Issue</a> &nbsp;·&nbsp; <a href="mailto:alshahoriar.hossain@gmail.com">Contact</a>
 
   <br/><br/>
 

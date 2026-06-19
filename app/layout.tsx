@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import NavbarWrapper from '../components/NavbarWrapper'
@@ -19,6 +19,7 @@ const GTM_ID = 'GTM-PS2HRL37'
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim()
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim()
 const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID?.trim()
+
 // Optimize font loading with display swap
 const inter = Inter({ 
   subsets: ['latin'],
@@ -27,19 +28,30 @@ const inter = Inter({
   variable: '--font-inter'
 })
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#1f2937' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export const metadata: Metadata = {
-  title: 'SkillDash - DSE Paper Trading Simulator | Practice Stock Market Risk-Free',
+  title: 'Stock Simulator BD - DSE Paper Trading Simulator | Practice Stock Market Risk-Free',
   description: 'Practice trading Dhaka Stock Exchange stocks with virtual currency. The only free DSE simulator with real-time market data, T+1 settlement rules, and 0.3% commission simulation. Learn stock investing without risking real money.',
+  applicationName: 'Stock Simulator BD',
   keywords: [
     "DSE simulator", "paper trading Bangladesh", "Dhaka Stock Exchange simulator",
     "virtual stock trading", "stock market practice Bangladesh", "DSE stocks",
     "learn stock trading", "free paper trading", "Bangladesh stock market",
     "trading simulator", "practice trading", "virtual trading Bangladesh",
-    "stock market learning", "DSE practice", "risk-free trading"
+    "stock market learning", "DSE practice", "risk-free trading", "stock simulator bd"
   ],
-  authors: [{ name: 'SkillDash Team' }],
-  creator: 'SkillDash',
-  publisher: 'SkillDash',
+  authors: [{ name: 'Stock Simulator BD Team' }],
+  creator: 'Shahoriar Hossain',
+  publisher: 'Stock Simulator BD',
   robots: {
     index: true,
     follow: true,
@@ -52,61 +64,56 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "SkillDash - DSE Paper Trading Simulator - Practice Stock Trading Risk-Free",
+    title: "Stock Simulator BD - DSE Paper Trading Simulator - Practice Stock Trading Risk-Free",
     description: "The only free paper trading simulator built for the Dhaka Stock Exchange. Trade 300+ DSE stocks with virtual currency, real-time market data, T+1 settlement rules, and 0.3% commission. Learn investing without financial risk.",
-    url: process.env.NEXT_PUBLIC_MAIN_DOMAIN || "https://skilldash.live",
-    siteName: "SkillDash",
+    url: process.env.NEXT_PUBLIC_MAIN_DOMAIN || "https://www.stocksimulator.tech",
+    siteName: "Stock Simulator BD",
     type: "website",
     locale: "en_US",
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_MAIN_DOMAIN || "https://skilldash.live"}/web-app-manifest-512x512.png`,
-        width: 512,
-        height: 512,
-        alt: "SkillDash - DSE Paper Trading Simulator",
+        url: `${process.env.NEXT_PUBLIC_MAIN_DOMAIN || "https://www.stocksimulator.tech"}/og/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: "Stock Simulator BD - DSE Paper Trading Simulator",
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SkillDash - DSE Paper Trading Simulator',
+    title: 'Stock Simulator BD - DSE Paper Trading Simulator',
     description: 'Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency. Learn stock investing with real market data and realistic trading rules.',
-    images: [`${process.env.NEXT_PUBLIC_MAIN_DOMAIN || "https://skilldash.live"}/web-app-manifest-512x512.png`],
-    creator: '@SkillDash',
+    images: [`${process.env.NEXT_PUBLIC_MAIN_DOMAIN || "https://www.stocksimulator.tech"}/og/og-image.png`],
+    creator: '@StockSimulatorBD',
   },
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
     ],
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    shortcut: '/favicon.ico',
   },
   manifest: '/site.webmanifest',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://skilldash.live'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://www.stocksimulator.tech'),
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://skilldash.live',
+    canonical: process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://www.stocksimulator.tech',
   },
   verification: {
     google: 'NRcmZt1gkRaisYql52KCRUqEJCyGeTGyXsntWkqYFFk',
   },
   category: 'finance',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Stock Simulator BD',
+  },
   other: {
     'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'black-translucent',
     'ai-content-declaration': 'human-created',
   },
-}
-
-// Add link tags for LLM discovery
-export const viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1f2937' },
-  ],
 }
 
 export default function RootLayout({
@@ -120,11 +127,6 @@ export default function RootLayout({
         <link rel="ai-documentation" href="/llms-full.txt" type="text/plain" />
         
         {/* Essential Meta Tags */}
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=contain" />
-        <meta name="theme-color" content="#8b5cf6" />
-        <meta name="msapplication-TileColor" content="#8b5cf6" />
-        <meta name="application-name" content="SkillDash" />
-        <meta name="apple-mobile-web-app-title" content="SkillDash" />
         <meta name="format-detection" content="telephone=no" />
         
         {/* Google Tag Manager Head Script */}
@@ -148,16 +150,8 @@ export default function RootLayout({
         {RECAPTCHA_SITE_KEY && <link rel="preconnect" href="https://www.google.com" crossOrigin="anonymous" />}
         {RECAPTCHA_SITE_KEY && <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="anonymous" />}
         
-        {/* Enhanced Favicon Links */}
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        
-        {/* Canonical URL */}
-        <link rel="canonical" href="https://skilldash.live" />
-        
         {/* Sitemap Link for Search Engines */}
-        <link rel="sitemap" type="application/xml" href="https://skilldash.live/sitemap.xml" />
+        <link rel="sitemap" type="application/xml" href="https://www.stocksimulator.tech/sitemap.xml" />
         
         {/* Enhanced Structured Data */}
         <script
@@ -166,27 +160,27 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebSite",
-              "name": "SkillDash",
-              "alternateName": "SkillDash - Bridge the Skill Gap",
-              "description": "Discover your strengths, complete AI-assessed learning paths, perfect your resume and unlock career opportunities.",
-              "url": "https://skilldash.live",
+              "name": "Stock Simulator BD",
+              "alternateName": "Stock Simulator BD - DSE Paper Trading",
+              "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
+              "url": "https://www.stocksimulator.tech",
               "sameAs": [
-                "https://www.facebook.com/skilldash",
-                "https://twitter.com/skilldash",
-                "https://www.linkedin.com/company/skilldash"
+                "https://www.facebook.com/stocksimulatorbd",
+                "https://twitter.com/stocksimulatorbd",
+                "https://www.linkedin.com/company/stocksimulatorbd"
               ],
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://skilldash.live/discover?q={search_term_string}",
+                "target": "https://www.stocksimulator.tech/discover?q={search_term_string}",
                 "query-input": "required name=search_term_string"
               },
               "publisher": {
                 "@type": "Organization",
-                "name": "SkillDash",
-                "url": "https://skilldash.live",
+                "name": "Stock Simulator BD",
+                "url": "https://www.stocksimulator.tech",
                 "logo": {
                   "@type": "ImageObject",
-                  "url": "https://skilldash.live/web-app-manifest-512x512.png",
+                  "url": "https://www.stocksimulator.tech/web-app-manifest-512x512.png",
                   "width": 512,
                   "height": 512
                 },
@@ -207,21 +201,16 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "EducationalOrganization",
-              "name": "SkillDash",
-              "description": "AI-assessed skill development and career platform for students worldwide",
-              "url": "https://skilldash.live",
-              "logo": "https://skilldash.live/web-app-manifest-512x512.png",
-              "educationalCredentialAwarded": "Digital Skills Certificate",
+              "name": "Stock Simulator BD",
+              "description": "Paper trading simulator platform for Bangladesh investors",
+              "url": "https://www.stocksimulator.tech",
+              "logo": "https://www.stocksimulator.tech/web-app-manifest-512x512.png",
+              "educationalCredentialAwarded": "Trading Experience",
               "offers": [
                 {
                   "@type": "Course",
-                  "name": "AI-Assessed Skill Discovery",
-                  "description": "Discover your hidden talents and potential career paths"
-                },
-                {
-                  "@type": "Course", 
-                  "name": "Resume Feedback Service",
-                  "description": "Get expert feedback on your resume with AI insights"
+                  "name": "DSE Stock Market Simulator",
+                  "description": "Practice trading stocks risk-free with live data"
                 }
               ]
             })

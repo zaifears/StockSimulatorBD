@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://skilldash.live',
+  siteUrl: 'https://www.stocksimulator.tech',
   generateRobotsTxt: true,
   autoLastmod: true,
   outDir: './public',
@@ -71,7 +71,7 @@ module.exports = {
       },
     ],
     additionalSitemaps: [
-      'https://skilldash.live/server-sitemap.xml',
+      'https://www.stocksimulator.tech/server-sitemap.xml',
     ],
   },
   

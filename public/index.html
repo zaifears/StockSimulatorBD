@@ -2,15 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#2563eb" />
-    <meta name="description" content="SkillDash - Learn, Grow, Earn" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Theme color for supported browsers. Provide light/dark variants and a Microsoft tile color as fallbacks. -->
+    <meta name="theme-color" content="#8b5cf6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#4f46e5" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#8b5cf6" />
+    <!-- Windows tile color fallback -->
+    <meta name="msapplication-TileColor" content="#8b5cf6" />
+    <meta name="description" content="Stock Simulator BD - Practice trading Dhaka Stock Exchange stocks risk-free." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>SkillDash</title>
-    <link rel="icon" href="/favicon.ico" />
+    <meta name="application-name" content="Stock Simulator BD" />
+    <meta name="apple-mobile-web-app-title" content="Stock Simulator BD" />
+    <title>Stock Simulator BD</title>
+    
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
     <style>
         * {
@@ -45,11 +55,14 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            /* Updated to match new Violet/Indigo branding */
+            background: linear-gradient(135deg, #8b5cf6 0%, #4f46e5 100%);
             color: white;
             flex-direction: column;
             gap: 20px;
             font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
         
         .spinner {
@@ -71,7 +84,7 @@
     <div id="__next">
         <div class="loading">
             <div class="spinner"></div>
-            <p>SkillDash is loading...</p>
+            <p>Stock Simulator BD is loading...</p>
         </div>
     </div>
     

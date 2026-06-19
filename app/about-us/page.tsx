@@ -10,10 +10,6 @@ const AboutHero = dynamic(() => import('../../components/AboutHero'), {
   ssr: false
 });
 
-const StorySection = dynamic(() => import('../../components/StorySection'), {
-  loading: () => <div className="h-96 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-3xl"></div>,
-  ssr: false
-});
 
 const Footer = dynamic(() => import('../../components/shared/Footer'), {
   loading: () => <div className="h-64 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-t-3xl"></div>,
@@ -37,8 +33,45 @@ export default function AboutUsPage() {
 
         {/* Story Section */}
         <Suspense fallback={<div className="h-96 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-3xl"></div>}>
-          <StorySection />
         </Suspense>
+
+        {/* About The Product Section */}
+        <section className="mt-24 md:mt-32">
+          <div className="text-center mb-16">
+            <p className="max-w-3xl mx-auto text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+              We built the ultimate paper trading platform for the Dhaka Stock Exchange. Whether you are a beginner looking to understand market dynamics or an experienced trader testing new strategies, our simulator provides a 100% risk-free environment to hone your investing skills.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* Feature 1 */}
+            <div className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50 dark:border-gray-800/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="text-5xl mb-6">📈</div>
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Real Market Data</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                Experience the DSE with authentic price movements, category tracking, and market trends to ensure your virtual trades reflect reality.
+              </p>
+            </div>
+            
+            {/* Feature 2 */}
+            <div className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50 dark:border-gray-800/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="text-5xl mb-6">🛡️</div>
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Risk-Free Learning</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                Start with a virtual portfolio balance. Make mistakes, learn from them, and build your trading confidence before investing real capital.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50 dark:border-gray-800/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="text-5xl mb-6">⚙️</div>
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Realistic Rules</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                We simulate actual DSE trading conditions, including standard 0.3% broker commissions and accurate portfolio settlement mechanics.
+              </p>
+            </div>
+          </div>
+        </section>
 
         {/* Contact Section */}
         <section className="mt-20 md:mt-32 text-center mb-20 md:mb-32">

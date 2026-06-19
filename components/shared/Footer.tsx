@@ -32,17 +32,17 @@ const Footer = memo(function Footer() {
         <div className="flex flex-col gap-3 min-w-[150px]">
           <div className="relative">
             <Image
-              src="/skilldash-logo.png"
-              alt="SkillDash Logo"
+              src="/favicon.svg"
+              alt="Stock Simulator BD"
               width={56}
               height={56}
               className="mb-2 transform hover:scale-110 transition-transform duration-300"
             />
             <div className="absolute -inset-2 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-lg opacity-0 hover:opacity-100 transition-opacity duration-300" />
           </div>
-          <span className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">SkillDash</span>
+          <span className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Stock Simulator BD</span>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed">
-            Empowering students with AI-driven career guidance and skill development.
+            Empowering students with Stock market knowledge.
           </p>
         </div>
         
@@ -68,7 +68,7 @@ const Footer = memo(function Footer() {
       </div>
       <div className="text-center my-4 py-4 border-t border-gray-200/30 dark:border-gray-700/30">
         <span className="text-xs text-gray-400 dark:text-gray-600">
-          &copy; {currentYear} SkillDash. All rights reserved.
+          &copy; {currentYear} Stock Simulator BD. All rights reserved.
         </span>
       </div>
     </footer>

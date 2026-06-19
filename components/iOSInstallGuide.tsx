@@ -43,7 +43,7 @@ export default function iOSInstallGuide() {
       <div className="max-w-md mx-auto">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <p className="font-semibold text-sm mb-1">📱 Install SkillDash</p>
+            <p className="font-semibold text-sm mb-1">📱 Install StockSimBD</p>
             <p className="text-xs opacity-90">
               Tap <span className="font-bold">Share ⬆️</span> → <span className="font-bold">Add to Home Screen ➕</span>
             </p>
