@@ -36,6 +36,7 @@ export default function AdminDashboard() {
         const godMode = await checkGodMode(user.uid);
         setIsGodMode(godMode);
 
+        // Get all users count
         const [usersSnapshot, rechargeSnapshot, pendingSnapshot, approvedSnapshot, rejectedSnapshot] = await Promise.all([
           getCountFromServer(collection(db, 'users')),
           getCountFromServer(collection(db, 'recharge_requests')),
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
         ]);
 
         const totalUsers = usersSnapshot.data().count;
-        console.log(`📊 Admin Dashboard - Total users from Firestore: ${totalUsers}`);
+        console.log(`📊 Admin Dashboard - Total users: ${totalUsers}`);
 
         setStats({
           totalUsers,

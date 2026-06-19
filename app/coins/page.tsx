@@ -8,6 +8,7 @@ import Footer from '@/components/shared/Footer';
 import { LoadingScreen } from '@/lib/components/shared';
 import { ROUTES } from '@/lib/constants';
 import { getFirestore, doc, onSnapshot, collection, query, where, orderBy, addDoc, getDocs, limit } from 'firebase/firestore';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 const BKASH_NUMBER = '01865333143';
 const PRICE_PER_10K_COINS = 10; // 10 BDT = 10,000 Coins
@@ -18,6 +19,7 @@ const COINS_PER_10_BDT = 10000;
 const CoinsPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { verifyRecaptcha } = useRecaptcha();
 
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -162,12 +164,21 @@ const CoinsPage: React.FC = () => {
     setRechargeSuccess('');
 
     try {
+      // 🤖 Verify with reCAPTCHA before submitting
+      const recaptchaResult = await verifyRecaptcha('submit_recharge');
+      
+      if (!recaptchaResult.success) {
+        setRechargeError(recaptchaResult.error || 'Security verification failed. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const db = getFirestore();
 
       // Removed client-side cross-user duplicate check to prevent Firebase permission errors.
       // Admins will visually see and reject any duplicate TrxIDs in their dashboard.
 
-      await addDoc(collection(db, 'recharge_requests'), {
+      const rechargeRef = await addDoc(collection(db, 'recharge_requests'), {
         userId: user.uid,
         userName: user.displayName || user.email?.split('@')[0] || 'User',
         userEmail: user.email,
@@ -181,6 +192,31 @@ const CoinsPage: React.FC = () => {
         processedAt: null,
         processedBy: null
       });
+
+      // 📧 Send email notification to admin (fire and forget - don't block UX)
+      try {
+        await fetch('/api/coins/send-recharge-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            emailData: {
+              requestId: rechargeRef.id,
+              userName: user.displayName || user.email?.split('@')[0] || 'User',
+              userEmail: user.email,
+              amount: rechargeAmount,
+              coins: coinsToReceive,
+              transactionId: trimmedTrxId,
+              bkashNumber: BKASH_NUMBER,
+              createdAt: new Date().toISOString(),
+            },
+            recaptchaToken: recaptchaResult.token, // Optional: send token for additional verification
+          }),
+        });
+        console.log('✅ Admin notification email queued');
+      } catch (emailError) {
+        console.error('⚠️ Failed to send email notification:', emailError);
+        // Don't fail the recharge request if email fails
+      }
 
       setRechargeSuccess('✅ Recharge request submitted! Wait for admin approval.');
       setTrxId('');
