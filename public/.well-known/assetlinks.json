@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "tech.stocksimulatorbd.bd",
+      "package_name": "tech.stocksimulator.bd",
       "sha256_cert_fingerprints": [
-        "94:CE:2C:14:BB:ED:84:87:69:CE:2F:BB:C1:0C:3F:BA:86:31:63:B3:17:1B:28:9F:02:4F:B3:8B:9E:2C:CB:7E"
+        "75:0C:26:7F:1A:EA:4D:9F:51:36:AB:F0:41:82:25:90:F7:BC:AD:FD:51:23:B9:F5:BE:1F:38:39:F1:4C:33:30"
       ]
     }
   }

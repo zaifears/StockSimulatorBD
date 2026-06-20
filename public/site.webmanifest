@@ -81,7 +81,7 @@
     {
       "platform": "play",
       "url": "https://www.stocksimulator.tech/stocksimulator_bd.apk",
-      "id": "com.stocksimulatorbd.app"
+      "id": "tech.stocksimulator.bd"
     }
   ],
   "prefer_related_applications": true

@@ -7,14 +7,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/blog/'],
+        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/blog/', '/stocks/'],
         disallow: ['/api/', '/admin/', '/profile/', '/coins/', '/_next/', '/auth/'],
       },
       {
-        // Explicitly welcome AI Search engines but keep them out of user data
+        // Explicitly welcome AI Search engines to index educational & stock content
         userAgent: ['GPTBot', 'PerplexityBot', 'Google-Extended', 'anthropic-ai', 'OAI-SearchBot'],
-        allow: ['/', '/simulator', '/about-us', '/blog/'],
-        disallow: ['/api/', '/admin/', '/profile/', '/coins/', '/_next/', '/auth/'],
+        allow: ['/', '/simulator', '/about-us', '/blog/', '/stocks/'],
+        disallow: ['/api/', '/admin/', '/profile/', '/coins/', '/_next/', '/auth/', '/simulator/trade'],
       }
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
