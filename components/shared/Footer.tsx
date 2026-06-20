@@ -2,23 +2,34 @@
 
 import { memo } from 'react';
 import Image from 'next/image';
+import { Facebook } from 'lucide-react'; // Added Facebook icon
 
-// FIXED: Proper TypeScript interface with optional properties
+// Fixed: Proper TypeScript interface
 interface FooterLink {
   label: string;
   href: string;
   external?: boolean;
   underlined?: boolean;
+  icon?: React.ReactNode; // Added optional icon field
 }
 
 interface FooterSection {
   useful: FooterLink[];
+  social: FooterLink[];
 }
 
 const FOOTER_LINKS: FooterSection = {
   useful: [
     { label: 'About Us', href: '/about-us' },
     { label: 'Privacy Policy', href: '/policy' }
+  ],
+  social: [
+    { 
+        label: 'Facebook', 
+        href: 'https://www.facebook.com/stocksimbd', 
+        external: true,
+        icon: <Facebook size={18} /> 
+    }
   ],
 };
 
@@ -28,6 +39,7 @@ const Footer = memo(function Footer() {
   return (
     <footer className="border-t border-gray-200/50 dark:border-gray-800/50 pt-10 mt-16 bg-white/30 dark:bg-black/30 backdrop-blur-sm rounded-t-3xl">
       <div className="max-w-5xl mx-auto px-4 pb-6 flex flex-col md:flex-row gap-6 md:gap-12 items-start justify-between">
+        
         {/* Logo and About */}
         <div className="flex flex-col gap-3 min-w-[150px]">
           <div className="relative">
@@ -46,8 +58,9 @@ const Footer = memo(function Footer() {
           </p>
         </div>
         
-        {/* Footer Links */}
-        <div className="flex justify-center flex-1">
+        {/* Footer Links Wrapper */}
+        <div className="flex gap-12 justify-center flex-1">
+          {/* Useful Links */}
           <div>
             <h4 className="text-md font-bold text-gray-800 dark:text-white mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Useful Links</h4>
             <ul className="flex flex-col gap-1 text-gray-500 dark:text-gray-400 text-sm">
@@ -55,8 +68,7 @@ const Footer = memo(function Footer() {
                 <li key={link.label}>
                   <a 
                     href={link.href} 
-                    className={`hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-300 ${link.underlined ? 'underline' : ''}`}
-                    {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    className={`hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-300`}
                   >
                     {link.label}
                   </a>
@@ -64,8 +76,28 @@ const Footer = memo(function Footer() {
               ))}
             </ul>
           </div>
+
+          {/* Social Links */}
+          <div>
+            <h4 className="text-md font-bold text-gray-800 dark:text-white mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Connect</h4>
+            <ul className="flex flex-col gap-2 text-gray-500 dark:text-gray-400 text-sm">
+              {FOOTER_LINKS.social.map((link) => (
+                <li key={link.label}>
+                  <a 
+                    href={link.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
+                  >
+                    {link.icon} {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
+      
       <div className="text-center my-4 py-4 border-t border-gray-200/30 dark:border-gray-700/30">
         <span className="text-xs text-gray-400 dark:text-gray-600">
           &copy; {currentYear} Stock Simulator BD. All rights reserved.
