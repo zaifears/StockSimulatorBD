@@ -1,21 +1,41 @@
 {
+  "id": "/",
   "name": "Stock Simulator BD",
   "short_name": "StockSim",
-  "icons": [
-    {
-      "src": "/web-app-manifest-192x192.png?v=20260619",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/web-app-manifest-512x512.png?v=20260619",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
+  "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "categories": ["finance", "education", "business"],
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://www.stocksimulator.tech/skilldash-simulator.apk",
+      "id": "com.stocksimulatorbd.app"
+    }
+  ],
+  "prefer_related_applications": true
 }

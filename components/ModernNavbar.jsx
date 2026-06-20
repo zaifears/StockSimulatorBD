@@ -54,7 +54,7 @@ const ModernNavbar = () => {
                 className="h-8 w-8 object-contain"
                 priority
               />
-              <span>Stock Simulator BD</span>
+              <span>StockSimBD</span>
             </Link>
 
             {/* Desktop Navigation - Hidden on mobile */}

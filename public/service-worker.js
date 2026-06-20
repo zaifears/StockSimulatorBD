@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skilldash-cache-v1';
+const CACHE_NAME = 'stocksim-cache-v1';
 const urlsToCache = [
   '/',              // Home
   '/offline.html',  // Offline fallback

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skilldash-offline-v1';
+const CACHE_NAME = 'stocksim-offline-v1';
 const OFFLINE_URL = '/offline.html';
 
 // 1. Install Service Worker & Cache the Offline Page

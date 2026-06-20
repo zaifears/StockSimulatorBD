@@ -4,11 +4,11 @@
 
   <h1>Stock Simulator BD</h1>
 
-  <h3>The Ultimate AI-Powered Stock Market Simulation for DSE</h3>
+  <h3>The Ultimate Stock Market Simulation for DSE</h3>
 
   <br/>
 
-  <a href="https://www.stocksimulator.tech/simulator"><img src="https://img.shields.io/badge/🚀_Live_Demo-skilldash.live-8b5cf6?style=for-the-badge" alt="Live Demo"/></a>
+  <a href="https://www.stocksimulator.tech/simulator"><img src="https://img.shields.io/badge/🚀_Live_Demo-stocksimulatorbd-8b5cf6?style=for-the-badge" alt="Live Demo"/></a>
   <a href="https://www.stocksimulator.tech/skilldash-simulator.apk"><img src="https://img.shields.io/badge/📱_Download-APK-34D399?style=for-the-badge" alt="Download APK"/></a>
 
   <br/><br/>
@@ -23,7 +23,7 @@
 
   <br/><br/>
 
-  <em>Master the Dhaka Stock Exchange risk-free. Powered by AI insights & real-time data sync.</em>
+  <em>Master the Dhaka Stock Exchange risk-free. Powered by real-time data sync.</em>
 
 </div>
 

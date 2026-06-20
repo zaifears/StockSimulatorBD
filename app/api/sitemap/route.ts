@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const baseUrl = 'https://skilldash.live';
+const baseUrl = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://www.stocksimulator.tech';
 
 // Only DSE Paper Trading related pages
 const staticPages = [
