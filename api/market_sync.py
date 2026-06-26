@@ -29,17 +29,31 @@ class DSEMarketParser(HTMLParser):
                 symbol = self.current_row[1]
                 if symbol != 'TRADING CODE' and symbol != '':
                     try:
+                        ltp = float(self.current_row[2]) if self.current_row[2] not in ['--', '', '0'] else 0
+                        high = float(self.current_row[3]) if self.current_row[3] not in ['--', ''] else 0
+                        low = float(self.current_row[4]) if self.current_row[4] not in ['--', ''] else 0
+                        close = float(self.current_row[5]) if self.current_row[5] not in ['--', ''] else 0
+                        ycp = float(self.current_row[6]) if self.current_row[6] not in ['--', ''] else 0
+                        change = float(self.current_row[7]) if self.current_row[7] not in ['--', ''] else 0
+                        trade = float(self.current_row[8]) if self.current_row[8] not in ['--', ''] else 0
+                        value = float(self.current_row[9]) if self.current_row[9] not in ['--', ''] else 0
+                        volume = float(self.current_row[10]) if len(self.current_row) > 10 and self.current_row[10] not in ['--', ''] else 0
+                        
+                        # Calculate change percent safely
+                        changePercent = round((change / ycp) * 100, 2) if ycp > 0 else 0
+
                         self.stocks.append({
                             "symbol": symbol,
-                            "ltp": float(self.current_row[2]) if self.current_row[2] not in ['--', '', '0'] else 0,
-                            "high": float(self.current_row[3]) if self.current_row[3] not in ['--', ''] else 0,
-                            "low": float(self.current_row[4]) if self.current_row[4] not in ['--', ''] else 0,
-                            "close": float(self.current_row[5]) if self.current_row[5] not in ['--', ''] else 0,
-                            "ycp": float(self.current_row[6]) if self.current_row[6] not in ['--', ''] else 0,
-                            "change": float(self.current_row[7]) if self.current_row[7] not in ['--', ''] else 0,
-                            "trade": float(self.current_row[8]) if self.current_row[8] not in ['--', ''] else 0,
-                            "value": float(self.current_row[9]) if self.current_row[9] not in ['--', ''] else 0,
-                            "volume": float(self.current_row[10]) if len(self.current_row) > 10 and self.current_row[10] not in ['--', ''] else 0
+                            "ltp": ltp,
+                            "high": high,
+                            "low": low,
+                            "close": close,
+                            "ycp": ycp,
+                            "change": change,
+                            "changePercent": changePercent,
+                            "trade": trade,
+                            "value": value,
+                            "volume": volume
                         })
                     except ValueError:
                         pass 
@@ -59,7 +73,7 @@ class handler(BaseHTTPRequestHandler):
             
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
             
-            with urllib.request.urlopen(req, context=ctx, timeout=10.0) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=8.0) as response:
                 html = response.read().decode('utf-8', errors='ignore')
                 
             parser = DSEMarketParser()

@@ -119,6 +119,9 @@ export const useSimulator = () => {
     let intervalId: NodeJS.Timeout;
 
     const fetchMarketData = async () => {
+      // Efficiency Upgrade: Do not waste Firebase reads if the user is on another tab
+      if (document.hidden) return;
+
       try {
         const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
         const marketRef = doc(db, 'artifacts', appId, 'public', 'data', 'market_info', 'latest');
@@ -126,10 +129,17 @@ export const useSimulator = () => {
 
         if (snapshot.exists() && isMounted) {
           const data = snapshot.data() as MarketInfo;
-          const mergedStocks = data.stocks.map(stock => ({
-            ...stock,
-            category: categoryMap[stock.symbol] || stock.category
-          }));
+          const mergedStocks = data.stocks.map(stock => {
+            const calculatedChangePercent = stock.changePercent !== undefined 
+              ? stock.changePercent 
+              : (stock.ltp - stock.change > 0 ? (stock.change / (stock.ltp - stock.change)) * 100 : 0);
+              
+            return {
+              ...stock,
+              changePercent: calculatedChangePercent,
+              category: categoryMap[stock.symbol] || stock.category
+            };
+          });
           setMarketInfo({ ...data, stocks: mergedStocks });
         } else if (isMounted) {
           setMarketInfo({ stocks: [], lastUpdated: new Date().toISOString(), totalStocks: 0 });
@@ -142,7 +152,17 @@ export const useSimulator = () => {
     fetchMarketData();
     intervalId = setInterval(fetchMarketData, 180000); 
 
-    return () => { isMounted = false; clearInterval(intervalId); };
+    // Fetch immediately when the user comes back to the tab
+    const handleVisibilityChange = () => {
+      if (!document.hidden) fetchMarketData();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => { 
+      isMounted = false; 
+      clearInterval(intervalId); 
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user, db, categoryMap]);
 
   // ── 3. Categories Listener ──
