@@ -68,10 +68,16 @@ export default function SimulatorTradePage() {
   const { 
     marketInfo, simulatorState, loading: simulatorLoading, 
     transactionStatus, transactionMessage, 
-    handleBuyTrade, handleSellTrade, isMarketOpen, resetTransaction 
+    executeTrade, isMarketOpen, resetTransaction 
   } = useSimulator();
   
-  // Handle authentication redirect
+  const handleBuyTrade = async (symbol: string, quantity: number) => {
+    return executeTrade(symbol, 'BUY', quantity);
+  };
+
+  const handleSellTrade = async (symbol: string, quantity: number) => {
+    return executeTrade(symbol, 'SELL', quantity);
+  };
   const [isRedirecting, setIsRedirecting] = useState(false);
   
   useEffect(() => {
@@ -310,7 +316,7 @@ export default function SimulatorTradePage() {
     setShowTradeModal(true);
   };
 
-  const executeTrade = async () => {
+  const handleExecuteModalTrade = async () => {
     if (!selectedStock || tradeQuantity === '' || tradeQuantity <= 0) return;
     if (tradeType === 'buy') await handleBuyTrade(selectedStock, tradeQuantity);
     else await handleSellTrade(selectedStock, tradeQuantity);
@@ -1232,7 +1238,7 @@ export default function SimulatorTradePage() {
                 <div className="px-4 sm:px-5 py-4 sm:py-3 border-t border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/20 pb-8 sm:pb-3">
                   {(
                       <button
-                        onClick={executeTrade}
+                        onClick={handleExecuteModalTrade}
                         disabled={tradeSummary.isDisabled}
                         className={`w-full py-2.5 rounded-xl text-white font-bold text-sm shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-2 ${
                           !marketOpen ? 'bg-gray-400 cursor-not-allowed' :

@@ -3,5 +3,6 @@
   "scss.lint.unknownAtRules": "ignore",
   "tailwindCSS.experimental.classRegex": [
     ["@apply\\s+([^;}]*)", "([^\\s]+)"]
-  ]
+  ],
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }

@@ -141,3 +141,4 @@ vite.config.ts.timestamp-*
 .env.local
 .env*.local
 .vercel
+.env*

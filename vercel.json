@@ -1,45 +1,19 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/update-categories",
-      "schedule": "0 9 * * 2"
-    }
-  ],
   "functions": {
-    "app/api/cron/update-categories/route.ts": {
-      "maxDuration": 60
+    "api/dse_chart.py": {
+      "maxDuration": 10
     },
-    "app/api/discover-chat/route.ts": {
-      "maxDuration": 60
-    },
-    "app/api/resume-feedback/route.ts": {
-      "maxDuration": 60
+    "api/market_sync.py": {
+      "maxDuration": 10
     }
   },
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With"
-        },
-        {
-          "key": "Access-Control-Max-Age",
-          "value": "86400"
-        }
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
       ]
     }
   ]
