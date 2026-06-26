@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSimulator } from '@/hooks/useSimulator';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -547,6 +548,12 @@ export default function SimulatorTradePage() {
                               </td>
                               <td className="px-5 py-3 text-right">
                                 <div className="flex justify-end gap-1.5">
+                                  <Link 
+                                    href={`/stocks/${stock.symbol}`}
+                                    className="px-3 py-1.5 rounded text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white"
+                                  >
+                                    Chart
+                                  </Link>
                                   <button 
                                     onClick={() => openTradeModal(stock.symbol, 'buy')}
                                     disabled={!marketOpen}
@@ -649,6 +656,12 @@ export default function SimulatorTradePage() {
                           
                           {/* Row 3: Actions */}
                           <div className="flex gap-2">
+                            <Link 
+                              href={`/stocks/${stock.symbol}`}
+                              className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                            >
+                              Chart
+                            </Link>
                             <button 
                               onClick={() => openTradeModal(stock.symbol, 'buy')}
                               disabled={!marketOpen}
@@ -752,6 +765,12 @@ export default function SimulatorTradePage() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
+                              <Link 
+                                href={`/stocks/${stock.symbol}`}
+                                className="px-3 py-1.5 rounded text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white"
+                              >
+                                Chart
+                              </Link>
                               <button 
                                 onClick={() => openTradeModal(stock.symbol, 'buy')}
                                 disabled={!marketOpen}
@@ -828,6 +847,12 @@ export default function SimulatorTradePage() {
                       
                       {/* Bottom Row: Action Buttons */}
                       <div className="flex gap-2">
+                        <Link 
+                          href={`/stocks/${stock.symbol}`}
+                          className="flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                        >
+                          Chart
+                        </Link>
                         <button 
                           onClick={() => openTradeModal(stock.symbol, 'buy')}
                           disabled={!marketOpen}

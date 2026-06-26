@@ -127,9 +127,41 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mb-3 tracking-tight">
                 About {stock.name}
               </h2>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm sm:text-base">
-                {stock.name} ({stock.symbol}) is one of the listed companies on the Dhaka Stock Exchange (DSE). This page is designed to help learners and aspiring investors understand the stock at a high level by combining price context, company background, and trading practice guidance. For real analysis, connect this template with your live market data service and company fundamentals API.
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm sm:text-base mb-6">
+                {stock.name} ({stock.symbol}) is one of the listed companies on the Dhaka Stock Exchange (DSE). This page is designed to help learners and aspiring investors understand the stock at a high level by combining price context, company background, and trading practice guidance. 
               </p>
+              
+              {/* ── External Link Section with Legal Disclaimers ── */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700/50">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 mb-1.5">
+                  Need in-depth financial data?
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                  For official fundamental analysis, P/E ratios, and detailed financials for {stock.symbol}, we recommend checking external market data providers.
+                </p>
+                
+                {/* Explicit Non-Sponsorship Disclaimer */}
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic mb-4 border-l-2 border-slate-300 dark:border-slate-600 pl-2">
+                  * Please note: We do not use the data of StockNow, nor is this link sponsored or affiliated.
+                </p>
+
+                <a 
+                  href={`https://stocknow.com.bd/stocks/${stock.symbol.toUpperCase()}`}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto gap-2 px-5 py-3 sm:py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 text-sm font-bold rounded-lg transition-all shadow-sm group"
+                >
+                  View {stock.symbol} on StockNow
+                  <svg className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+                
+                {/* Liability Disclaimer */}
+                <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-2.5 text-center sm:text-left">
+                  We are not responsible for the content or any actions taken on StockNow.
+                </p>
+              </div>
             </section>
           </div>
 
