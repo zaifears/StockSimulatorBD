@@ -32,29 +32,46 @@ const data: ChartCandle[] = Array.isArray(raw) ? raw : raw.data ?? [];
         if (!data || data.length === 0) throw new Error('No historical data available');
 
         // 2. Map data and SANITIZE DSE's broken High/Low values
-const validData = data.filter((d) => {
-  if (!d.date || !d.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
-  if (!d.open || !d.close) return false;
-  return true;
-});
+// 2. Map data and SANITIZE DSE's broken High/Low/Open values
+        const validData = data.filter((d) => {
+          if (!d.date || !d.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+          if (!d.close) return false; // DSE often misses open, so only require close
+          return true;
+        });
 
-const candleData = validData.map((d) => {
-  const maxBody = Math.max(d.open, d.close);
-  const minBody = Math.min(d.open, d.close);
-  return {
-    time: d.date as string,
-    open: d.open,
-    high: d.high < maxBody || d.high === 0 ? maxBody : d.high,
-    low: d.low > minBody || d.low === 0 ? minBody : d.low,
-    close: d.close,
-  };
-});
+        const candleData = validData.map((d, index) => {
+          // Fallback to yesterday's close if open is broken or 0
+          let actualOpen = d.open;
+          if (!actualOpen || actualOpen === 0) {
+            actualOpen = index > 0 ? validData[index - 1].close : d.close;
+          }
 
-const volumeData = validData.map((d) => ({
-  time: d.date as string,
-  value: d.volume || 0,
-  color: d.close >= d.open ? '#26a69a' : '#ef5350',
-}));
+          const maxBody = Math.max(actualOpen, d.close);
+          const minBody = Math.min(actualOpen, d.close);
+          
+          // REAL CHART LOGIC: Color based on if price went up from YESTERDAY'S close
+          const prevClose = index > 0 ? validData[index - 1].close : actualOpen;
+          const isUp = d.close >= prevClose;
+          const trendColor = isUp ? '#26a69a' : '#ef5350'; // Green if up, Red if down
+          
+          return {
+            time: d.date as string,
+            open: actualOpen,
+            high: d.high < maxBody || d.high === 0 ? maxBody : d.high,
+            low: d.low > minBody || d.low === 0 ? minBody : d.low,
+            close: d.close,
+            // Force the exact color per candle based on actual market trend
+            color: trendColor,
+            borderColor: trendColor,
+            wickColor: trendColor,
+          };
+        });
+
+        const volumeData = candleData.map((d, index) => ({
+          time: d.time as string,
+          value: validData[index].volume || 0,
+          color: d.color, // Match the volume bar directly to the candle color
+        }));
 
 console.log('[StockChart] raw sample:', JSON.stringify(data.slice(0, 3), null, 2));
 if (candleData.length === 0) throw new Error('No valid candles after filtering');

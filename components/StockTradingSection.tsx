@@ -1,6 +1,7 @@
 'use client';
 
 import { useSimulator } from '@/hooks/useSimulator';
+import { useAuth } from '@/contexts/AuthContext';
 import TradeExecutionPanel from '@/components/simulator/TradeExecutionPanel';
 
 interface StockTradingSectionProps {
@@ -9,10 +10,19 @@ interface StockTradingSectionProps {
 }
 
 export default function StockTradingSection({ symbol, fallbackPrice }: StockTradingSectionProps) {
-  const { executeTrade, simulatorState, marketInfo, loading, transactionStatus, transactionMessage, resetTransaction } = useSimulator();
+  const { user } = useAuth();
+  const { 
+    executeTrade, 
+    simulatorState, 
+    marketInfo, 
+    isMarketOpen, 
+    transactionStatus, 
+    transactionMessage, 
+    resetTransaction 
+  } = useSimulator();
 
   // Extract the live polled price if available, otherwise use the server-side fallback price
-  const liveStock = marketInfo?.stocks.find(s => s.symbol.toUpperCase() === symbol.toUpperCase());
+  const liveStock = marketInfo?.stocks?.find(s => s.symbol.toUpperCase() === symbol.toUpperCase());
   const currentPrice = liveStock && liveStock.ltp > 0 ? liveStock.ltp : fallbackPrice;
 
   // Extract user holdings for this asset
@@ -26,6 +36,8 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
         currentPrice={currentPrice}
         availableBalance={simulatorState.balance}
         currentHoldings={currentHoldings}
+        isMarketOpen={isMarketOpen()}
+        isAuthenticated={!!user} // Tells the panel if the user is logged in
         onExecute={(type, qty) => executeTrade(symbol, type, qty)}
       />
 
