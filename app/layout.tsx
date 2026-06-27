@@ -38,18 +38,18 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Stock Simulator BD - DSE Paper Trading Simulator | Practice Stock Market Risk-Free',
-  description: 'Practice trading Dhaka Stock Exchange stocks with virtual currency. The only free DSE simulator with real-time market data, T+1 settlement rules, and 0.3% commission simulation. Learn stock investing without risking real money.',
+  title: 'Stock Simulator BD - DSE Paper Trading Simulator',
+  description: "Practice trading DSE stocks risk-free. Bangladesh's free simulator featuring real-time data, virtual currency, and T+1 settlement rules.",
   applicationName: 'Stock Simulator BD',
   keywords: [
     "DSE simulator", "paper trading Bangladesh", "Dhaka Stock Exchange simulator",
     "virtual stock trading", "stock market practice Bangladesh", "DSE stocks",
     "learn stock trading", "free paper trading", "Bangladesh stock market",
     "trading simulator", "practice trading", "virtual trading Bangladesh",
-    "stock market learning", "DSE practice", "risk-free trading", "stock simulator bd"
+    "stock market learning", "DSE practice", "risk-free trading", "stock simulator bd", "stock simulator bd",
   ],
-  authors: [{ name: 'Stock Simulator BD Team' }],
-  creator: 'Shahoriar Hossain',
+  authors: [{ name: 'Md Al Shahoriar Hossain', url: 'https://shahoriar.bd' }],
+  creator: 'Md Al Shahoriar Hossain',
   publisher: 'Stock Simulator BD',
   robots: {
     index: true,
@@ -190,8 +190,7 @@ export default function RootLayout({
               "url": "https://www.stocksimulator.tech",
               "sameAs": [
                 "https://www.facebook.com/stocksimulatorbd",
-                "https://twitter.com/stocksimulatorbd",
-                "https://www.linkedin.com/company/stocksimulatorbd"
+                "https://skilldash.live",
               ],
               "potentialAction": {
                 "@type": "SearchAction",
@@ -241,21 +240,60 @@ export default function RootLayout({
           }}
         />
 
-        {/* Brand Rebrand Mapping Schema - Re-links Historical Footprint & Authority */}
+        {/* SoftwareApplication - enables Google app rich results */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "FinancialApplication",
+              "@type": "SoftwareApplication",
               "name": "Stock Simulator BD",
-              "alternateName": ["StockSimBD", "SkillDash"],
+              "alternateName": "StockSimBD",
               "url": "https://www.stocksimulator.tech",
               "applicationCategory": "FinanceApplication",
               "operatingSystem": "Web",
-              "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
+              "browserRequirements": "Requires JavaScript",
+              "description": "The only free DSE paper trading simulator for the Dhaka Stock Exchange. Trade 300+ stocks with virtual currency, real-time market data, T+1 settlement rules, and 0.3% commission simulation.",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "BDT"
+              },
+              "author": {
+                "@type": "Person",
+                "name": "Md Al Shahoriar Hossain",
+                "url": "https://shahoriar.bd"
+              },
+              "creator": {
+                "@type": "Person",
+                "name": "Md Al Shahoriar Hossain",
+                "url": "https://shahoriar.bd"
+              },
+              "featureList": [
+                "Real-time DSE market data",
+                "T+1 settlement simulation",
+                "0.3% commission simulation",
+                "Virtual portfolio tracking",
+                "300+ DSE stocks"
+              ]
+            })
+          }}
+        />
+
+        {/* Person - creator entity */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              "name": "Md Al Shahoriar Hossain",
+              "alternateName": ["Shahoriar Hossain", "zaifears"],
+              "url": "https://shahoriar.bd",
               "sameAs": [
-                "https://www.skilldash.live/"
+                "https://shahoriar.bd",
+                "https://linkedin.com/in/shahoriarhossain",
+                "https://github.com/zaifears"
               ]
             })
           }}

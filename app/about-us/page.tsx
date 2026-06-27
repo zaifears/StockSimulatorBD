@@ -4,26 +4,25 @@ import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import BouncingBalls from '../../components/shared/BouncingBalls';
 
-// Dynamic imports for better performance
 const AboutHero = dynamic(() => import('../../components/AboutHero'), {
   loading: () => <div className="h-64 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-3xl mb-16"></div>,
-  ssr: false
+  ssr: false,
 });
-
 
 const Footer = dynamic(() => import('../../components/shared/Footer'), {
   loading: () => <div className="h-64 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-t-3xl"></div>,
-  ssr: false
+  ssr: false,
 });
 
 export default function AboutUsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-black dark:to-gray-900 text-gray-800 dark:text-gray-200 pt-40 pb-12 sm:pt-40 sm:pb-24 px-4 relative overflow-hidden">
-      
+
       {/* Bouncing Balls Component */}
       <BouncingBalls variant="dense" />
 
       <div className="max-w-7xl mx-auto relative z-10">
+
         {/* Hero Section */}
         <div className="animate-fade-in-up">
           <Suspense fallback={<div className="h-64 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-3xl mb-16"></div>}>
@@ -42,8 +41,8 @@ export default function AboutUsPage() {
               We built the ultimate paper trading platform for the Dhaka Stock Exchange. Whether you are a beginner looking to understand market dynamics or an experienced trader testing new strategies, our simulator provides a 100% risk-free environment to hone your investing skills.
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+
             {/* Feature 1 */}
             <div className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50 dark:border-gray-800/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-5xl mb-6">📈</div>
@@ -52,7 +51,7 @@ export default function AboutUsPage() {
                 Experience the DSE with authentic price movements, category tracking, and market trends to ensure your virtual trades reflect reality.
               </p>
             </div>
-            
+
             {/* Feature 2 */}
             <div className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50 dark:border-gray-800/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-5xl mb-6">🛡️</div>
@@ -70,6 +69,29 @@ export default function AboutUsPage() {
                 We simulate actual DSE trading conditions, including standard 0.3% broker commissions and accurate portfolio settlement mechanics.
               </p>
             </div>
+
+          </div>
+        </section>
+
+        {/* Creator Attribution */}
+        <section className="mt-20 md:mt-24 text-center">
+          <div className="inline-block bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm px-8 py-6 rounded-3xl shadow-lg border border-gray-200/50 dark:border-gray-800/50">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Built & maintained by</p>
+            <a
+              href="https://shahoriar.bd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            >
+              Md Al Shahoriar Hossain
+            </a>
+            <div className="flex gap-4 justify-center mt-3 text-xs text-gray-400 dark:text-gray-500">
+              <a href="https://shahoriar.bd" target="_blank" rel="noopener noreferrer" className="hover:text-purple-500 transition-colors duration-300">shahoriar.bd</a>
+              <span>·</span>
+              <a href="https://linkedin.com/in/shahoriarhossain" target="_blank" rel="noopener noreferrer" className="hover:text-purple-500 transition-colors duration-300">LinkedIn</a>
+              <span>·</span>
+              <a href="https://github.com/zaifears" target="_blank" rel="noopener noreferrer" className="hover:text-purple-500 transition-colors duration-300">GitHub</a>
+            </div>
           </div>
         </section>
 
@@ -83,11 +105,12 @@ export default function AboutUsPage() {
               Get in Touch
             </h2>
             <p className="max-w-4xl mx-auto text-lg text-gray-700 dark:text-gray-300 leading-relaxed mb-10">
-              Have questions, ideas, or feedback? We'd love to hear from you!
+              Have questions, ideas, or feedback? We&apos;d love to hear from you!
             </p>
-            
+
             {/* Contact Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-2xl mx-auto">
+
               {/* Email Button */}
               <a
                 href="mailto:alshahoriar.hossain@gmail.com"
@@ -102,7 +125,7 @@ export default function AboutUsPage() {
 
               {/* Contact Page Button */}
               <a
-                href="https://shahoriar.vercel.app/contact"
+                href="https://shahoriar.bd/contact"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
@@ -112,9 +135,11 @@ export default function AboutUsPage() {
                 </svg>
                 <span>Contact Page</span>
               </a>
+
             </div>
           </div>
         </section>
+
       </div>
 
       {/* Footer */}
