@@ -25,6 +25,13 @@
     --text-secondary: #d1d5db;
     --bg-primary: #000000;  /* ✅ Pure black */
     --bg-secondary: #1a1a1a;
+    --navbar-height: 64px; /* 4rem to match h-16 */
+  .pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
   }
 }
 
@@ -343,14 +350,14 @@ button:disabled {
    BACKDROP FILTER SUPPORT
    ============================================ */
 @supports (backdrop-filter: blur(10px)) {
-  .backdrop-blur-xs { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
-  .backdrop-blur-sm { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-  .backdrop-blur { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-  .backdrop-blur-md { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-  .backdrop-blur-lg { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-  .backdrop-blur-xl { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
-  .backdrop-blur-2xl { backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); }
-  .backdrop-blur-3xl { backdrop-filter: blur(64px); -webkit-backdrop-filter: blur(64px); }
+  .backdrop-blur-xs { -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  .backdrop-blur-sm { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  .backdrop-blur { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .backdrop-blur-md { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  .backdrop-blur-lg { -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .backdrop-blur-xl { -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  .backdrop-blur-2xl { -webkit-backdrop-filter: blur(40px); backdrop-filter: blur(40px); }
+  .backdrop-blur-3xl { -webkit-backdrop-filter: blur(64px); backdrop-filter: blur(64px); }
 }
 
 @supports not (backdrop-filter: blur(10px)) {
@@ -383,11 +390,11 @@ button:disabled {
    GLASS EFFECTS
    ============================================ */
 .navbar-backdrop {
-  backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
   background-color: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
+} 
 
 @media (prefers-color-scheme: dark) {
   .navbar-backdrop {
@@ -397,8 +404,8 @@ button:disabled {
 }
 
 .glass-effect {
-  backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
   background-color: rgba(255, 255, 255, 0.80);
   border: 1px solid rgba(209, 213, 219, 0.3);
 }
@@ -496,8 +503,8 @@ button:disabled {
 /* High DPI screen optimizations */
 @media screen and (-webkit-min-device-pixel-ratio: 0) {
   .backdrop-blur-xl {
-    backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
+    backdrop-filter: blur(24px) !important;
   }
 }
 

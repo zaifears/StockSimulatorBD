@@ -78,18 +78,22 @@ export default function MarketCalendar({ holidays }: MarketCalendarProps) {
         <div className="flex items-center gap-1 justify-between">
            <button 
              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
+             aria-label="Previous month"
+             title="Previous month"
              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500"
            >
-             <ChevronLeft className="w-4 h-4" />
+             <ChevronLeft className="w-4 h-4" aria-hidden="true" />
            </button>
            <span className="text-xs font-mono font-medium text-gray-700 dark:text-gray-300 flex-1 text-center">
              {monthName}
            </span>
            <button 
              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
+             aria-label="Next month"
+             title="Next month"
              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500"
            >
-             <ChevronRight className="w-4 h-4" />
+             <ChevronRight className="w-4 h-4" aria-hidden="true" />
            </button>
         </div>
       </div>
