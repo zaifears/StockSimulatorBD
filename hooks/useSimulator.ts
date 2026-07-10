@@ -17,7 +17,6 @@ import { getFreshToken } from '@/lib/firebase';
 
 // =====================================================
 // PRECISION MONEY MATH UTILITIES
-// Converts to paisa (integer) to avoid floating-point errors
 // =====================================================
 const toPaisa = (amount: number): number => Math.round(amount * 100);
 const fromPaisa = (paisa: number): number => paisa / 100;
@@ -90,13 +89,14 @@ export const useSimulator = () => {
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [transactionMessage, setTransactionMessage] = useState('');
   const [bangladeshHolidays, setBangladeshHolidays] = useState<string[]>([]);
+  const [nextUpdateIn, setNextUpdateIn] = useState(180); // 3 minutes countdown
   
   const marketUnsubscribe = useRef<Unsubscribe | null>(null);
   const categoriesUnsubscribe = useRef<Unsubscribe | null>(null);
   const stateUnsubscribe = useRef<Unsubscribe | null>(null);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
 
-  const COMMISSION_RATE = 0.004; // 0.4% DSE Commission
+  const COMMISSION_RATE = 0.004;
 
   // ── 1. Load Bangladesh Holidays ──
   useEffect(() => {
@@ -112,16 +112,15 @@ export const useSimulator = () => {
     loadHolidays();
   }, []);
 
-  // ── 2. Polling Market Data ──
+  // ── 2. Polling Market Data (With Efficient Countdown) ──
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     let isMounted = true;
-    let intervalId: NodeJS.Timeout;
+    let timerId: NodeJS.Timeout;
 
     const fetchMarketData = async () => {
-      // Efficiency Upgrade: Do not waste Firebase reads if the user is on another tab
-      if (document.hidden) return;
-
+      if (document.hidden) return; // Efficiency Upgrade
+      
       try {
         const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
         const marketRef = doc(db, 'artifacts', appId, 'public', 'data', 'market_info', 'latest');
@@ -141,7 +140,8 @@ export const useSimulator = () => {
             };
           });
           setMarketInfo({ ...data, stocks: mergedStocks });
-        } else if (isMounted) {
+          setNextUpdateIn(180); // Reset timer on successful fetch
+        } else if (isMounted && !marketInfo) {
           setMarketInfo({ stocks: [], lastUpdated: new Date().toISOString(), totalStocks: 0 });
         }
       } catch (err) {
@@ -150,17 +150,32 @@ export const useSimulator = () => {
     };
 
     fetchMarketData();
-    intervalId = setInterval(fetchMarketData, 180000); 
 
-    // Fetch immediately when the user comes back to the tab
+    // 1-second interval handles both the UI countdown and triggering the fetch
+    timerId = setInterval(() => {
+      if (document.hidden) return; // Pause countdown if user is in another tab
+      
+      setNextUpdateIn((prev) => {
+        if (prev <= 1) {
+          fetchMarketData();
+          return 180;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Fetch immediately and reset timer when user comes back to the tab
     const handleVisibilityChange = () => {
-      if (!document.hidden) fetchMarketData();
+      if (!document.hidden) {
+        fetchMarketData();
+        setNextUpdateIn(180);
+      }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => { 
       isMounted = false; 
-      clearInterval(intervalId); 
+      clearInterval(timerId); 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user, db, categoryMap]);
@@ -198,7 +213,6 @@ export const useSimulator = () => {
             gainLossPercent: calculateGainLossPercent(data.portfolio || [], marketInfo?.stocks || [])
           }));
         } else {
-          // Initialize shell for new users
           const initialState = { balance: 0, portfolio: [], totalInvested: 0, realizedGainLoss: 0 };
           await setDoc(stateRef, initialState, { merge: true });
         }
@@ -236,7 +250,7 @@ export const useSimulator = () => {
 
   const isMarketOpen = useCallback(() => {
     const now = new Date();
-    const bdTime = new Date(now.getTime() + (6 * 60 * 60 * 1000)); // UTC+6
+    const bdTime = new Date(now.getTime() + (6 * 60 * 60 * 1000));
     const hour = bdTime.getUTCHours();
     const minute = bdTime.getUTCMinutes();
     const dayOfWeek = bdTime.getUTCDay();
@@ -274,7 +288,6 @@ export const useSimulator = () => {
       throw new Error('Invalid Stock');
     }
 
-    // Security check
     const freshToken = await getFreshToken(true);
     if (!freshToken) {
       setTransactionStatus('error');
@@ -340,7 +353,6 @@ export const useSimulator = () => {
             throw new Error(`Insufficient shares. You own ${existingItem?.quantity || 0}.`);
           }
 
-          // T+1 Rule
           const bdOptions = { timeZone: 'Asia/Dhaka' };
           const purchaseDateStr = new Date(existingItem.purchaseDate).toLocaleDateString('en-CA', bdOptions);
           const todayDateStr = new Date().toLocaleDateString('en-CA', bdOptions);
@@ -350,8 +362,6 @@ export const useSimulator = () => {
           }
 
           const netProceeds = moneySubtract(grossValue, commission);
-          
-          // Cost Basis of shares being sold
           const averageCost = existingItem.averageBuyPrice;
           const costOfSoldShares = moneyMultiply(averageCost, quantity);
           const realizedGain = moneySubtract(netProceeds, costOfSoldShares);
@@ -375,7 +385,6 @@ export const useSimulator = () => {
           });
         }
 
-        // Write to Trade History
         const newHistoryRef = doc(historyColRef);
         transaction.set(newHistoryRef, {
           symbol,
@@ -412,6 +421,7 @@ export const useSimulator = () => {
     transactionMessage,
     executeTrade,
     isMarketOpen,
-    resetTransaction
+    resetTransaction,
+    nextUpdateIn // <-- EXPORTING THE TIMER
   };
 };
