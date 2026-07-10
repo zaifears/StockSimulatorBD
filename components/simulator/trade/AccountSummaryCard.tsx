@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
 import type { SimulatorState } from '@/hooks/useSimulator';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 
 export default function AccountSummaryCard({ simulatorState, marketOpen }: Props) {
   const router = useRouter();
+  const [showDetails, setShowDetails] = useState(false); // New state for mobile toggle
   const realized = simulatorState.realizedGainLoss || 0;
   const unrealized = simulatorState.totalGainLoss;
   const net = realized + unrealized;
@@ -43,58 +44,60 @@ export default function AccountSummaryCard({ simulatorState, marketOpen }: Props
         </div>
       </div>
       
-      <div className="hidden sm:grid grid-cols-2 gap-3 pt-4 border-t border-white/20 mb-4">
+      {/* Mobile Toggle Button */}
+      <button 
+        onClick={() => setShowDetails(!showDetails)}
+        className="sm:hidden w-full py-1.5 bg-white/10 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-1 mb-2 hover:bg-white/20"
+      >
+        {showDetails ? 'Hide Details' : 'View Detailed Assets'}
+        {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      {/* Grid: Visible on desktop always, visible on mobile only when showDetails is true */}
+      <div className={`${showDetails ? 'grid' : 'hidden'} sm:grid grid-cols-2 gap-3 pt-4 border-t border-white/20 mb-4`}>
         <div className="bg-white/10 rounded-lg p-3">
           <div className="text-blue-200 text-[10px] uppercase">Buying Power</div>
-          <div className="font-mono font-semibold text-lg">৳{simulatorState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="font-mono font-semibold text-sm sm:text-lg">৳{simulatorState.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="bg-white/10 rounded-lg p-3">
           <div className="text-blue-200 text-[10px] uppercase">Total Invested</div>
-          <div className="font-mono font-semibold text-lg">৳{simulatorState.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="font-mono font-semibold text-sm sm:text-lg">৳{simulatorState.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="bg-white/10 rounded-lg p-3">
           <div className="text-blue-200 text-[10px] uppercase">Portfolio Value</div>
-          <div className="font-mono font-semibold text-lg">৳{simulatorState.totalCurrentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="font-mono font-semibold text-sm sm:text-lg">৳{simulatorState.totalCurrentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="bg-white/10 rounded-lg p-3">
           <div className="text-blue-200 text-[10px] uppercase">Total Return</div>
-          <div className={`font-mono font-semibold text-lg flex items-center gap-1 ${simulatorState.totalGainLoss >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-            {simulatorState.totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          <div className={`font-mono font-semibold text-sm sm:text-lg flex items-center gap-1 ${simulatorState.totalGainLoss >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+            {simulatorState.totalGainLoss >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             {simulatorState.gainLossPercent.toFixed(2)}%
           </div>
         </div>
       </div>
 
-      <div className="hidden sm:block space-y-2 mb-4">
+      <div className={`${showDetails ? 'block' : 'hidden'} sm:block space-y-2 mb-4`}>
         <div className="bg-white/10 rounded-lg px-3 py-2.5 flex justify-between items-center">
           <span className="text-blue-200 text-[10px] uppercase">Realized P&L</span>
-          <span className={`font-mono font-bold text-sm ${realized >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+          <span className={`font-mono font-bold text-xs ${realized >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
             {realized >= 0 ? '+' : ''}৳{realized.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
         <div className="bg-white/10 rounded-lg px-3 py-2.5 flex justify-between items-center">
           <span className="text-blue-200 text-[10px] uppercase">Unrealized P&L</span>
-          <span className={`font-mono font-bold text-sm ${unrealized >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+          <span className={`font-mono font-bold text-xs ${unrealized >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
             {unrealized >= 0 ? '+' : ''}৳{unrealized.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div className="bg-white/15 rounded-lg px-3 py-2.5 flex justify-between items-center border border-white/10">
-          <span className="text-white text-[10px] uppercase font-semibold">Net Gain/Loss</span>
-          <span className={`font-mono font-bold text-base flex items-center gap-1 ${net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-            {net >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-            {net >= 0 ? '+' : ''}৳{Math.abs(net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
       </div>
 
-      <p className="text-blue-200 text-[10px] mb-4">*Simulated with Coins (1 Coin = 1 BDT, virtual currency for educational purposes)</p>
+      <p className="text-blue-200 text-[9px] mb-4">*Simulated currency for educational purposes</p>
       
       <button
         onClick={() => router.push('/coins')}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold text-sm transition-all duration-200 border border-white/30 hover:border-white/50"
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold text-xs transition-all border border-white/30"
       >
-        <span>+</span>
-        <span>Add Credit</span>
+        Add Credit
       </button>
     </div>
   );
