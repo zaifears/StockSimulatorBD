@@ -174,6 +174,10 @@ const nextConfig = {
       },
     ];
   },
+
+  env: {
+    NEXT_PUBLIC_IS_PREVIEW_MODE: process.env.IS_PREVIEW_MODE,
+  },
 };
 
 export default nextConfig;
