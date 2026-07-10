@@ -28,7 +28,7 @@ type TabType = 'market' | 'portfolio';
 export default function SimulatorTradePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { marketInfo, simulatorState, loading: simulatorLoading, transactionStatus, transactionMessage, executeTrade, isMarketOpen, resetTransaction, refreshMarketData } = useSimulator();
+  const { marketInfo, simulatorState, loading: simulatorLoading, transactionStatus, transactionMessage, executeTrade, isMarketOpen, resetTransaction, nextUpdateIn } = useSimulator();
   
   const modal = useTradeModal(executeTrade);
   const searchInputRef = useRef<HTMLInputElement>(null);
