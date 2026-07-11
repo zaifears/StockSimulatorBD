@@ -29,11 +29,36 @@ const MarketToolbar = forwardRef<HTMLDivElement, Props>(({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const searchWebMcpSchema = {
+    tools: [
+      {
+        name: "search_dse_ticker",
+        description: "Search the Dhaka Stock Exchange market directory by company name or ticker symbol.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The stock ticker symbol (e.g., GP) or company name to search for."
+            }
+          },
+          required: ["query"]
+        }
+      }
+    ]
+  };
+
   return (
     <div 
       ref={ref} 
       className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white/95 dark:bg-[#15191E]/95 backdrop-blur-xl p-3 sm:p-2.5 -mx-4 sm:mx-0 px-4 sm:px-2.5 rounded-none sm:rounded-2xl border-y sm:border border-gray-200 dark:border-gray-800 shadow-md sm:shadow-sm sticky top-16 z-40 sm:z-30"
     >
+      {/* WebMCP Schema Injection */}
+      <script 
+        type="application/webmcp+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(searchWebMcpSchema) }}
+      />
+
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <div className="flex items-center gap-1 sm:gap-2 h-12 sm:h-14 bg-gray-50 dark:bg-gray-900/50 p-1 sm:p-1.5 rounded-xl border border-gray-100 dark:border-gray-800/50">
           {(['market', 'portfolio'] as const).map(tab => (
@@ -69,20 +94,26 @@ const MarketToolbar = forwardRef<HTMLDivElement, Props>(({
         </div>
       </div>
 
-      <div className="relative h-10 sm:h-14 w-full sm:w-auto sm:flex-1 sm:max-w-xs sm:min-w-[180px] sm:ml-auto">
+      {/* Semantic Form for WebMCP Agent */}
+      <form 
+        onSubmit={(e) => e.preventDefault()}
+        className="relative h-10 sm:h-14 w-full sm:w-auto sm:flex-1 sm:max-w-xs sm:min-w-[180px] sm:ml-auto"
+      >
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 cursor-text" onClick={() => searchInputRef.current?.focus()}>
           <Search className="w-4 h-4 text-gray-400" />
         </div>
         <input
           ref={searchInputRef}
+          name="query"
           type="text"
           placeholder="Search companies..."
           value={searchInput}
           onChange={e => onSearchChange(e.target.value)}
+          aria-label="Search DSE Stocks"
           className="w-full h-full pl-9 sm:pl-10 pr-3 sm:pr-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium placeholder:text-gray-400"
         />
         {isPending && <div className="absolute inset-y-0 right-3 flex items-center text-[10px] font-semibold text-blue-500">Updating...</div>}
-      </div>
+      </form>
     </div>
   );
 });

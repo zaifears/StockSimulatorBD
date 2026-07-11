@@ -115,6 +115,27 @@ function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePass
         {/* Form */}
         {!success && (
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            {/* WebMCP Schema Injection */}
+            <script 
+              type="application/webmcp+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify({
+                tools: [
+                  {
+                    name: "change_password",
+                    description: "Change the user's account password.",
+                    parameters: {
+                      type: "object",
+                      properties: {
+                        current_password: { type: "string", description: "The user's current password" },
+                        new_password: { type: "string", description: "The new password (min 8 characters)" },
+                        confirm_password: { type: "string", description: "Confirmation of the new password" }
+                      },
+                      required: ["current_password", "new_password", "confirm_password"]
+                    }
+                  }
+                ]
+              }) }}
+            />
             {/* Current Password */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -122,6 +143,7 @@ function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePass
               </label>
               <div className="relative">
                 <input
+                  name="current_password"
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -148,6 +170,7 @@ function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePass
               </label>
               <div className="relative">
                 <input
+                  name="new_password"
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -198,6 +221,7 @@ function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePass
               </label>
               <div className="relative">
                 <input
+                  name="confirm_password"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

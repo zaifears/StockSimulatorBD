@@ -230,8 +230,40 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
     fetchCounts();
   }, [requests]); // Re-fetch when requests change (approve/reject updates snapshot)
 
+  const adminWebMcpSchema = {
+    tools: [
+      {
+        name: "approve_recharge",
+        description: "Approve a pending coin recharge request.",
+        parameters: {
+          type: "object",
+          properties: {
+            request_id: { type: "string", description: "The ID of the recharge request" }
+          },
+          required: ["request_id"]
+        }
+      },
+      {
+        name: "reject_recharge",
+        description: "Reject a pending coin recharge request.",
+        parameters: {
+          type: "object",
+          properties: {
+            request_id: { type: "string", description: "The ID of the recharge request" }
+          },
+          required: ["request_id"]
+        }
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen pt-24 px-4 pb-12 bg-gray-50/50 dark:bg-[#0a0a0a]">
+      {/* WebMCP Schema Injection */}
+      <script 
+        type="application/webmcp+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(adminWebMcpSchema) }}
+      />
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Success Toast */}
         {showSuccessToast && (
@@ -392,29 +424,35 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                   {/* Actions */}
                   {req.status === 'pending' && (
                     <div className="flex flex-row lg:flex-col gap-2 w-full lg:w-auto shrink-0">
-                      <button
-                        onClick={() => handleApprove(req.id, req.userId, req.coins, req.userName)}
-                        disabled={processing === req.id}
-                        className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {processing === req.id ? (
-                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        )}
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        onClick={() => handleReject(req.id, req.userName)}
-                        disabled={processing === req.id}
-                        className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-white dark:bg-transparent border border-gray-200 dark:border-gray-700 hover:border-red-500 hover:text-red-600 dark:hover:border-red-500/50 dark:hover:bg-red-500/10 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        <span>Reject</span>
-                      </button>
+                      <form className="flex-1 lg:flex-none flex" onSubmit={(e) => { e.preventDefault(); handleApprove(req.id, req.userId, req.coins, req.userName); }}>
+                        <input type="hidden" name="request_id" value={req.id} />
+                        <button
+                          type="submit"
+                          disabled={processing === req.id}
+                          className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {processing === req.id ? (
+                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          )}
+                          <span>Approve</span>
+                        </button>
+                      </form>
+                      <form className="flex-1 lg:flex-none flex" onSubmit={(e) => { e.preventDefault(); handleReject(req.id, req.userName); }}>
+                        <input type="hidden" name="request_id" value={req.id} />
+                        <button
+                          type="submit"
+                          disabled={processing === req.id}
+                          className="w-full flex items-center justify-center gap-2 bg-white dark:bg-transparent border border-gray-200 dark:border-gray-700 hover:border-red-500 hover:text-red-600 dark:hover:border-red-500/50 dark:hover:bg-red-500/10 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          <span>Reject</span>
+                        </button>
+                      </form>
                     </div>
                   )}
                 </div>

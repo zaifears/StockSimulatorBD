@@ -84,8 +84,26 @@ export default function EmailVerificationBanner() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const verificationWebMcpSchema = {
+    tools: [
+      {
+        name: "send_verification_email",
+        description: "Send or resend the email verification link to the user."
+      },
+      {
+        name: "check_verification_status",
+        description: "Refresh and check if the user has completed the email verification process."
+      }
+    ]
+  };
+
   return (
     <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-3 py-4 sm:px-6 fixed top-0 left-0 right-0 z-[100] shadow-lg">
+      {/* WebMCP Schema Injection */}
+      <script 
+        type="application/webmcp+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(verificationWebMcpSchema) }}
+      />
       <div className="max-w-6xl mx-auto">
         
         {/* 📱 MOBILE LAYOUT (default) */}
@@ -112,11 +130,12 @@ export default function EmailVerificationBanner() {
           
           {/* Mobile buttons - stacked */}
           <div className="space-y-2">
-            <button
-              onClick={handleSendVerification}
-              disabled={sending || !canResend}
-              className="w-full bg-white text-red-600 px-4 py-3 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            >
+            <form onSubmit={(e) => { e.preventDefault(); handleSendVerification(); }}>
+              <button
+                type="submit"
+                disabled={sending || !canResend}
+                className="w-full bg-white text-red-600 px-4 py-3 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
               {sending ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-spin">⏳</span>
@@ -133,13 +152,15 @@ export default function EmailVerificationBanner() {
                   <span>Send Verification Email</span>
                 </span>
               )}
-            </button>
+              </button>
+            </form>
             
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="w-full bg-red-800 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-red-900 transition-colors disabled:opacity-50 shadow-sm"
-            >
+            <form onSubmit={(e) => { e.preventDefault(); handleRefresh(); }}>
+              <button
+                type="submit"
+                disabled={refreshing}
+                className="w-full bg-red-800 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-red-900 transition-colors disabled:opacity-50 shadow-sm"
+              >
               {refreshing ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-spin">🔄</span>
@@ -151,7 +172,8 @@ export default function EmailVerificationBanner() {
                   <span>I Already Verified</span>
                 </span>
               )}
-            </button>
+              </button>
+            </form>
           </div>
         </div>
 
@@ -173,11 +195,12 @@ export default function EmailVerificationBanner() {
           </div>
           
           <div className="flex gap-3 flex-shrink-0">
-            <button
-              onClick={handleSendVerification}
-              disabled={sending || !canResend}
-              className="bg-white text-red-600 px-5 py-2.5 rounded-full font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-            >
+            <form onSubmit={(e) => { e.preventDefault(); handleSendVerification(); }}>
+              <button
+                type="submit"
+                disabled={sending || !canResend}
+                className="bg-white text-red-600 px-5 py-2.5 rounded-full font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
               {sending ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin">⏳</span>
@@ -188,14 +211,17 @@ export default function EmailVerificationBanner() {
               ) : (
                 '📧 Send Verification Email'
               )}
-            </button>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="bg-red-800 text-white px-5 py-2.5 rounded-full font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
+              </button>
+            </form>
+            <form onSubmit={(e) => { e.preventDefault(); handleRefresh(); }}>
+              <button
+                type="submit"
+                disabled={refreshing}
+                className="bg-red-800 text-white px-5 py-2.5 rounded-full font-semibold hover:bg-red-900 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
               {refreshing ? '🔄 Checking...' : '✅ I Verified'}
-            </button>
+              </button>
+            </form>
           </div>
         </div>
       </div>

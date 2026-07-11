@@ -24,8 +24,48 @@ const AuthForm: React.FC<AuthFormProps> = ({
 }) => {
   const inputClass = "w-full px-4 py-2 border rounded-md bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors";
   
+  const authWebMcpSchema = {
+    tools: isSignUp ? [
+      {
+        name: "register_user",
+        description: "Create a new user account.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Full name" },
+            email: { type: "string", description: "Email address" },
+            password: { type: "string", description: "Password" },
+            confirmPassword: { type: "string", description: "Password confirmation" },
+            phone: { type: "string", description: "Phone number (optional)" },
+            age: { type: "integer", description: "Age (optional)" },
+            status: { type: "string", description: "Current status (e.g., Student, Job)" }
+          },
+          required: ["name", "email", "password", "confirmPassword", "status"]
+        }
+      }
+    ] : [
+      {
+        name: "login_user",
+        description: "Log into an existing account.",
+        parameters: {
+          type: "object",
+          properties: {
+            email: { type: "string", description: "Email address" },
+            password: { type: "string", description: "Password" }
+          },
+          required: ["email", "password"]
+        }
+      }
+    ]
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* WebMCP Schema Injection */}
+      <script 
+        type="application/webmcp+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(authWebMcpSchema) }}
+      />
       {isSignUp && (
         <>
           <input

@@ -339,6 +339,26 @@ export default function CoinsPage() {
               </div>
 
               <form onSubmit={handleRechargeSubmit} className="space-y-8">
+                {/* WebMCP Schema Injection */}
+                <script 
+                  type="application/webmcp+json"
+                  dangerouslySetInnerHTML={{ __html: JSON.stringify({
+                    tools: [
+                      {
+                        name: "request_coin_recharge",
+                        description: "Submit a bKash transaction ID to request virtual coins.",
+                        parameters: {
+                          type: "object",
+                          properties: {
+                            amount: { type: "integer", description: "The amount in BDT sent via bKash" },
+                            trxId: { type: "string", description: "The bKash Transaction ID (5-20 alphanumeric characters)" }
+                          },
+                          required: ["amount", "trxId"]
+                        }
+                      }
+                    ]
+                  }) }}
+                />
                 {/* Amount Selector */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
@@ -374,6 +394,7 @@ export default function CoinsPage() {
                       <Minus className="w-5 h-5" />
                     </button>
                     <input
+                      name="amount"
                       type="number"
                       value={rechargeAmount}
                       onChange={(e) => {
@@ -409,6 +430,7 @@ export default function CoinsPage() {
                     bKash Transaction ID
                   </label>
                   <input
+                    name="trxId"
                     type="text"
                     value={trxId}
                     onChange={(e) => setTrxId(e.target.value)}

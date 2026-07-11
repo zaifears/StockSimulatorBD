@@ -43,13 +43,19 @@ function ProfileActions({
           </button>
         )}
         
-        <button 
-          onClick={onLogout} 
-          className="group flex items-center justify-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg border border-red-200 dark:border-red-800"
-        >
-          <LogoutIcon />
-          <span>Logout</span>
-        </button>
+        <form onSubmit={(e) => { e.preventDefault(); onLogout(); }}>
+          {/* WebMCP Schema Injection */}
+          <script type="application/webmcp+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            tools: [{ name: "logout_user", description: "Log out of the current account." }]
+          }) }} />
+          <button 
+            type="submit"
+            className="w-full group flex items-center justify-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg border border-red-200 dark:border-red-800"
+          >
+            <LogoutIcon />
+            <span>Logout</span>
+          </button>
+        </form>
       </div>
     );
   }
