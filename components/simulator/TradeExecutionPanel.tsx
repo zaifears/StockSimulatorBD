@@ -53,8 +53,27 @@ export default function TradeExecutionPanel({
     }
   };
 
+  const tradeWebMcpSchema = {
+    tools: [
+      {
+        name: "execute_paper_trade",
+        description: `Execute a buy or sell order for ${symbol} on the simulated market.`,
+        parameters: {
+          type: "object",
+          properties: {
+            trade_action: { type: "string", enum: ["BUY", "SELL"], description: "Whether to buy or sell the stock." },
+            quantity: { type: "integer", minimum: 1, description: "The number of shares to trade." }
+          },
+          required: ["trade_action", "quantity"]
+        }
+      }
+    ]
+  };
+
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+    <form onSubmit={(e) => e.preventDefault()} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+      {/* WebMCP Schema Injection */}
+      <script type="application/webmcp+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(tradeWebMcpSchema) }} />
       <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Execute Trade</h3>
       
       {/* ── Price & Holdings ── */}
@@ -104,6 +123,7 @@ export default function TradeExecutionPanel({
           </button>
           
           <input
+            name="quantity"
             type="number"
             min="1"
             value={quantity}
@@ -160,6 +180,8 @@ export default function TradeExecutionPanel({
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <button
+            name="trade_action"
+            value="BUY"
             type="button"
             onClick={() => handleTrade('BUY')}
             disabled={!canBuy || isInputDisabled}
@@ -169,6 +191,8 @@ export default function TradeExecutionPanel({
           </button>
           
           <button
+            name="trade_action"
+            value="SELL"
             type="button"
             onClick={() => handleTrade('SELL')}
             disabled={!canSell || isInputDisabled}
@@ -178,6 +202,6 @@ export default function TradeExecutionPanel({
           </button>
         </div>
       )}
-    </div>
+    </form>
   );
 }

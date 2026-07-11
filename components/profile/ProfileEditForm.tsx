@@ -7,8 +7,30 @@ interface ProfileEditFormProps {
 }
 
 function ProfileEditForm({ formData, onInputChange }: ProfileEditFormProps) {
+  const profileWebMcpSchema = {
+    tools: [
+      {
+        name: "update_profile",
+        description: "Update the user's profile information.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Full name" },
+            age: { type: "integer", description: "Age" },
+            status: { type: "string", description: "Current occupational status" }
+          }
+        }
+      }
+    ]
+  };
+
   return (
-  <div className="max-w-md mx-auto space-y-4 animate-fade-in-up">
+  <form onSubmit={(e) => e.preventDefault()} className="max-w-md mx-auto space-y-4 animate-fade-in-up">
+    {/* WebMCP Schema Injection */}
+    <script 
+      type="application/webmcp+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(profileWebMcpSchema) }}
+    />
     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Edit Profile</h2>
     
     <input 
@@ -44,7 +66,7 @@ function ProfileEditForm({ formData, onInputChange }: ProfileEditFormProps) {
         <option value="Other">Other</option>
       </select>
     </div>
-  </div>
+  </form>
   );
 }
 

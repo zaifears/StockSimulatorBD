@@ -69,8 +69,46 @@ export default function TradeModal({
   // Prevent internal clicks from closing the modal
   const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tradeSummary.isDisabled) {
+      onExecute();
+    }
+  };
+
+  const tradeWebMcpSchema = {
+    tools: [
+      {
+        name: "execute_paper_trade",
+        description: `Execute a buy or sell order for ${selectedStock} on the simulated market.`,
+        parameters: {
+          type: "object",
+          properties: {
+            trade_action: {
+              type: "string",
+              enum: ["buy", "sell"],
+              description: "Whether to buy or sell the stock."
+            },
+            quantity: {
+              type: "integer",
+              minimum: 1,
+              description: "The number of shares to trade."
+            }
+          },
+          required: ["trade_action", "quantity"]
+        }
+      }
+    ]
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+      
+      {/* WebMCP Schema Injection */}
+      <script 
+        type="application/webmcp+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(tradeWebMcpSchema) }}
+      />
       <div onClick={stopPropagation} className={`${
         transactionStatus === 'success' ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800/50'
         : transactionStatus === 'error' ? 'bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-950/30 dark:to-rose-900/20 border-rose-200 dark:border-rose-800/50'
@@ -96,7 +134,7 @@ export default function TradeModal({
             </button>
           </div>
         ) : (
-          <>
+          <form onSubmit={handleFormSubmit}>
             <div className={`px-4 sm:px-5 py-3 flex justify-between items-center border-b ${tradeType === 'buy' ? 'bg-emerald-500/20 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-800/50' : 'bg-rose-500/20 dark:bg-rose-500/10 border-rose-200 dark:border-rose-800/50'}`}>
               <div className="flex items-center gap-3">
                 <div>
@@ -113,15 +151,19 @@ export default function TradeModal({
                   </span>
                 )}
               </div>
-              <button onClick={onClose} aria-label="Close modal" title="Close" className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-full transition-colors flex-shrink-0">
+              <button type="button" onClick={onClose} aria-label="Close modal" title="Close" className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-full transition-colors flex-shrink-0">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
 
             <div className="p-4 sm:p-5 space-y-3">
+              
+              {/* Hidden semantic input for AI agent to interact with the Buy/Sell state */}
+              <input type="hidden" name="trade_action" value={tradeType} />
+
               <div className="grid grid-cols-2 gap-1.5 bg-white dark:bg-gray-900/30 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
-                <button onClick={() => setTradeType('buy')} className={`py-2 text-sm font-bold rounded-md transition-all ${tradeType === 'buy' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Buy</button>
-                <button onClick={() => setTradeType('sell')} className={`py-2 text-sm font-bold rounded-md transition-all ${tradeType === 'sell' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Sell</button>
+                <button type="button" onClick={() => setTradeType('buy')} className={`py-2 text-sm font-bold rounded-md transition-all ${tradeType === 'buy' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Buy</button>
+                <button type="button" onClick={() => setTradeType('sell')} className={`py-2 text-sm font-bold rounded-md transition-all ${tradeType === 'sell' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>Sell</button>
               </div>
 
               {tradeType === 'sell' && !tradeSummary.canSell && (
@@ -134,11 +176,12 @@ export default function TradeModal({
               <div>
                 <label htmlFor="trade-quantity" className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase mb-1.5">Quantity</label>
                 <div className="flex items-center gap-2">
-                  <button aria-label="Decrease quantity" onClick={() => { const nextQty = Math.max(1, (typeof tradeQuantity === 'number' ? tradeQuantity : 1) - 1); setTradeQuantity(nextQty); setTradeQuantityInput(String(nextQty)); }} disabled={tradeQuantity !== '' && tradeQuantity <= 1} className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0">
+                  <button type="button" aria-label="Decrease quantity" onClick={() => { const nextQty = Math.max(1, (typeof tradeQuantity === 'number' ? tradeQuantity : 1) - 1); setTradeQuantity(nextQty); setTradeQuantityInput(String(nextQty)); }} disabled={tradeQuantity !== '' && tradeQuantity <= 1} className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0">
                     <Minus className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                   </button>
                   <input 
                     id="trade-quantity" 
+                    name="quantity"
                     type="text" 
                     inputMode="numeric" 
                     pattern="[0-9]*" 
@@ -147,7 +190,7 @@ export default function TradeModal({
                     onBlur={() => { if (tradeQuantity === '' || tradeQuantity <= 0) { setTradeQuantity(1); setTradeQuantityInput('1'); } }}
                     className="flex-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-center text-lg font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   />
-                  <button aria-label="Increase quantity" onClick={() => { const nextQty = (typeof tradeQuantity === 'number' && tradeQuantity > 0 ? tradeQuantity : 0) + 1; setTradeQuantity(nextQty); setTradeQuantityInput(String(nextQty)); }} className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex-shrink-0">
+                  <button type="button" aria-label="Increase quantity" onClick={() => { const nextQty = (typeof tradeQuantity === 'number' && tradeQuantity > 0 ? tradeQuantity : 0) + 1; setTradeQuantity(nextQty); setTradeQuantityInput(String(nextQty)); }} className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 flex-shrink-0">
                     <Plus className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                   </button>
                 </div>
@@ -172,11 +215,11 @@ export default function TradeModal({
             </div>
 
             <div className="px-4 sm:px-5 py-4 sm:py-3 border-t border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/20 pb-safe pb-8 sm:pb-3">
-              <button onClick={onExecute} disabled={tradeSummary.isDisabled} className={`w-full py-2.5 rounded-xl text-white font-bold text-sm shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-2 ${!marketOpen ? 'bg-gray-400 cursor-not-allowed' : tradeSummary.isDisabled ? 'bg-gray-400 cursor-not-allowed opacity-60' : tradeType === 'buy' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 shadow-rose-500/30'}`}>
+              <button type="submit" disabled={tradeSummary.isDisabled} className={`w-full py-2.5 rounded-xl text-white font-bold text-sm shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-2 ${!marketOpen ? 'bg-gray-400 cursor-not-allowed' : tradeSummary.isDisabled ? 'bg-gray-400 cursor-not-allowed opacity-60' : tradeType === 'buy' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 shadow-rose-500/30'}`}>
                 {transactionStatus === 'processing' ? <RefreshCw className="w-4 h-4 animate-spin" /> : tradeType === 'buy' ? 'Confirm Buy' : 'Confirm Sell'}
               </button>
             </div>
-          </>
+          </form>
         )}
       </div>
     </div>
