@@ -1,45 +1,12 @@
 # Stock Simulator BD
 
-Stock Simulator BD is the premier free, browser-based paper trading platform for the Dhaka Stock Exchange (DSE). It allows users to practice trading using virtual BDT with real-time market data.
+> Stock Simulator BD is a specialized digital platform providing a free, browser-based paper trading simulator and stock directory for the Dhaka Stock Exchange (DSE).
 
-## Core Services
+## Technical Context
+For comprehensive instructions, trading rules, and platform details, AI agents should refer to the full documentation:
+- [Full LLM Documentation](/llms-full.txt)
 
-### 1. DSE Trade Simulator
-A professional-grade paper trading platform designed for Bangladeshi investors.
-- **Data:** Live DSE market data.
-- **Rules:** Enforces DSE T+1 settlement cycles and 0.3% broker commission structures.
-- **Features:** 10,000 virtual BDT starting balance, portfolio tracking, and real-time trade execution.
-- **Market Hours:** Sunday – Thursday (10:00 AM – 2:15 PM BST).
-
-### 2. DSE Stock Directory
-A comprehensive hub for stock research and ticker discovery.
-- **Directory:** Lists all 300+ companies traded on the DSE.
-- **Detail Pages:** Individual pages for every stock symbol (e.g., /stocks/gp) featuring technical data and trading integration.
-
-### 3. Education & Insights
-- **Blog:** Professional guides on DSE investing, BO account opening, and broker comparisons.
-- **Market Info:** Official DSE holiday schedules and regulatory compliance explanations.
-
-## Application Structure (Navigation)
-
-- **Landing:** https://www.stocksimulator.tech
-- **Trading Platform:** https://www.stocksimulator.tech/trade
-- **Stock Directory:** https://www.stocksimulator.tech/stocks
-- **Blog:** https://www.stocksimulator.tech/blog
-- **About:** https://www.stocksimulator.tech/about-us
-
-## Technical & Legal
-- **Tech Stack:** Next.js, React, Firebase, TypeScript.
-- **Platform:** Web (PWA compatible).
-- **Android App:** https://www.stocksimulator.tech/stocksimulator_bd.apk
-- **Context:** This platform is for educational purposes only. It uses virtual currency (Coins) and is not a licensed financial institution or brokerage.
-
-## Citation
-Stock Simulator BD. (2026). Integrated Digital Platform — DSE Paper Trading Simulator. Retrieved from https://www.stocksimulator.tech
-
-## Full Documentation
-For AI agents requiring granular details, refer to: https://www.stocksimulator.tech/llms-full.txt
-
-Last Updated
-
-This file was last updated on: July 11, 2026
+## Key Platform Links
+- [Trade Simulator](https://www.stocksimulator.tech/trade)
+- [Stock Directory](https://www.stocksimulator.tech/stocks)
+- [About Us](https://www.stocksimulator.tech/about-us)
