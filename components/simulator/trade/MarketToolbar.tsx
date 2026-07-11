@@ -22,7 +22,7 @@ export default function MarketToolbar({ activeTab, onTabChange, marketOpen, next
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white/95 dark:bg-[#15191E]/95 backdrop-blur-xl p-3 sm:p-2.5 -mx-4 sm:mx-0 px-4 sm:px-2.5 rounded-none sm:rounded-2xl border-y sm:border border-gray-200 dark:border-gray-800 shadow-md sm:shadow-sm sticky top-[var(--navbar-height)] z-40 sm:z-30">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white/95 dark:bg-[#15191E]/95 backdrop-blur-xl p-3 sm:p-2.5 -mx-4 sm:mx-0 px-4 sm:px-2.5 rounded-none sm:rounded-2xl border-y sm:border border-gray-200 dark:border-gray-800 shadow-md sm:shadow-sm sticky top-16 z-40 sm:z-30">
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <div className="flex items-center gap-1 sm:gap-2 h-12 sm:h-14 bg-gray-50 dark:bg-gray-900/50 p-1 sm:p-1.5 rounded-xl border border-gray-100 dark:border-gray-800/50">
           {(['market', 'portfolio'] as const).map(tab => (
