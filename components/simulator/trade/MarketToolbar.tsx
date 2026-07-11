@@ -1,4 +1,4 @@
-import React, { RefObject } from 'react';
+import React, { RefObject, forwardRef } from 'react';
 import { Search, Activity, Briefcase, Clock } from 'lucide-react';
 
 interface Props {
@@ -12,9 +12,17 @@ interface Props {
   isPending: boolean;
 }
 
-export default function MarketToolbar({ activeTab, onTabChange, marketOpen, nextUpdateIn, searchInput, onSearchChange, searchInputRef, isPending }: Props) {
+const MarketToolbar = forwardRef<HTMLDivElement, Props>(({ 
+  activeTab, 
+  onTabChange, 
+  marketOpen, 
+  nextUpdateIn, 
+  searchInput, 
+  onSearchChange, 
+  searchInputRef, 
+  isPending 
+}, ref) => {
   
-  // Format MM:SS for the UI
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -22,7 +30,10 @@ export default function MarketToolbar({ activeTab, onTabChange, marketOpen, next
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white/95 dark:bg-[#15191E]/95 backdrop-blur-xl p-3 sm:p-2.5 -mx-4 sm:mx-0 px-4 sm:px-2.5 rounded-none sm:rounded-2xl border-y sm:border border-gray-200 dark:border-gray-800 shadow-md sm:shadow-sm sticky top-16 z-40 sm:z-30">
+    <div 
+      ref={ref} 
+      className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white/95 dark:bg-[#15191E]/95 backdrop-blur-xl p-3 sm:p-2.5 -mx-4 sm:mx-0 px-4 sm:px-2.5 rounded-none sm:rounded-2xl border-y sm:border border-gray-200 dark:border-gray-800 shadow-md sm:shadow-sm sticky top-16 z-40 sm:z-30"
+    >
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <div className="flex items-center gap-1 sm:gap-2 h-12 sm:h-14 bg-gray-50 dark:bg-gray-900/50 p-1 sm:p-1.5 rounded-xl border border-gray-100 dark:border-gray-800/50">
           {(['market', 'portfolio'] as const).map(tab => (
@@ -36,7 +47,7 @@ export default function MarketToolbar({ activeTab, onTabChange, marketOpen, next
               }`}
             >
               {tab === 'market' ? <Activity className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
-              <span className="capitalize hidden sm:inline">{tab}</span>
+              <span className="capitalize text-[10px] sm:text-sm">{tab}</span>
             </button>
           ))}
         </div>
@@ -74,4 +85,7 @@ export default function MarketToolbar({ activeTab, onTabChange, marketOpen, next
       </div>
     </div>
   );
-}
+});
+
+MarketToolbar.displayName = 'MarketToolbar';
+export default MarketToolbar;

@@ -5,69 +5,38 @@ module.exports = {
   autoLastmod: true,
   outDir: './public',
   
-  // Include main pages and feature pages
+  // Keep this empty. Dynamic routes (/stocks/[stock]) are handled by your server-sitemap.xml
   additionalPaths: async (config) => {
-    return [
-      {
-        loc: '/simulator/trade',
-        changefreq: 'weekly',
-        priority: 0.95,
-        lastmod: new Date().toISOString(),
-      },
-      {
-        loc: '/go',
-        changefreq: 'weekly',
-        priority: 0.7,
-        lastmod: new Date().toISOString(),
-      },
-      {
-        loc: '/about-us',
-        changefreq: 'monthly',
-        priority: 0.6,
-        lastmod: new Date().toISOString(),
-      },
-      {
-        loc: '/profile',
-        changefreq: 'weekly',
-        priority: 0.5,
-        lastmod: new Date().toISOString(),
-      },
-      {
-        loc: '/coins',
-        changefreq: 'weekly',
-        priority: 0.7,
-        lastmod: new Date().toISOString(),
-      },
-    ]
+    return []
   },
 
   robotsTxtOptions: {
     policies: [
       {
         userAgent: '*',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'],
+        allow: ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'],
         disallow: ['/api/', '/_next/'],
       },
       {
         userAgent: 'Googlebot',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'],
+        allow: ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'],
         disallow: ['/api/', '/_next/'],
       },
       {
         userAgent: 'Bingbot',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'],
+        allow: ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'],
       },
       {
         userAgent: 'GPTBot',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'],
+        allow: ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'],
       },
       {
         userAgent: 'CCBot',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'],
+        allow: ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'],
       },
       {
         userAgent: 'anthropic-ai',
-        allow: ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'],
+        allow: ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'],
       },
     ],
     additionalSitemaps: [
@@ -83,37 +52,35 @@ module.exports = {
   ],
 
   transform: async (config, path) => {
-    // Allow these pages in the sitemap
-    const allowedPaths = ['/', '/simulator', '/simulator/trade', '/go', '/about-us', '/profile', '/coins'];
+    const allowedPaths = ['/', '/trade', '/stocks', '/about-us', '/blog', '/profile', '/coins'];
     
     if (!allowedPaths.includes(path)) {
-      return null; // Exclude this path from sitemap
+      return null;
     }
 
-    // Custom transform for allowed pages only
     const priorities = {
       '/': 1.0,
-      '/simulator': 0.95,
-      '/simulator/trade': 0.95,
-      '/go': 0.7,
-      '/about-us': 0.6,
+      '/trade': 0.95,
+      '/stocks': 0.9,
+      '/about-us': 0.9,
+      '/blog': 0.9,
+      '/coins': 0.7,
       '/profile': 0.5,
-      '/coins': 0.5,
     };
 
     const changefreqs = {
-      '/': 'daily',
-      '/simulator': 'weekly',
-      '/simulator/trade': 'weekly',
-      '/go': 'weekly',
+      '/': 'weekly',
+      '/trade': 'monthly',
+      '/stocks': 'weekly', 
       '/about-us': 'monthly',
-      '/profile': 'weekly',
-      '/coins': 'weekly',
+      '/blog': 'monthly',
+      '/coins': 'monthly',
+      '/profile': 'monthly',
     };
 
     return {
       loc: path,
-      changefreq: changefreqs[path] || 'weekly',
+      changefreq: changefreqs[path] || 'monthly',
       priority: priorities[path] || 0.5,
       lastmod: config.autoLastmod ? new Date().toISOString() : undefined,
       alternateRefs: config.alternateRefs ?? [],

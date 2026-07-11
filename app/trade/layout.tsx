@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DSE Stock Simulator | Stock Simulator BD - Practice Trading Risk-Free',
     description: 'Practice trading Dhaka Stock Exchange stocks with virtual currency. Real-time market data, 0.3% commission, T+1 settlement rules. No real money involved.',
-    url: 'https://www.stocksimulator.tech/simulator',
+    url: 'https://www.stocksimulator.tech/trade',
     type: 'website',
     images: [
       {

@@ -14,39 +14,24 @@ const PAGE_FILE_PATTERN = /^page\.(tsx|ts|jsx|js|mdx)$/i;
 
 async function collectBlogRoutes(dir: string, segments: string[] = []): Promise<string[]> {
   let entries: Dirent<string>[] = [];
-
   try {
     entries = await readdir(dir, { withFileTypes: true, encoding: 'utf8' });
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 
   const routes: string[] = [];
-
   for (const entry of entries) {
     if (entry.isFile() && PAGE_FILE_PATTERN.test(entry.name)) {
       const suffix = segments.join('/');
       routes.push(suffix ? `/blog/${suffix}` : '/blog');
     }
   }
-
   for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    // Skip dynamic and parallel routes because they need explicit params.
-    if (entry.name.startsWith('[') || entry.name.startsWith('@')) {
-      continue;
-    }
-
-    // Route groups are not part of the URL path.
+    if (!entry.isDirectory() || entry.name.startsWith('[') || entry.name.startsWith('@')) continue;
     const isRouteGroup = entry.name.startsWith('(') && entry.name.endsWith(')');
     const nextSegments = isRouteGroup ? segments : [...segments, entry.name];
     const nestedRoutes = await collectBlogRoutes(path.join(dir, entry.name), nextSegments);
     routes.push(...nestedRoutes);
   }
-
   return routes;
 }
 
@@ -69,16 +54,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: withBaseUrl('/simulator'),
+      url: withBaseUrl('/trade'),
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.95,
     },
     {
-      url: withBaseUrl('/go'),
+      url: withBaseUrl('/stocks'),
       lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.7,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    // Add this inside the staticRoutes array in app/sitemap.ts
+    {
+      url: withBaseUrl('/stocks'),
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.9, // High priority hub page
     },
     {
       url: withBaseUrl('/about-us'),

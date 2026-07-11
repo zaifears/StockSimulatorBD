@@ -9,7 +9,7 @@ import ProfileEditForm from '../../components/profile/ProfileEditForm';
 import ProfileActions from '../../components/profile/ProfileActions';
 import ChangePasswordForm from '../../components/profile/ChangePasswordForm';
 import CoinDisplay from '@/components/ui/CoinDisplay';
-import BouncingBalls from '@/components/shared/BouncingBalls';
+import { Wallet, ChevronRight } from 'lucide-react';
 
 export default function ProfilePage() {
   const { 
@@ -24,7 +24,7 @@ export default function ProfilePage() {
     handleEdit, 
     handleCancel,
     handleChangePassword,
-    hasPassword  // ✅ NEW: Check if user has password
+    hasPassword  // ✅ Check if user has password
   } = useProfile();
 
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -34,89 +34,104 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-950 dark:via-black dark:to-blue-950/30 overflow-x-hidden relative">
+    <main className="min-h-screen flex flex-col w-full bg-white dark:bg-[#090E17] transition-colors duration-300 pb-safe overflow-x-hidden text-gray-800 dark:text-gray-200">
       
-      {/* Bouncing Balls Background */}
-      <BouncingBalls variant="default" />
+      {/* ✅ MODERN GRID BACKGROUND & GLOWS */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,#3b82f615_1px,transparent_1px),linear-gradient(to_bottom,#3b82f615_1px,transparent_1px)] pointer-events-none z-0"></div>
+      
+      <div className="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-[300px] bg-blue-500/10 dark:bg-blue-600/15 blur-[100px] rounded-full"></div>
+        <div className="absolute top-40 right-10 w-64 h-64 bg-purple-500/10 dark:bg-purple-600/10 rounded-full blur-[100px]"></div>
+      </div>
 
-      <div className="relative z-10">
-        {/* Header */}
+      <div className="relative z-10 flex-1">
+        {/* Header Meta */}
         <ProfileHeader />
 
         {/* Main Content - Mobile Optimized */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-          <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 overflow-hidden">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 md:pt-32 md:pb-24 animate-fade-in-up">
+          
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              Your <span className="text-blue-600 dark:text-blue-400">Profile</span>
+            </h1>
+          </div>
+
+          <div className="bg-white/80 dark:bg-[#1A1F26]/90 backdrop-blur-xl rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
             
-            {/* Mobile-Optimized Coin Display Section */}
-            <div className="bg-gradient-to-r from-yellow-400/10 via-orange-400/10 to-yellow-500/10 dark:from-yellow-500/20 dark:via-orange-500/20 dark:to-yellow-600/20 p-4 sm:p-6 lg:p-8 border-b border-gray-200/50 dark:border-gray-800/50">
-              
-              {/* Mobile: Stack vertically, Desktop: Side by side */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* ✅ PREMIUM COIN WIDGET SECTION */}
+            <div className="bg-amber-50/50 dark:bg-amber-500/5 p-5 sm:p-8 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
                 
                 {/* Left side - Title */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1 sm:mb-2">
-                    Your StockSimulatorBD Coins
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    Manage your AI feature usage
-                  </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-100 dark:bg-amber-500/20 rounded-xl flex items-center justify-center border border-amber-200 dark:border-amber-500/30 flex-shrink-0">
+                    <Wallet className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-0.5">
+                      StockSimBD Coins
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                      Your simulator balance
+                    </p>
+                  </div>
                 </div>
                 
                 {/* Right side - Coin display and button */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 flex-shrink-0">
-                  {/* Mobile-optimized coin display */}
-                  <div className="flex items-center">
+                <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 bg-white dark:bg-[#111418] p-3 sm:p-2 sm:pr-2 sm:pl-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                  <div className="flex items-center shrink-0">
                     <CoinDisplay 
                       className="flex" 
-                      size="small"
+                      size="default"
                       showLabel={false}
                     />
                   </div>
                   
-                  {/* Mobile-friendly button */}
                   <button
                     onClick={() => window.location.href = '/coins'}
-                    className="px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg text-xs sm:text-sm whitespace-nowrap"
+                    className="flex items-center gap-1 px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all duration-200 shadow-md shadow-blue-500/20 text-xs sm:text-sm whitespace-nowrap active:scale-95"
                   >
-                    View Details
+                    Manage <ChevronRight className="w-4 h-4 hidden sm:block" />
                   </button>
                 </div>
+
               </div>
             </div>
             
-            {/* Mobile-Optimized Profile Header */}
-            <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:via-purple-500/20 dark:to-indigo-500/20 p-6 sm:p-8 lg:p-12 text-center border-b border-gray-200/50 dark:border-gray-800/50">
+            {/* ✅ PROFILE AVATAR SECTION */}
+            <div className="p-8 sm:p-12 text-center border-b border-gray-100 dark:border-gray-800 relative overflow-hidden">
               
-              {/* Mobile-Responsive Profile Picture */}
-              <div className="relative inline-block mb-4 sm:mb-6">
-                <div className="w-20 h-20 sm:w-28 sm:h-28 lg:w-32 lg:h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-1 shadow-xl">
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <div className="relative inline-block mb-2">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full p-2 shadow-inner border border-blue-100 dark:border-blue-800/50">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                    <svg className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-white" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500 rounded-full border-2 sm:border-4 border-white dark:border-gray-900 flex items-center justify-center">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
-                </div>
+                {/* Online Status Dot */}
+                <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-emerald-500 rounded-full border-4 border-white dark:border-[#1A1F26] flex items-center justify-center shadow-sm"></div>
               </div>
 
-              {/* Mobile-Optimized Content */}
-              <div className="max-w-md mx-auto">
-                {!isEditing ? (
-                  <ProfileDisplay user={user} profile={profile} />
-                ) : (
-                  <ProfileEditForm 
-                    formData={formData} 
-                    onInputChange={handleInputChange} 
-                  />
-                )}
-              </div>
             </div>
 
-            {/* Mobile-Optimized Action Buttons */}
-            <div className="p-4 sm:p-6 lg:p-8">
+            {/* ✅ UPDATED: Enforce centering for all inner components */}
+            <div className="p-6 sm:p-8 lg:p-10 max-w-2xl mx-auto flex flex-col items-center justify-center text-center">
+              
+              {!isEditing ? (
+                <ProfileDisplay user={user} profile={profile} />
+              ) : (
+                <ProfileEditForm 
+                  formData={formData} 
+                  onInputChange={handleInputChange} 
+                />
+              )}
+              
+            </div>
+
+            {/* ✅ ACTION BUTTONS (Footer of Card) */}
+            <div className="bg-gray-50 dark:bg-[#111418] p-6 sm:p-8 border-t border-gray-100 dark:border-gray-800">
               <ProfileActions 
                 isEditing={isEditing}
                 onEdit={handleEdit}
@@ -124,9 +139,10 @@ export default function ProfilePage() {
                 onCancel={handleCancel}
                 onSave={handleSave}
                 onChangePassword={() => setShowChangePasswordModal(true)}
-                hasPassword={hasPassword}  // ✅ NEW: Only show password button if user has password
+                hasPassword={hasPassword}
               />
             </div>
+
           </div>
         </div>
       </div>
@@ -151,7 +167,7 @@ export default function ProfilePage() {
         @keyframes fade-in-up {
           from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(20px);
           }
           to {
             opacity: 1;
@@ -159,9 +175,9 @@ export default function ProfilePage() {
           }
         }
         .animate-fade-in-up {
-          animation: fade-in-up 0.8s ease-out forwards;
+          animation: fade-in-up 0.6s ease-out forwards;
         }
       `}</style>
-    </div>
+    </main>
   );
 }
