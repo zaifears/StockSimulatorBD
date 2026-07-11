@@ -8,7 +8,6 @@ interface FooterLink {
   label: string;
   href: string;
   external?: boolean;
-  underlined?: boolean;
   icon?: React.ReactNode;
 }
 
@@ -27,7 +26,7 @@ const FOOTER_LINKS: FooterSection = {
       label: 'Facebook',
       href: 'https://www.facebook.com/stocksimbd',
       external: true,
-      icon: <Facebook size={18} />,
+      icon: <Facebook size={16} />,
     },
   ],
 };
@@ -36,43 +35,42 @@ const Footer = memo(function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-gray-200/50 dark:border-gray-800/50 pt-10 mt-16 bg-white/30 dark:bg-black/30 backdrop-blur-sm rounded-t-3xl">
-      <div className="max-w-5xl mx-auto px-4 pb-6 flex flex-col md:flex-row gap-6 md:gap-12 items-start justify-between">
+    <footer className="w-full bg-white dark:bg-[#090E17] pt-16 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row gap-12 items-start justify-between">
 
         {/* Logo and About */}
-        <div className="flex flex-col gap-3 min-w-[150px]">
-          <div className="relative">
+        <div className="flex flex-col gap-4 max-w-xs">
+          <div className="flex items-center gap-3">
             <Image
               src="/favicon.svg"
-              alt="Stock Simulator BD"
-              width={56}
-              height={56}
-              className="mb-2 transform hover:scale-110 transition-transform duration-300"
+              alt="Stock Simulator BD Logo"
+              width={40}
+              height={40}
+              className="transform hover:scale-105 transition-transform duration-300"
             />
-            <div className="absolute -inset-2 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-lg opacity-0 hover:opacity-100 transition-opacity duration-300" />
+            <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+              StockSim<span className="text-blue-600 dark:text-blue-400">BD</span>
+            </span>
           </div>
-          <span className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Stock Simulator BD
-          </span>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed">
-            Empowering students with Stock market knowledge.
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Empowering students with risk-free stock market knowledge and a realistic DSE trading experience.
           </p>
         </div>
 
         {/* Footer Links Wrapper */}
-        <div className="flex gap-12 justify-center flex-1">
-
+        <div className="flex gap-16 sm:gap-24">
+          
           {/* Useful Links */}
           <div>
-            <p className="text-md font-bold text-gray-800 dark:text-white mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Useful Links
-            </p>
-            <ul className="flex flex-col gap-1 text-gray-500 dark:text-gray-400 text-sm">
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
+              Platform
+            </h4>
+            <ul className="flex flex-col gap-3 text-sm">
               {FOOTER_LINKS.useful.map((link) => (
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-300"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 font-medium"
                   >
                     {link.label}
                   </a>
@@ -83,39 +81,40 @@ const Footer = memo(function Footer() {
 
           {/* Social Links */}
           <div>
-            <p className="text-md font-bold text-gray-800 dark:text-white mb-3 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
               Connect
-            </p>
-            <ul className="flex flex-col gap-2 text-gray-500 dark:text-gray-400 text-sm">
+            </h4>
+            <ul className="flex flex-col gap-3 text-sm">
               {FOOTER_LINKS.social.map((link) => (
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
+                    target={link.external ? "_blank" : undefined}
+                    rel={link.external ? "noopener noreferrer" : undefined}
+                    className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 font-medium"
                   >
-                    {link.icon} {link.label}
+                    <span className="text-gray-400 dark:text-gray-500">{link.icon}</span> 
+                    {link.label}
                   </a>
                 </li>
               ))}
             </ul>
           </div>
-
         </div>
       </div>
 
-      <div className="text-center my-4 py-4 border-t border-gray-200/30 dark:border-gray-700/30">
-        <span className="text-xs text-gray-400 dark:text-gray-600">
+      {/* Bottom Copyright Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-16 pt-8 border-t border-gray-100 dark:border-gray-800/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <span className="text-xs text-gray-500 dark:text-gray-500">
           &copy; {currentYear} Stock Simulator BD. All rights reserved.
         </span>
-        <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-500">
           Created by{' '}
           <a
             href="https://shahoriar.bd"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-purple-500 transition-colors duration-300"
+            className="font-medium text-gray-700 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Md Al Shahoriar Hossain
           </a>

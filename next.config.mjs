@@ -7,14 +7,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['react-icons'],
   },
-  
-  // Turbopack configuration for Next.js 16
-  turbopack: {
-    resolveAlias: {
-      '@': './src',
-    },
-  },
-  
+    
   // Optimize images
   images: {
     formats: ['image/webp', 'image/avif'],
@@ -36,6 +29,22 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'],
     } : false,
+  },
+
+  // Set up 301 Permanent Redirects for SEO and legacy links
+  async redirects() {
+    return [
+      {
+        source: '/simulator/trade',
+        destination: '/trade',
+        permanent: true, // 301 Redirect
+      },
+      {
+        source: '/simulator',
+        destination: '/',
+        permanent: true, // 301 Redirect
+      },
+    ];
   },
 
   // Fixed HTTP headers with correct regex
@@ -173,6 +182,10 @@ const nextConfig = {
         destination: '/site.webmanifest',
       },
     ];
+  },
+
+  env: {
+    NEXT_PUBLIC_IS_PREVIEW_MODE: process.env.IS_PREVIEW_MODE,
   },
 };
 

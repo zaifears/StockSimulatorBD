@@ -249,6 +249,12 @@ export const useSimulator = () => {
   };
 
   const isMarketOpen = useCallback(() => {
+    // 1. Force Open if we are in the Preview Environment
+    if (process.env.NEXT_PUBLIC_IS_PREVIEW_MODE === 'true') {
+      return true;
+    }
+
+    // 2. Standard Production Logic
     const now = new Date();
     const bdTime = new Date(now.getTime() + (6 * 60 * 60 * 1000));
     const hour = bdTime.getUTCHours();

@@ -14,7 +14,6 @@ import { Activity, Briefcase, Search, ChevronUp } from 'lucide-react';
 // Extracted Components
 import MarketToolbar from '@/components/simulator/trade/MarketToolbar';
 import AccountSummaryCard from '@/components/simulator/trade/AccountSummaryCard';
-import MarketRulesCard from '@/components/simulator/trade/MarketRulesCard';
 import StockRow from '@/components/simulator/trade/StockRow';
 import StockCardMobile from '@/components/simulator/trade/StockCardMobile';
 import TradeModal from '@/components/simulator/trade/TradeModal';
@@ -28,10 +27,11 @@ type TabType = 'market' | 'portfolio';
 export default function SimulatorTradePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { marketInfo, simulatorState, loading: simulatorLoading, transactionStatus, transactionMessage, executeTrade, isMarketOpen, resetTransaction, refreshMarketData } = useSimulator();
+  const { marketInfo, simulatorState, loading: simulatorLoading, transactionStatus, transactionMessage, executeTrade, isMarketOpen, resetTransaction, nextUpdateIn } = useSimulator();
   
   const modal = useTradeModal(executeTrade);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const toolbarAnchorRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -86,6 +86,13 @@ export default function SimulatorTradePage() {
 
   const handleTabChange = useCallback((tab: TabType) => {
     startTransition(() => { setActiveTab(tab); setVisibleCount(50); });
+    
+    if (toolbarAnchorRef.current) {
+      const rect = toolbarAnchorRef.current.getBoundingClientRect();
+      if (rect.top < 80) {
+        toolbarAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   }, []);
 
   const marketOpen = isMarketOpen();
@@ -149,6 +156,7 @@ export default function SimulatorTradePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-4 order-last lg:order-first">
+            <div ref={toolbarAnchorRef} className="scroll-mt-24" aria-hidden="true" />
             <MarketToolbar 
                activeTab={activeTab} onTabChange={handleTabChange} marketOpen={marketOpen} 
                nextUpdateIn={nextUpdateIn} searchInput={searchInput} onSearchChange={setSearchInput} 
@@ -237,7 +245,6 @@ export default function SimulatorTradePage() {
           <div className="lg:col-span-4 space-y-6 order-first lg:order-last">
             <AccountSummaryCard simulatorState={simulatorState} marketOpen={marketOpen} />
             <MarketCalendar holidays={holidays} />
-            <MarketRulesCard />
           </div>
         </div>
       </div>

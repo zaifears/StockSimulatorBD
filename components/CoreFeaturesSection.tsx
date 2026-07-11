@@ -1,42 +1,79 @@
-'use client';
+import React from 'react';
+import { TrendingUp, BarChart2, ShieldCheck, Clock, Users, Zap } from 'lucide-react';
 
-import React, { memo } from 'react';
-import Link from 'next/link';
+const features = [
+  {
+    icon: <BarChart2 className="w-6 h-6 text-blue-500" />,
+    title: 'Real Market Data',
+    description: 'Trade with actual DSE stock prices and live market conditions.'
+  },
+  {
+    icon: <ShieldCheck className="w-6 h-6 text-emerald-500" />,
+    title: 'Zero Risk Learning',
+    description: 'Practice without losing real money. Build skills from scratch.'
+  },
+  {
+    icon: <Clock className="w-6 h-6 text-amber-500" />,
+    title: 'Realistic Rules',
+    description: 'Enforces T+1 limits and authentic 0.4% broker commissions.'
+  },
+  {
+    icon: <TrendingUp className="w-6 h-6 text-indigo-500" />,
+    title: 'Portfolio Tracking',
+    description: 'Monitor your realized and unrealized P&L in real-time.'
+  }
+];
 
-const CoreFeaturesSection = memo(() => (
-  <section className="py-20 relative">
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 box-border">
-      <h2 className="sr-only">The Most Accurate Dhaka Stock Exchange Simulator Features</h2>
-      <div className="mt-0 pt-0">
+const stats = [
+  { value: '৳10K+', label: 'Virtual Capital' },
+  { value: '300+', label: 'Tradable Stocks' },
+  { value: 'Live', label: 'Market Hours' },
+];
 
-        <div className="grid grid-cols-1 max-w-2xl mx-auto gap-4 sm:gap-6">
-          {/* Simulator Card */}
-          <Link 
-            href="/simulator"
-            aria-label="Open DSE trading simulator"
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-6 sm:p-8 hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-            <div className="relative z-10">
-              <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">📈</div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-3">Dhaka Stock Exchange Paper Trading Simulator</h3>
-              <p className="text-white/90 text-xs sm:text-sm mb-4">
-                Practice stock trading risk-free with real market data. Learn before you trade.
-              </p>
-              <div className="flex items-center text-white font-semibold text-xs sm:text-sm group-hover:translate-x-1 transition-transform">
-                <span>Launch Simulator</span>
-                <svg className="w-4 h-4 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </div>
-            </div>
-          </Link>
-        </div>
+export default function CoreFeaturesSection() {
+  return (
+    <section className="w-full bg-gray-50 dark:bg-[#111418] py-16 sm:py-24 border-y border-gray-100 dark:border-gray-800/60">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         
-      </div>
-    </div>
-  </section>
-));
-CoreFeaturesSection.displayName = 'CoreFeaturesSection';
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          {/* Left Side: Text */}
+          <div className="flex-1 text-center lg:text-left">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-6">
+              Master Trading <br className="hidden lg:block" />
+              <span className="text-blue-600 dark:text-blue-400">with Simulator</span>
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg mb-8 max-w-xl mx-auto lg:mx-0">
+              Practice stock trading in a risk-free environment. Learn market dynamics, test strategies, and build confidence before investing your own capital.
+            </p>
+            
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-4 sm:gap-6 border-t border-gray-200 dark:border-gray-800 pt-8">
+              {stats.map((stat, idx) => (
+                <div key={idx} className="text-center lg:text-left">
+                  <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{stat.value}</div>
+                  <div className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-export default CoreFeaturesSection;
+          {/* Right Side: Feature Grid */}
+          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {features.map((feat, idx) => (
+              <div key={idx} className="bg-white dark:bg-[#1A1F26] p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center mb-4">
+                  {feat.icon}
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{feat.title}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {feat.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}
