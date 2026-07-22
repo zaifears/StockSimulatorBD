@@ -342,7 +342,7 @@ export const changePassword = async (
     // Update to new password
     await updatePassword(user, newPassword);
   } catch (error: any) {
-    if (error.code === 'auth/wrong-password') {
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
       throw new Error('Current password is incorrect');
     } else if (error.code === 'auth/weak-password') {
       throw new Error('New password is too weak. Use at least 8 characters');
