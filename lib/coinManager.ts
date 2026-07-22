@@ -45,30 +45,23 @@ export class CoinManager {
       if (currentUser && currentUser.uid === userId) {
         const userDocRef = doc(db, 'users', userId);
         
-        // Determine coins based on provider
-        let initialCoins = 5; // Default for social/guest
-        
-        const isEmailPasswordUser = !currentUser.isAnonymous && 
-          !currentUser.providerData.some((p: any) => p.providerId === 'google.com' || p.providerId === 'github.com');
-        
-        if (isEmailPasswordUser && !currentUser.emailVerified) {
-          initialCoins = 0; // Email users get 0 coins until verified
-        }
-        
+        // 🔒 IMPORTANT: 'coins' and 'welcomeBonusGranted' are server-only fields
+        // (see firestore.rules: users/{userId} write rule blocks these keys for owners).
+        // The real coin balance lives in artifacts/{appId}/users/{userId}/simulator/state.balance
+        // and welcome bonuses are granted exclusively via /api/auth/grant-social-bonus.
+        // This client-side write must NEVER include those keys or Firestore will reject it.
         await setDoc(userDocRef, {
           name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           email: currentUser.email,
           age: null,
           status: 'Other',
           phone: '',
-          coins: initialCoins,
-          welcomeBonusGranted: initialCoins > 0, // ✅ Track bonus state for consistency
           provider: currentUser.providerData[0]?.providerId || 'email',
           createdAt: new Date().toISOString(),
           autoCreated: true
-        });
+        }, { merge: true });
         
-        console.log(`✅ Auto-created user document for ${userId} with ${initialCoins} coins`);
+        console.log(`✅ Auto-created user document for ${userId} (coins/bonus handled server-side)`);
       }
     } catch (error) {
       console.error('Failed to create missing user document:', error);
