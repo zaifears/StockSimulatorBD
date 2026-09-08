@@ -35,6 +35,10 @@ export default function TradePage() {
   );
 }
 
+// Active community poll flag: disabled since enough responses were gathered for this poll.
+// Feature architecture stays fully wired so future polls can be activated by toggling this flag.
+const IS_TRADE_POLL_ACTIVE = false;
+
 function MarketScreen() {
   const { user } = useAuth();
   const {
@@ -45,7 +49,7 @@ function MarketScreen() {
   const [showSurvey, setShowSurvey] = useState(false);
 
   useEffect(() => {
-    if (!user?.uid) {
+    if (!IS_TRADE_POLL_ACTIVE || !user?.uid) {
       setShowSurvey(false);
       return;
     }
@@ -377,7 +381,7 @@ function MarketScreen() {
         />
       )}
 
-      {showSurvey && (
+      {IS_TRADE_POLL_ACTIVE && showSurvey && (
         <TradeQuestionnaireModal onSuccess={handleSurveySuccess} />
       )}
     </div>
