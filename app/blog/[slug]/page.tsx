@@ -383,6 +383,43 @@ export default async function BlogArticlePage({
       [BLOCKS.QUOTE]: (_node: Node, children: ReactNode) => (
         <blockquote>{children}</blockquote>
       ),
+      [BLOCKS.EMBEDDED_ASSET]: (node: Node) => {
+        const target = node.data?.target;
+        if (!target) return null;
+
+        const fields = (target.fields ?? target) as Record<string, any>;
+        const file = fields?.file;
+        const rawUrl = typeof file?.url === 'string' ? file.url : null;
+
+        if (!rawUrl) return null;
+
+        const url = rawUrl.startsWith('http') ? rawUrl : `https:${rawUrl}`;
+        const title = typeof fields.title === 'string' ? fields.title : '';
+        const description = typeof fields.description === 'string' ? fields.description : title;
+        const width = file?.details?.image?.width ?? 1200;
+        const height = file?.details?.image?.height ?? 675;
+
+        return (
+          <figure className="my-8">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+              <Image
+                src={url}
+                alt={description || 'Blog article image'}
+                width={width}
+                height={height}
+                sizes="(max-width: 768px) 100vw, 896px"
+                loading="lazy"
+                className="h-auto w-full object-cover"
+              />
+            </div>
+            {description && (
+              <figcaption className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400">
+                {description}
+              </figcaption>
+            )}
+          </figure>
+        );
+      },
     },
   };
 
