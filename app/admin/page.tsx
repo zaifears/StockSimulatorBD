@@ -44,8 +44,13 @@ export default function AdminDashboard() {
   const [bossFeedback, setBossFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Real-time listener for pending Boss upgrade requests
+  // 🔒 M-2: Only set up listener once isAdminMode is confirmed true.
+  // Without this guard, any authenticated user who visits /admin (before the
+  // auth redirect fires) opens a Firestore listener on boss_requests. Firestore
+  // rules immediately deny it (no data leak), but it generates noisy
+  // permission-denied errors in the console and wastes a listener slot.
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (!user || authLoading || !isAdminMode) return;
     const q = query(
       collection(db, 'boss_requests'),
       where('status', '==', 'pending'),
@@ -60,7 +65,8 @@ export default function AdminDashboard() {
       (err) => console.error('Error listening to pending boss requests:', err)
     );
     return () => unsub();
-  }, [user, authLoading]);
+  }, [user, authLoading, isAdminMode]);
+
 
   const handleApproveBoss = async (req: any) => {
     setBossActionLoading(req.id);

@@ -37,6 +37,15 @@ service cloud.firestore {
       // and Boss Pro subscription expiry/metadata. The client may never set, change,
       // or REMOVE any of these.
       function protectedUserFields() {
+        // 🔒 SECURITY NOTE: 'role' MUST be in this list. The client-side
+        // lib/admin.ts#checkAdminMode reads `userData.role === 'admin'` from
+        // Firestore to gate the Firebase Console shortcut on /admin.
+        // Without 'role' here, any user can write role:'admin' to their own
+        // document from the browser console and trick that UI check.
+        // The API layer (verifyAdminAccess) always uses the JWT custom claim —
+        // not this field — so no API endpoint is affected, but the UI gating
+        // would be bypassed. Adding 'role' ensures the client SDK can never
+        // set or modify it directly.
         return [
           'admin', 'welcomeBonusGranted', 'role', 'isGodMode',
           'disclaimerAgreedAt', 'promoCodeRedeemedAt', 'tradeSurveyCompletedAt',
@@ -56,10 +65,19 @@ service cloud.firestore {
       // diff().affectedKeys() covers additions, changes and removals.
       // 🔒 Anti-tampering: A client can NEVER set or modify accountTier to 'Boss'
       // from the browser console. Only the server (Firebase Admin SDK) can upgrade tiers.
+      //
+      // 🔒 accountTier DELETION is also implicitly blocked: if a client calls
+      // FieldValue.delete() on accountTier, the affectedKeys() check detects it
+      // (deletions are "affected"). It then falls into the second clause:
+      //   request.resource.data.accountTier == 'Bro'
+      // which evaluates to `undefined == 'Bro'` → false → rule denies the write.
+      // So deletion of accountTier is rejected by the same condition that rejects
+      // writes of any value other than 'Bro'. No separate rule is needed.
       allow update: if isOwner(userId)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['accountTier'])
             || (request.resource.data.accountTier == 'Bro' && resource.data.get('accountTier', 'Bro') == 'Bro'));
+
 
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()
@@ -92,10 +110,15 @@ service cloud.firestore {
     }
 
     // ===== COIN TRANSACTIONS =====
+    // All writes happen server-side via Firebase Admin SDK (grant-social-bonus,
+    // admin/recharge approval). The previous `allow create: if isAuthenticated()`
+    // let any authenticated user forge arbitrary coinTransaction records with any
+    // amount/type/description fields (only userId was validated). Since no client
+    // code ever calls the client SDK to create these documents, the rule was dead
+    // code that created a real forgery attack surface. Closed entirely.
     match /coinTransactions/{transactionId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
     
     // ===== RECHARGE REQUESTS =====
@@ -225,7 +248,11 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
       allow update, delete: if isOwner(resource.data.creatorId);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks'])
+      // 🔒 Click counter: require auth to prevent unauthenticated bots from
+      // inflating click counts on any link. Increment-by-1-only is enforced
+      // to prevent setting an arbitrary value (e.g. clicks: 999999).
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks'])
         && request.resource.data.clicks == resource.data.clicks + 1;
     }
     

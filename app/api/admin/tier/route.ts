@@ -131,7 +131,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, requestId, userId, email, durationDays, rejectionReason } = body;
 
+    // 🔒 M-3: Whitelist valid subscription durations. Only these exact day counts
+    // are allowed for Boss grants. Any other value (e.g. 36500 for "100 years")
+    // is rejected — even if it comes from a legitimate admin session that was
+    // confused or compromised. The UI only presents these four options anyway.
+    const ALLOWED_DAYS = [7, 31, 185, 365];
+    const safeDays = (d: unknown): number => {
+      const n = typeof d === 'number' ? d : parseInt(String(d), 10);
+      return ALLOWED_DAYS.includes(n) ? n : 31;
+    };
+
     const db = getFirestore();
+
 
     // ─────────────────────────────────────────────
     // 1. REJECT REQUEST
@@ -185,7 +196,11 @@ export async function POST(req: NextRequest) {
           throw new Error(`Request is already ${requestData?.status}`);
         }
 
-        const days = typeof durationDays === 'number' && durationDays > 0 ? durationDays : (requestData?.durationDays || 31);
+        // Use admin-supplied override if present and whitelisted, otherwise fall back
+        // to the duration stored on the request (which was validated by Firestore rules
+        // to be in [31, 185] at submission time).
+        const requestedDays = durationDays ?? requestData?.durationDays;
+        const days = safeDays(requestedDays);
         const userDoc = await transaction.get(userRef);
         const userData = userDoc.exists ? userDoc.data() : null;
         targetUserName = userData?.name || requestData?.userName || 'User';
@@ -259,7 +274,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'Missing userId or email to grant Boss tier' }, { status: 400 });
       }
 
-      const days = typeof durationDays === 'number' && durationDays > 0 ? durationDays : 31;
+      const days = safeDays(durationDays);
       const userRef = db.collection('users').doc(targetUid);
       const userDoc = await userRef.get();
 

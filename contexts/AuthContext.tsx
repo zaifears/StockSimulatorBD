@@ -8,7 +8,7 @@ import {
   sendEmailVerification,
   getRedirectResult 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, handleSocialSignInResult } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { updateUserCount } from '@/lib/utils/updateStats';
@@ -360,6 +360,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, [authStateResolved, redirectChecked]);
+
+  // 🔒 M-1 FIX: Real-time Boss/Bro tier sync via onSnapshot.
+  //
+  // The initial onAuthStateChanged block sets isBoss from a one-shot getDoc.
+  // That snapshot becomes stale the moment:
+  //   a) The admin grants Boss to an online user → they'd need a hard reload
+  //   b) A Boss subscription expires mid-session → isBoss stays true until reload
+  //
+  // This listener watches the user document and updates accountTier/isBoss
+  // whenever bossUntil or accountTier changes — server-authoritative and
+  // real-time. When the user is null (signed out), the listener is torn down.
+  useEffect(() => {
+    if (!user) return;
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsub = onSnapshot(
+      userDocRef,
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        const now = Date.now();
+        const activeBoss =
+          data?.accountTier === 'Boss' ||
+          (typeof data?.bossUntil === 'number' && data.bossUntil > now);
+        const tier: 'Boss' | 'Bro' = activeBoss ? 'Boss' : 'Bro';
+        setAccountTier(tier);
+        setIsBoss(activeBoss);
+      },
+      (err) => {
+        // Permission denied or network error — fail silently; the value from
+        // onAuthStateChanged is still in state from initial load.
+        console.warn('⚠️ User document snapshot error (tier sync):', err.message);
+      }
+    );
+    return () => unsub();
+  }, [user]);
+
 
   const sendVerificationEmail = async () => {
     if (user && !user.emailVerified) {

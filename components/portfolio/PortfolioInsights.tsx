@@ -20,13 +20,11 @@ import {
   TrendingDown,
   Receipt,
   Lock,
-  Sparkles,
   ArrowRight,
   AlertTriangle,
 } from 'lucide-react';
 import type { PortfolioInsights as Insights } from '@/lib/utils/portfolio';
 import BossBadge from '@/components/ui/BossBadge';
-import { useAuth } from '@/contexts/AuthContext';
 
 const fmt = (n: number, dp = 2) =>
   n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -53,11 +51,13 @@ interface PortfolioInsightsProps {
   isBoss?: boolean;
 }
 
-export default function PortfolioInsights({ insights, isBoss: isBossProp }: PortfolioInsightsProps) {
-  const { isBoss: authIsBoss } = useAuth();
+// 🔒 L-3 FIX: Removed useAuth() from this component. The parent (app/portfolio/page.tsx)
+// always passes isBoss explicitly as a prop from its own useAuth() call. Having the
+// component also read from context created a dual-source-of-truth: if isBossProp was
+// ever false (e.g. for testing) while authIsBoss was true, the component would silently
+// ignore the prop. The component is now purely presentational — it only trusts the prop.
+export default function PortfolioInsights({ insights, isBoss: isUnlocked = false }: PortfolioInsightsProps) {
 
-  // If explicit prop is given, use it; otherwise use auth status
-  const isUnlocked = isBossProp !== undefined ? isBossProp : authIsBoss;
 
   // ─────────────────────────────────────────────
   // LOCKED BRO VIEW (WITH UPGRADE CTA & TEASER)
