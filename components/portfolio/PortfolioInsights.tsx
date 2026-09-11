@@ -86,7 +86,6 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
                 <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white">
                   Portfolio Insights & Risk Radar
                 </h3>
-                <BossBadge size="xs" />
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
                 Boss Exclusive Analytics for Serious DSE Traders
@@ -95,7 +94,7 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
           </div>
 
           <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
-            Stop trading blind. Unlock institutional-grade portfolio intelligence to audit your true investment performance beyond daily paper fluctuations:
+            Trade like a Boss. Unlock comprehensive portfolio intelligence to audit your true investment performance beyond daily paper fluctuations:
           </p>
 
           {/* Feature Highlight Pills */}

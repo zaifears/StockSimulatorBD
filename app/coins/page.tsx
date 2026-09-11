@@ -239,11 +239,11 @@ function FundsScreen() {
               </div>
               <div>
                 <div className="flex items-center gap-1.5 font-black text-sm text-gray-900 dark:text-white">
-                  <span>Boss Perk Active: +10% Coins</span>
+                  <span>Boss Perk Active: +10% Free Coins</span>
                   <BossBadge size="xs" interactive={false} />
                 </div>
                 <p className="text-xs text-amber-800 dark:text-amber-300 font-medium mt-0.5">
-                  You automatically receive <strong className="font-extrabold">+10% extra coins</strong> (550 coins / ৳) on all bKash recharges!
+                  You automatically get <strong className="font-extrabold">10% extra coins for free</strong> on all your bKash recharges!
                 </p>
               </div>
             </div>
@@ -264,10 +264,10 @@ function FundsScreen() {
               </div>
               <div>
                 <div className="text-xs font-extrabold text-amber-900 dark:text-amber-200 uppercase tracking-wide flex items-center gap-1">
-                  <span>Boss Superpower: +10% Recharge Bonus</span>
+                  <span>Boss Perk: 10% Extra Coins For Free</span>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                  Boss members get <strong className="text-amber-600 dark:text-amber-400 font-bold">550 coins / ৳</strong> (10% extra free) on every bKash recharge.
+                  Boss tier gives you <strong className="text-amber-600 dark:text-amber-400 font-bold">10% extra coins for free</strong> on every recharge.
                 </p>
               </div>
             </div>
@@ -425,7 +425,7 @@ function FundsScreen() {
                     <div className="text-xs text-amber-800 dark:text-amber-300">
                       <span>Base: <strong>{baseCoins.toLocaleString()}</strong></span>
                       <span className="mx-1.5">•</span>
-                      <span className="font-extrabold text-amber-600 dark:text-amber-400">+10% Boss Bonus: +{bonusCoins.toLocaleString()}</span>
+                      <span className="font-extrabold text-amber-600 dark:text-amber-400">+10% Free Bonus: +{bonusCoins.toLocaleString()}</span>
                     </div>
                     <div className="text-base font-black text-amber-600 dark:text-amber-400 mt-1 flex items-center justify-center gap-1.5">
                       <Crown className="w-4 h-4 fill-current" />
@@ -442,7 +442,7 @@ function FundsScreen() {
                       className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-bold mt-1"
                     >
                       <Crown className="w-3 h-3" />
-                      <span>Boss members get {Math.round(baseCoins * 1.1).toLocaleString()} coins (+10% extra). Upgrade for ৳20 →</span>
+                      <span>Boss gets 10% extra coins for free (+{Math.round(baseCoins * 0.1).toLocaleString()} free coins). Upgrade for ৳20 →</span>
                     </Link>
                   </div>
                 )}

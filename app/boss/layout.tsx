@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   keywords: ['Boss plan', 'DSE simulator pro', 'StockSimulatorBD Boss', 'Bangladesh stock market', 'portfolio PDF', 'trading analytics'],
   openGraph: {
     title: 'Boss Pro Access | Stock Simulator BD',
-    description: 'Upgrade from Bro to Boss. Unlock institutional-grade DSE trading analytics, official PDF statements, and coin bonuses starting at ৳20.',
+    description: 'Upgrade from Bro to Boss. Unlock deep DSE portfolio analytics, official PDF statements, and coin bonuses starting at ৳20.',
     url: absoluteUrl('/boss'),
     type: 'website',
   },

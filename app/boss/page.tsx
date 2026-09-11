@@ -5,7 +5,7 @@
 // Optimized for mobile (320px-640px) and large displays (1280px-2560px).
 // Preview mode: complete visual, interactive comparison and bKash payment instructions.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -135,7 +135,7 @@ const COMPLETE_AUDIT_DATA: AuditCategory[] = [
   },
   {
     category: '2. Analytics & Risk Radar (Boss Exclusive)',
-    description: 'Institutional-grade portfolio analytics to uncover hidden risks and evaluate your true returns.',
+    description: 'Advanced portfolio analytics to uncover hidden risks and evaluate your true returns.',
     features: [
       {
         name: 'Portfolio Insights Radar (Feature A)',
@@ -189,9 +189,9 @@ const COMPLETE_AUDIT_DATA: AuditCategory[] = [
     features: [
       {
         name: 'Recharge Coin Bonus (Feature C)',
-        description: 'Extra virtual coins automatically credited on every single bKash fund recharge (e.g. ৳100 = 55,000 coins).',
-        bro: 'Standard (500/৳)',
-        boss: '+10% Extra Coins',
+        description: 'You get 10% extra coins for free on every single bKash recharge (e.g. ৳100 = 50,000 + 5,000 free bonus coins).',
+        bro: 'Standard (৳20 = 10k)',
+        boss: '10% Extra Free Coins',
         isBossExclusive: true,
         tag: 'Feature C',
       },
@@ -227,8 +227,8 @@ const FAQS = [
     a: 'Your account seamlessly transitions back to the Bro tier. You will never lose your stocks, balance, or trades. Boss-exclusive views like deep analytics and PDF generation will pause until you choose to renew.',
   },
   {
-    q: 'How does the +10% Recharge Coin Bonus work?',
-    a: 'Whenever you recharge virtual coins (for example, ৳100 recharge = 50,000 coins for Bro), an active Boss member receives 55,000 coins (+5,000 bonus coins) credited directly to their simulator balance.',
+    q: 'How does the 10% extra coins bonus work?',
+    a: 'Whenever you recharge virtual coins (for example, ৳100 recharge = 50,000 coins for Bro), as a Boss member you get 10% extra coins for free (55,000 coins) credited directly to your simulator balance automatically.',
   },
   {
     q: 'Can I export my portfolio PDF on my phone?',
@@ -261,6 +261,30 @@ export default function BossPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
+
+  const scrollToPayment = (plan: 'monthly' | 'semester') => {
+    setSelectedPlan(plan);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', '#payment');
+      const element = document.getElementById('payment');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#payment') {
+      const timer = setTimeout(() => {
+        const element = document.getElementById('payment');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -356,8 +380,7 @@ export default function BossPage() {
             </span>
           </div>
 
-          <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight sm:leading-none">
-            Stop Trading Blind. <br className="hidden sm:inline" />
+          <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight">
             <span className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 bg-clip-text text-transparent">
               Trade Like a Boss.
             </span>
@@ -365,8 +388,8 @@ export default function BossPage() {
 
           <p className="max-w-3xl mx-auto text-xs sm:text-base md:text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-6 sm:mb-8">
             Every user is by default a <strong className="text-blue-600 dark:text-blue-400 font-bold">Bro</strong> with 100% free lifetime DSE trading.
-            Upgrade to <strong className="text-amber-600 dark:text-amber-400 font-bold">Boss</strong> to unlock institutional-grade portfolio insights,
-            official PDF statements, unlimited trade audits, and +10% coin bonuses.
+            Upgrade to <strong className="text-amber-600 dark:text-amber-400 font-bold">Boss</strong> to unlock full portfolio insights,
+            official PDF statements, unlimited trade audits, and 10% extra coins for free.
           </p>
 
           {/* Current User Tier Indicator */}
@@ -392,7 +415,7 @@ export default function BossPage() {
       </div>
 
       {/* Pricing Cards Section */}
-      <section className="py-10 sm:py-16 md:py-24 max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-10 sm:py-16 md:py-20 max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-xl mx-auto mb-8 sm:mb-12">
           <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
             Affordable, Transparent Pricing
@@ -402,36 +425,9 @@ export default function BossPage() {
           </p>
         </div>
 
-        {/* Mobile Plan Selector Segmented Control */}
-        <div className="flex md:hidden items-center justify-center p-1 rounded-2xl bg-gray-200/70 dark:bg-gray-800/80 mb-6 max-w-xs mx-auto">
-          <button
-            type="button"
-            onClick={() => setSelectedPlan('monthly')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
-              selectedPlan === 'monthly'
-                ? 'bg-white dark:bg-[#111620] text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            31 Days (৳20)
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPlan('semester')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-              selectedPlan === 'semester'
-                ? 'bg-amber-500 text-gray-950 shadow-sm font-black'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            <Sparkles className="w-3 h-3 fill-current" />
-            <span>6 Mo (৳99)</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-8 items-stretch">
-          {/* Bro Plan (Free Forever) */}
-          <div className="bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-7 lg:p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          {/* Box 1: Bro Plan (Free Forever) */}
+          <div className="lg:col-span-4 bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
@@ -442,7 +438,7 @@ export default function BossPage() {
                 </span>
               </div>
               <div className="mb-4">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white">
+                <div className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
                   ৳0
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -485,7 +481,7 @@ export default function BossPage() {
               </div>
             </div>
 
-            <div className="mt-6 sm:mt-8">
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
               <Link
                 href="/trade"
                 className="w-full block text-center py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold text-xs transition-colors"
@@ -495,161 +491,161 @@ export default function BossPage() {
             </div>
           </div>
 
-          {/* Monthly Boss (৳20) */}
-          <div
-            onClick={() => setSelectedPlan('monthly')}
-            className={`cursor-pointer bg-white dark:bg-[#111620] border-2 rounded-3xl p-5 sm:p-7 lg:p-8 flex flex-col justify-between shadow-sm transition-all duration-200 relative ${
-              selectedPlan === 'monthly'
-                ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-amber-500/10'
-                : 'border-gray-200 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-700'
-            }`}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                  <Crown className="w-3 h-3" /> Monthly Boss
-                </span>
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                  31 Days
-                </span>
-              </div>
-              <div className="mb-4">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white">
-                    ৳20
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">/ 31 days</span>
-                </div>
-                <div className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-                  ৳0.65 / day (Less than a cup of cha)
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                Test-drive institutional portfolio analytics and download your first verified statements.
-              </p>
-
-              <div className="space-y-3 text-xs text-gray-700 dark:text-gray-300">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span className="font-semibold">Everything in Bro Tier, plus:</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Portfolio Insights (Realized P&L & Sectors)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Unlimited Lifetime Trade History</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Official PDF Portfolio Statement Generator</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>+10% Bonus Coins on Every Recharge</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>Golden BOSS Profile Badge</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 sm:mt-8">
-              <button
-                type="button"
-                className={`w-full py-3 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-                  selectedPlan === 'monthly'
-                    ? 'bg-amber-500 hover:bg-amber-600 text-gray-950 shadow-md'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                }`}
-              >
-                <span>Select 31 Days (৳20)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Semester Boss (৳99 / 6 Months - Highlighted) */}
-          <div
-            onClick={() => setSelectedPlan('semester')}
-            className={`cursor-pointer bg-gradient-to-b from-amber-500/10 via-white to-white dark:from-amber-500/15 dark:via-[#111620] dark:to-[#111620] border-2 rounded-3xl p-5 sm:p-7 lg:p-8 flex flex-col justify-between shadow-lg transition-all duration-200 relative transform md:-translate-y-2 lg:-translate-y-3 ${
-              selectedPlan === 'semester'
-                ? 'border-amber-500 ring-4 ring-amber-500/25 shadow-amber-500/20'
-                : 'border-amber-400/60 dark:border-amber-600/60 hover:border-amber-500'
-            }`}
-          >
-            {/* Top Ribbon */}
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 text-[10px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md flex items-center gap-1 whitespace-nowrap">
-              <Sparkles className="w-3 h-3 fill-current" />
-              <span>Most Popular • Save 18%</span>
-            </div>
+          {/* Box 2: ONE Rectangle Box for the 2 Boss Tiers */}
+          <div className="lg:col-span-8 bg-gradient-to-b from-amber-500/10 via-white to-white dark:from-amber-500/15 dark:via-[#111620] dark:to-[#111620] border-2 border-amber-500/40 dark:border-amber-500/30 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-lg relative overflow-hidden">
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
 
             <div>
-              <div className="flex items-center justify-between mb-4 mt-2">
-                <span className="text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-amber-500 text-gray-950 flex items-center gap-1 shadow-sm">
-                  <Crown className="w-3 h-3 fill-current" /> Semester Boss
-                </span>
-                <span className="text-xs font-black text-amber-600 dark:text-amber-400">
-                  185 Days (6 Mo)
-                </span>
-              </div>
-              <div className="mb-4">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 dark:text-white">
-                    ৳99
+              {/* Header inside Boss Box */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-lg bg-amber-500 text-gray-950 flex items-center gap-1.5 shadow-sm">
+                    <Crown className="w-3.5 h-3.5 fill-current" /> Boss Tier (Pro)
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">/ 6 months</span>
+                  <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                    Choose 31 Days or 6 Months
+                  </span>
                 </div>
-                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-1">
-                  Just ৳16.50 / month (৳0.53 / day)
+                <div className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>No Auto-Renewals</span>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                The ultimate companion for the full university semester or market cycle. Maximum savings & zero hassle.
+
+              <h3 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white mb-2">
+                Unlock All Boss Superpowers
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-5">
+                Every Boss membership includes our complete suite of analytics, PDF exports, and extra free coin perks:
               </p>
 
-              <div className="space-y-3 text-xs text-gray-800 dark:text-gray-200">
+              {/* Shared Boss Perks Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-gray-700 dark:text-gray-300 mb-6 bg-amber-500/5 dark:bg-amber-500/5 p-4 rounded-2xl border border-amber-500/15">
+                <div className="flex items-center gap-2 font-medium">
+                  <Check className="w-4 h-4 text-amber-500 shrink-0 font-bold" />
+                  <span>1-Click High-Res PDF Portfolio Statements</span>
+                </div>
+                <div className="flex items-center gap-2 font-medium">
+                  <Check className="w-4 h-4 text-amber-500 shrink-0 font-bold" />
+                  <span>Full Portfolio Risk Radar & 21 Sectors</span>
+                </div>
+                <div className="flex items-center gap-2 font-medium">
+                  <Check className="w-4 h-4 text-amber-500 shrink-0 font-bold" />
+                  <span>Unlimited Lifetime Trade History Ledger</span>
+                </div>
                 <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
-                  <Crown className="w-4 h-4 text-amber-500 shrink-0 fill-current" />
-                  <span>All Boss Features for 6 Full Months</span>
+                  <Coins className="w-4 h-4 text-amber-500 shrink-0 fill-current" />
+                  <span>10% Extra Coins For Free on Every Recharge</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0 font-black" />
-                  <span>Unlimited 1-Click PDF Portfolio Statements</span>
+                <div className="flex items-center gap-2 font-medium">
+                  <Check className="w-4 h-4 text-amber-500 shrink-0 font-bold" />
+                  <span>Golden Crown BOSS Profile & Leaderboard Badge</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0 font-black" />
-                  <span>Full Portfolio Risk Radar & Sector Breakdown</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0 font-black" />
-                  <span>Unlimited Order History & Trade Audit</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0 font-black" />
-                  <span>+10% Extra Coins on EVERY bKash Recharge</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0 font-black" />
-                  <span>Golden BOSS Crown Profile Badge</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0 font-black" />
-                  <span className="font-semibold text-amber-600 dark:text-amber-400">Save ৳21 vs renewing monthly</span>
+                <div className="flex items-center gap-2 font-medium">
+                  <Check className="w-4 h-4 text-amber-500 shrink-0 font-bold" />
+                  <span>VIP Sandbox Slots & Upcoming DSE Features</span>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-6 sm:mt-8">
-              <button
-                type="button"
-                className="w-full py-3.5 px-4 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-lg shadow-amber-500/25 hover:brightness-105 active:scale-98"
-              >
-                <span>Activate Semester Boss (৳99)</span>
-                <Flame className="w-4 h-4 fill-current" />
-              </button>
+              {/* 2 Nested Rectangles for Monthly vs Semester */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Nested Rectangle 1: Monthly Boss (৳20) */}
+                <div
+                  onClick={() => scrollToPayment('monthly')}
+                  className={`cursor-pointer rounded-2xl p-4 sm:p-5 transition-all flex flex-col justify-between border-2 ${
+                    selectedPlan === 'monthly'
+                      ? 'bg-amber-500/15 border-amber-500 shadow-md ring-2 ring-amber-500/20'
+                      : 'bg-white dark:bg-[#141a24] border-gray-200 dark:border-gray-700 hover:border-amber-400'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                        <Crown className="w-3.5 h-3.5" /> Monthly Boss
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        31 Days
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1 my-1.5">
+                      <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">৳20</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">/ 31 days</span>
+                    </div>
+                    <div className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mb-2">
+                      ৳0.65 / day • Less than a cup of cha
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                      Ideal for test-driving deep analytics and exporting your first official statements.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToPayment('monthly');
+                    }}
+                    className={`mt-4 w-full py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                      selectedPlan === 'monthly'
+                        ? 'bg-amber-500 hover:bg-amber-600 text-gray-950 shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-amber-500 hover:text-gray-950'
+                    }`}
+                  >
+                    <span>Select 31 Days (৳20)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Nested Rectangle 2: Semester Boss (৳99 - Highlighted) */}
+                <div
+                  onClick={() => scrollToPayment('semester')}
+                  className={`cursor-pointer rounded-2xl p-4 sm:p-5 transition-all flex flex-col justify-between border-2 relative ${
+                    selectedPlan === 'semester'
+                      ? 'bg-gradient-to-b from-amber-500/20 to-amber-500/5 border-amber-500 shadow-md ring-2 ring-amber-500/30'
+                      : 'bg-white dark:bg-[#141a24] border-amber-400/50 dark:border-amber-600/50 hover:border-amber-500'
+                  }`}
+                >
+                  {/* Top Badge */}
+                  <div className="absolute -top-2.5 right-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow flex items-center gap-1 whitespace-nowrap">
+                    <Sparkles className="w-2.5 h-2.5 fill-current" />
+                    <span>Save 18%</span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                        <Crown className="w-3.5 h-3.5 fill-current" /> Semester Boss
+                      </span>
+                      <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                        6 Months
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1 my-1.5">
+                      <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">৳99</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">/ 6 months</span>
+                    </div>
+                    <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mb-2">
+                      Just ৳16.50 / month (Save ৳21)
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                      Complete university semester or market cycle companion. Maximum savings & zero hassle.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToPayment('semester');
+                    }}
+                    className="mt-4 w-full py-3 px-3 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-95"
+                  >
+                    <span>Activate Semester Boss (৳99)</span>
+                    <Flame className="w-3.5 h-3.5 fill-current" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -674,7 +670,7 @@ export default function BossPage() {
             {/* Feature 1: Official Portfolio PDF */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" />
+                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
                   <Download className="w-5 h-5" />
                 </div>
@@ -699,7 +695,7 @@ export default function BossPage() {
             {/* Feature 2: Portfolio Insights & Sector Radar */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" />
+                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
                   <PieChart className="w-5 h-5" />
                 </div>
@@ -724,7 +720,7 @@ export default function BossPage() {
             {/* Feature 3: Unlimited Lifetime Order History */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" />
+                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-purple-500/15 flex items-center justify-center text-purple-600 dark:text-purple-400 mb-4">
                   <History className="w-5 h-5" />
                 </div>
@@ -745,26 +741,26 @@ export default function BossPage() {
               </div>
             </div>
 
-            {/* Feature 4: +10% Recharge Coin Bonus */}
+            {/* Feature 4: 10% Extra Coins For Free */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" />
+                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4">
                   <Coins className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">
-                  4. +10% Coin Bonus (Feature C)
+                  4. 10% Extra Coins For Free (Feature C)
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                  Need more virtual capital to test high-value trades? Every time you recharge funds via bKash, you instantly get 10% extra coins added directly to your simulator balance automatically.
+                  Boss gets 10% extra coins for free on every recharge. You automatically get 10% bonus coins credited directly to your simulator balance on every single top-up.
                 </p>
               </div>
               <div className="p-2.5 rounded-xl bg-white dark:bg-[#1a2233] border border-gray-200 dark:border-gray-700/60 flex items-center justify-between text-xs font-mono">
                 <span className="text-gray-500 dark:text-gray-400 text-[11px]">
-                  ৳100 = 50k
+                  Bro: Standard
                 </span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">
-                  Boss = 55k (+10%)
+                  Boss: +10% Free Bonus
                 </span>
               </div>
             </div>
@@ -1006,16 +1002,20 @@ export default function BossPage() {
       </section>
 
       {/* Payment Instructions Section */}
-      <section className="py-12 sm:py-20 bg-slate-100/70 dark:bg-[#0c1017] border-t border-gray-200 dark:border-gray-800">
+      <section
+        id="payment"
+        className="scroll-mt-20 sm:scroll-mt-24 py-12 sm:py-20 bg-slate-100/70 dark:bg-[#0c1017] border-t border-gray-200 dark:border-gray-800"
+      >
         <div className="max-w-2xl sm:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 text-xs font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400 mb-2">
+              <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
               Quick & Easy Local Payment
             </span>
             <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
               How to Activate Boss Access
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-lg mx-auto">
               Send the selected amount via bKash Personal and provide your Transaction ID below.
             </p>
           </div>
@@ -1023,57 +1023,88 @@ export default function BossPage() {
           <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-10 shadow-sm">
             {/* Step 1: Select Plan */}
             <div className="mb-6">
-              <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2.5">
                 1. Selected Membership Plan
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                {PLANS.map((plan) => (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setSelectedPlan(plan.id)}
-                    className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all ${
-                      selectedPlan === plan.id
-                        ? 'border-amber-500 bg-amber-500/10 text-gray-900 dark:text-white ring-2 ring-amber-500/20'
-                        : 'border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{plan.name}</div>
-                    <div className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">
-                      ৳{plan.priceBdt}
-                    </div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      {plan.durationLabel}
-                    </div>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {PLANS.map((plan) => {
+                  const isSelected = selectedPlan === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all relative flex items-center justify-between active:scale-[0.99] ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-500/10 text-gray-900 dark:text-white shadow-sm ring-2 ring-amber-500/20'
+                          : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#161c28] text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-900 dark:text-white">
+                            {plan.name}
+                          </span>
+                          {plan.badge && (
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
+                              {plan.badge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                            ৳{plan.priceBdt}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            / {plan.durationLabel}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected
+                            ? 'border-amber-500 bg-amber-500 text-gray-950'
+                            : 'border-gray-300 dark:border-gray-700'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Step 2: bKash Send Money */}
-            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-pink-50 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/30">
-              <div className="flex items-center justify-between mb-2">
+            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-extrabold text-pink-700 dark:text-pink-300 uppercase tracking-wide flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-pink-500" />
                   2. Send Money via bKash Personal
                 </span>
-                <span className="text-xs font-mono font-bold text-pink-600 dark:text-pink-400">
+                <span className="px-2.5 py-1 rounded-full bg-pink-600 text-white text-xs font-black tracking-wide shadow-sm">
                   Amount: ৳{activePlan.priceBdt}
                 </span>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-[#1a2130] p-3 sm:p-4 rounded-xl border border-pink-200 dark:border-pink-800/40 gap-3">
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-[#1a2130] p-4 rounded-xl border border-pink-200 dark:border-pink-800/50 gap-3">
                 <div>
-                  <div className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase">
-                    bKash Personal Number
+                  <div className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase font-semibold">
+                    bKash Personal (Send Money)
                   </div>
-                  <div className="font-mono font-black text-lg sm:text-xl text-gray-900 dark:text-white tracking-wider">
+                  <div className="font-mono font-black text-xl sm:text-2xl text-gray-900 dark:text-white tracking-widest mt-0.5">
                     {BKASH_NUMBER}
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyBkash}
-                  className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold transition-all active:scale-95"
+                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm ${
+                    copied
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-pink-600 hover:bg-pink-700 text-white'
+                  }`}
                 >
                   {copied ? (
                     <>
@@ -1088,7 +1119,9 @@ export default function BossPage() {
                   )}
                 </button>
               </div>
-              <p className="text-[11px] text-pink-700/80 dark:text-pink-300/80 mt-2.5 leading-relaxed">
+
+              {/* Mobile Quick Guide */}
+              <p className="text-[11px] text-pink-700/90 dark:text-pink-300/90 mt-2.5 leading-relaxed">
                 Open bKash App → Tap <strong>Send Money</strong> → Enter <strong>{BKASH_NUMBER}</strong> → Amount <strong>৳{activePlan.priceBdt}</strong> → Reference: <code>BOSS</code>.
               </p>
             </div>
@@ -1104,7 +1137,7 @@ export default function BossPage() {
                   Please sign in or create an account so we can link your Boss subscription to your profile.
                 </p>
                 <Link
-                  href="/auth?redirect=/boss"
+                  href="/auth?redirect=/boss#payment"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs shadow-md transition-all active:scale-95"
                 >
                   <LogIn className="w-4 h-4" />
@@ -1128,7 +1161,7 @@ export default function BossPage() {
                       placeholder="e.g. BL95K87J9"
                       maxLength={20}
                       disabled={isSubmitting}
-                      className="w-full px-4 py-3 sm:py-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base font-mono tracking-wider uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                      className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base sm:text-lg font-mono tracking-widest uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
                     />
                   </div>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
@@ -1170,7 +1203,7 @@ export default function BossPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !trxId.trim()}
-                  className="w-full py-3.5 sm:py-4 px-6 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full py-4 px-6 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {isSubmitting ? (
                     <>
@@ -1244,14 +1277,14 @@ export default function BossPage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
-              onClick={() => window.scrollTo({ top: 450, behavior: 'smooth' })}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-gray-950 font-black text-xs shadow-md transition-all active:scale-95"
+              onClick={() => scrollToPayment('semester')}
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-gray-950 font-black text-xs sm:text-sm shadow-md transition-all active:scale-95"
             >
-              Choose a Plan
+              Choose a Plan (৳20 / ৳99)
             </button>
             <Link
               href="/trade"
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs transition-all text-center"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs sm:text-sm transition-all text-center"
             >
               Keep Trading as Bro
             </Link>
