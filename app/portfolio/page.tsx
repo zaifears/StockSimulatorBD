@@ -12,6 +12,7 @@ import { useTradeHistory } from '@/hooks/useTradeHistory';
 import { getPortfolioTotals, getPortfolioInsights } from '@/lib/utils/portfolio';
 import PortfolioSummary from '@/components/portfolio/PortfolioSummary';
 import PortfolioInsights from '@/components/portfolio/PortfolioInsights';
+import PdfStatementButton from '@/components/portfolio/PdfStatementButton';
 import BossBadge from '@/components/ui/BossBadge';
 import HoldingRow from '@/components/portfolio/HoldingRow';
 import TradeModal from '@/components/simulator/trade/TradeModal';
@@ -57,11 +58,21 @@ function PortfolioScreen() {
 
   return (
     <div className="max-w-3xl mx-auto px-0 sm:px-4">
-      <div className="px-4 sm:px-0 pt-4 pb-3 flex items-center justify-between">
-        <h1 className="text-lg font-extrabold text-gray-900 dark:text-white">Portfolio</h1>
-        <span className="text-xs font-mono text-gray-400 dark:text-gray-500">
-          {simulatorState.portfolio.length} holding{simulatorState.portfolio.length === 1 ? '' : 's'}
-        </span>
+      <div className="px-4 sm:px-0 pt-4 pb-3 flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h1 className="text-lg font-extrabold text-gray-900 dark:text-white truncate">Portfolio</h1>
+          <span className="text-xs font-mono text-gray-400 dark:text-gray-500 shrink-0">
+            {simulatorState.portfolio.length} holding{simulatorState.portfolio.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        <PdfStatementButton
+          isBoss={isBoss}
+          totals={totals}
+          portfolio={simulatorState.portfolio}
+          stockBySymbol={stockBySymbol}
+          balance={simulatorState.balance}
+          realizedGainLoss={simulatorState.realizedGainLoss || 0}
+        />
       </div>
 
       <div className="px-0 sm:px-0 mb-4">

@@ -39,6 +39,8 @@
     "firebase": "^12.9.0",
     "firebase-admin": "^13.6.1",
     "groq-sdk": "^0.32.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lightweight-charts": "^4.1.1",
     "lucide-react": "^0.294.0",
     "mammoth": "^1.11.0",
