@@ -49,10 +49,11 @@ export default function TierList() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Manual grant state
-  const [manualUserId, setManualUserId] = useState('');
+  const [manualQuery, setManualQuery] = useState('');
   const [manualUserDoc, setManualUserDoc] = useState<any>(null);
   const [manualSearching, setManualSearching] = useState(false);
   const [manualDays, setManualDays] = useState(31);
+  const [filterQuery, setFilterQuery] = useState('');
 
   // Counts
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
@@ -170,25 +171,26 @@ export default function TierList() {
     }
   };
 
-  const handleManualSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const uid = manualUserId.trim();
-    if (!uid) return;
+  const handleManualSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const queryTerm = manualQuery.trim();
+    if (!queryTerm) return;
 
     setManualSearching(true);
     setManualUserDoc(null);
     setMessage(null);
 
     try {
-      const userRef = doc(db, 'users', uid);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        setManualUserDoc({ id: snap.id, ...snap.data() });
-      } else {
-        setMessage({ text: 'User document not found for UID: ' + uid, type: 'error' });
+      const res = await fetchWithFreshToken(`/api/admin/tier?search=${encodeURIComponent(queryTerm)}`, {
+        method: 'GET',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.user) {
+        throw new Error(json.error || `No user found matching: "${queryTerm}"`);
       }
+      setManualUserDoc(json.user);
     } catch (err: any) {
-      setMessage({ text: err.message, type: 'error' });
+      setMessage({ text: err.message || 'Search failed', type: 'error' });
     } finally {
       setManualSearching(false);
     }
@@ -215,14 +217,17 @@ export default function TierList() {
 
       setMessage({
         text: action === 'manual_grant'
-          ? `Success! Granted Boss tier to ${manualUserDoc.name || manualUserDoc.id} for ${manualDays} days.`
-          : `Success! Reverted ${manualUserDoc.name || manualUserDoc.id} to Bro tier.`,
+          ? `Success! Granted Boss tier to ${manualUserDoc.name || manualUserDoc.email || manualUserDoc.id} for ${manualDays} days.`
+          : `Success! Reverted ${manualUserDoc.name || manualUserDoc.email || manualUserDoc.id} to Bro tier.`,
         type: 'success',
       });
 
-      // Refresh doc
-      const updated = await getDoc(doc(db, 'users', manualUserDoc.id));
-      if (updated.exists()) setManualUserDoc({ id: updated.id, ...updated.data() });
+      // Refresh doc from backend
+      const refreshRes = await fetchWithFreshToken(`/api/admin/tier?search=${encodeURIComponent(manualUserDoc.id)}`, { method: 'GET' });
+      const refreshJson = await refreshRes.json();
+      if (refreshJson.success && refreshJson.user) {
+        setManualUserDoc(refreshJson.user);
+      }
       fetchStats();
     } catch (err: any) {
       setMessage({ text: err.message, type: 'error' });
@@ -393,7 +398,7 @@ export default function TierList() {
           }`}
         >
           <Search className="w-3.5 h-3.5" />
-          <span>Manual User Grant / Search</span>
+          <span>Search Email / UID & Grant</span>
         </button>
       </div>
 
@@ -402,27 +407,27 @@ export default function TierList() {
         <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm mb-8">
           <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-blue-500" />
-            <span>Search User & Direct Tier Override</span>
+            <span>Search User by Email or UID & Direct Tier Override</span>
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
-            Look up any registered user by their Firebase UID to grant or revoke Boss access instantly.
+            Look up any registered trader by their email address (e.g. user@gmail.com) or Firebase UID to grant or revoke Boss access instantly.
           </p>
 
           <form onSubmit={handleManualSearch} className="flex flex-col sm:flex-row gap-3 mb-6">
             <input
               type="text"
-              value={manualUserId}
-              onChange={(e) => setManualUserId(e.target.value)}
-              placeholder="Paste Firebase User UID (e.g. kLm901XyZ...)"
+              value={manualQuery}
+              onChange={(e) => setManualQuery(e.target.value)}
+              placeholder="Enter user email (e.g. trader@gmail.com) or Firebase UID..."
               className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a2130] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
-              disabled={manualSearching || !manualUserId.trim()}
+              disabled={manualSearching || !manualQuery.trim()}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               {manualSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-              <span>Inspect User</span>
+              <span>Search & Inspect</span>
             </button>
           </form>
 
@@ -498,6 +503,22 @@ export default function TierList() {
         </div>
       )}
 
+      {/* Search/Filter Bar for Requests */}
+      {activeTab !== 'manual' && requests.length > 0 && (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Filter requests by trader name, email, plan, or bKash TrxID..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#131822] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Requests List */}
       {loading ? (
         <div className="py-16 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-3">
@@ -520,7 +541,19 @@ export default function TierList() {
         </div>
       ) : (
         <div className="space-y-3">
-          {requests.map((req) => (
+          {requests
+            .filter((req) => {
+              if (!filterQuery.trim()) return true;
+              const q = filterQuery.toLowerCase().trim();
+              return (
+                req.userName?.toLowerCase().includes(q) ||
+                req.userEmail?.toLowerCase().includes(q) ||
+                req.transactionId?.toLowerCase().includes(q) ||
+                req.userId?.toLowerCase().includes(q) ||
+                req.planName?.toLowerCase().includes(q)
+              );
+            })
+            .map((req) => (
             <div
               key={req.id}
               className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:border-amber-400/50 transition-colors"

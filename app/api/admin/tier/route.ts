@@ -1,8 +1,9 @@
 // app/api/admin/tier/route.ts
-// Server-side admin handler for Boss tier subscriptions, approvals, rejections, and manual grants.
+// Server-side admin handler for Boss tier subscriptions, approvals, rejections, email search, and manual grants.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import { verifyAdminAccess } from '@/lib/utils/adminVerification';
 import '@/lib/firebaseAdmin';
 
@@ -16,8 +17,88 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: adminCheck.error }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const searchQuery = searchParams.get('search')?.trim();
+    const pendingOnly = searchParams.get('pending');
+
     const db = getFirestore();
 
+    // ─────────────────────────────────────────────
+    // 1. SEARCH USER BY EMAIL OR UID
+    // ─────────────────────────────────────────────
+    if (searchQuery) {
+      // A. Try direct UID match
+      const userDoc = await db.collection('users').doc(searchQuery).get();
+      if (userDoc.exists) {
+        return NextResponse.json({
+          success: true,
+          user: { id: userDoc.id, ...userDoc.data() },
+        });
+      }
+
+      // B. Try matching email in Firestore users collection
+      let emailSnap = await db.collection('users').where('email', '==', searchQuery).limit(5).get();
+      if (emailSnap.empty) {
+        emailSnap = await db.collection('users').where('email', '==', searchQuery.toLowerCase()).limit(5).get();
+      }
+
+      if (!emailSnap.empty) {
+        const found = emailSnap.docs[0];
+        return NextResponse.json({
+          success: true,
+          user: { id: found.id, ...found.data() },
+        });
+      }
+
+      // C. Fallback: Lookup in Firebase Admin Auth by email
+      try {
+        const authUser = await getAuth().getUserByEmail(searchQuery);
+        if (authUser) {
+          const docSnap = await db.collection('users').doc(authUser.uid).get();
+          const docData = docSnap.exists ? docSnap.data() : null;
+          return NextResponse.json({
+            success: true,
+            user: {
+              id: authUser.uid,
+              name: docData?.name || authUser.displayName || authUser.email?.split('@')[0] || 'User',
+              email: authUser.email,
+              displayName: authUser.displayName,
+              accountTier: docData?.accountTier || 'Bro',
+              bossUntil: docData?.bossUntil || 0,
+              createdAt: docData?.createdAt || authUser.metadata.creationTime,
+              provider: authUser.providerData[0]?.providerId || 'email',
+              ...docData,
+            },
+          });
+        }
+      } catch {
+        // Auth user not found
+      }
+
+      return NextResponse.json(
+        { success: false, error: `No registered user found with email or UID: "${searchQuery}"` },
+        { status: 404 }
+      );
+    }
+
+    // ─────────────────────────────────────────────
+    // 2. FETCH PENDING REQUESTS
+    // ─────────────────────────────────────────────
+    if (pendingOnly === 'true') {
+      const pendingSnap = await db
+        .collection('boss_requests')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .limit(30)
+        .get();
+
+      const requests = pendingSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return NextResponse.json({ success: true, requests });
+    }
+
+    // ─────────────────────────────────────────────
+    // 3. STATS SUMMARY
+    // ─────────────────────────────────────────────
     const [pendingSnap, approvedSnap, rejectedSnap, activeBossSnap] = await Promise.all([
       db.collection('boss_requests').where('status', '==', 'pending').count().get(),
       db.collection('boss_requests').where('status', '==', 'approved').count().get(),
@@ -35,7 +116,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('❌ Admin tier stats error:', error);
+    console.error('❌ Admin tier GET error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -48,7 +129,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, requestId, userId, durationDays, rejectionReason } = body;
+    const { action, requestId, userId, email, durationDays, rejectionReason } = body;
 
     const db = getFirestore();
 
@@ -82,7 +163,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────
-    // 2. APPROVE REQUEST
+    // 2. APPROVE REQUEST (1-CLICK DIRECT)
     // ─────────────────────────────────────────────
     if (action === 'approve') {
       if (!requestId || !userId) {
@@ -91,6 +172,9 @@ export async function POST(req: NextRequest) {
 
       const requestRef = db.collection('boss_requests').doc(requestId);
       const userRef = db.collection('users').doc(userId);
+
+      let calculatedUntil = 0;
+      let targetUserName = '';
 
       await db.runTransaction(async (transaction) => {
         const requestDoc = await transaction.get(requestRef);
@@ -104,20 +188,22 @@ export async function POST(req: NextRequest) {
         const days = typeof durationDays === 'number' && durationDays > 0 ? durationDays : (requestData?.durationDays || 31);
         const userDoc = await transaction.get(userRef);
         const userData = userDoc.exists ? userDoc.data() : null;
+        targetUserName = userData?.name || requestData?.userName || 'User';
 
         // If user is already active Boss, extend from their current expiry; otherwise start from now
         const now = Date.now();
         const currentUntil = (userData?.bossUntil && userData.bossUntil > now) ? userData.bossUntil : now;
         const newBossUntil = currentUntil + (days * 86400 * 1000);
+        calculatedUntil = newBossUntil;
 
-        // Update user to Boss
+        // Update user to Boss (Server-side authoritative write)
         transaction.set(
           userRef,
           {
             accountTier: 'Boss',
             bossUntil: newBossUntil,
             bossSince: userData?.bossSince || FieldValue.serverTimestamp(),
-            lastBossPlan: requestData?.planName || 'Monthly Boss',
+            lastBossPlan: requestData?.planName || (days >= 180 ? 'Semester Boss' : 'Monthly Boss'),
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -132,27 +218,52 @@ export async function POST(req: NextRequest) {
         });
       });
 
-      console.log(`✅ Admin ${adminCheck.uid} approved Boss tier for user ${userId} (request ${requestId})`);
-      return NextResponse.json({ success: true, message: 'Boss tier activated successfully' });
+      console.log(`✅ Admin ${adminCheck.uid} approved Boss tier for user ${userId} (${targetUserName}, request ${requestId})`);
+      return NextResponse.json({
+        success: true,
+        message: `Boss tier activated successfully for ${targetUserName}!`,
+        bossUntil: calculatedUntil,
+      });
     }
 
     // ─────────────────────────────────────────────
-    // 3. MANUAL DIRECT GRANT
+    // 3. MANUAL DIRECT GRANT (BY USERID OR EMAIL)
     // ─────────────────────────────────────────────
     if (action === 'manual_grant') {
-      if (!userId) {
-        return NextResponse.json({ success: false, error: 'Missing userId' }, { status: 400 });
+      let targetUid = userId?.trim();
+      const targetEmail = (email || body.userEmail)?.trim();
+
+      // If no UID provided, resolve via email
+      if (!targetUid && targetEmail) {
+        let emailSnap = await db.collection('users').where('email', '==', targetEmail).limit(1).get();
+        if (emailSnap.empty) {
+          emailSnap = await db.collection('users').where('email', '==', targetEmail.toLowerCase()).limit(1).get();
+        }
+
+        if (!emailSnap.empty) {
+          targetUid = emailSnap.docs[0].id;
+        } else {
+          try {
+            const authUser = await getAuth().getUserByEmail(targetEmail);
+            targetUid = authUser.uid;
+          } catch {
+            return NextResponse.json(
+              { success: false, error: `No registered user found with email: ${targetEmail}` },
+              { status: 404 }
+            );
+          }
+        }
+      }
+
+      if (!targetUid) {
+        return NextResponse.json({ success: false, error: 'Missing userId or email to grant Boss tier' }, { status: 400 });
       }
 
       const days = typeof durationDays === 'number' && durationDays > 0 ? durationDays : 31;
-      const userRef = db.collection('users').doc(userId);
+      const userRef = db.collection('users').doc(targetUid);
       const userDoc = await userRef.get();
 
-      if (!userDoc.exists) {
-        return NextResponse.json({ success: false, error: 'User document not found' }, { status: 404 });
-      }
-
-      const userData = userDoc.data();
+      const userData = userDoc.exists ? userDoc.data() : null;
       const now = Date.now();
       const currentUntil = (userData?.bossUntil && userData.bossUntil > now) ? userData.bossUntil : now;
       const newBossUntil = currentUntil + (days * 86400 * 1000);
@@ -168,10 +279,11 @@ export async function POST(req: NextRequest) {
         { merge: true }
       );
 
-      console.log(`👑 Admin ${adminCheck.uid} manually granted Boss tier to ${userId} for ${days} days`);
+      console.log(`👑 Admin ${adminCheck.uid} manually granted Boss tier to ${targetUid} (${userData?.email || targetEmail || 'no-email'}) for ${days} days`);
       return NextResponse.json({
         success: true,
-        message: `Boss tier granted to user for ${days} days`,
+        message: `Boss tier granted to ${userData?.name || targetEmail || targetUid} for ${days} days!`,
+        userId: targetUid,
         bossUntil: newBossUntil,
       });
     }
@@ -180,11 +292,31 @@ export async function POST(req: NextRequest) {
     // 4. REVOKE BOSS TIER (REVERT TO BRO)
     // ─────────────────────────────────────────────
     if (action === 'revoke') {
-      if (!userId) {
-        return NextResponse.json({ success: false, error: 'Missing userId' }, { status: 400 });
+      let targetUid = userId?.trim();
+      const targetEmail = (email || body.userEmail)?.trim();
+
+      if (!targetUid && targetEmail) {
+        let emailSnap = await db.collection('users').where('email', '==', targetEmail).limit(1).get();
+        if (emailSnap.empty) {
+          emailSnap = await db.collection('users').where('email', '==', targetEmail.toLowerCase()).limit(1).get();
+        }
+        if (!emailSnap.empty) {
+          targetUid = emailSnap.docs[0].id;
+        } else {
+          try {
+            const authUser = await getAuth().getUserByEmail(targetEmail);
+            targetUid = authUser.uid;
+          } catch {
+            return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+          }
+        }
       }
 
-      const userRef = db.collection('users').doc(userId);
+      if (!targetUid) {
+        return NextResponse.json({ success: false, error: 'Missing userId or email' }, { status: 400 });
+      }
+
+      const userRef = db.collection('users').doc(targetUid);
       await userRef.set(
         {
           accountTier: 'Bro',
@@ -194,7 +326,7 @@ export async function POST(req: NextRequest) {
         { merge: true }
       );
 
-      console.log(`🛡️ Admin ${adminCheck.uid} revoked Boss tier from ${userId}`);
+      console.log(`🛡️ Admin ${adminCheck.uid} revoked Boss tier from ${targetUid}`);
       return NextResponse.json({ success: true, message: 'User reverted to Bro tier' });
     }
 

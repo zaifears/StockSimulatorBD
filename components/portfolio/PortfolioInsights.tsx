@@ -10,7 +10,7 @@
 // full insights, sector radar, and commission analytics render seamlessly.
 // For Bro users, a sleek locked preview with value highlights and upgrade CTA is displayed.
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import {
   PieChart,
@@ -22,8 +22,6 @@ import {
   Lock,
   Sparkles,
   ArrowRight,
-  Eye,
-  EyeOff,
   AlertTriangle,
 } from 'lucide-react';
 import type { PortfolioInsights as Insights } from '@/lib/utils/portfolio';
@@ -51,26 +49,20 @@ const SECTOR_PALETTE = [
 ];
 
 interface PortfolioInsightsProps {
-  insights: Insights;
+  insights: Insights | null;
   isBoss?: boolean;
 }
 
 export default function PortfolioInsights({ insights, isBoss: isBossProp }: PortfolioInsightsProps) {
   const { isBoss: authIsBoss } = useAuth();
-  const [demoUnlocked, setDemoUnlocked] = useState(false);
 
-  // If explicit prop is given, use it; otherwise use auth status; or allow demo toggle
-  const isUnlocked = isBossProp !== undefined ? isBossProp : (authIsBoss || demoUnlocked);
-
-  const {
-    totalPnl, realizedGainLoss, topHolding, categoryBreakdown, sectorBreakdown,
-    lifetimeCommission, bestMoverToday, worstMoverToday,
-  } = insights;
+  // If explicit prop is given, use it; otherwise use auth status
+  const isUnlocked = isBossProp !== undefined ? isBossProp : authIsBoss;
 
   // ─────────────────────────────────────────────
-  // LOCKED BRO VIEW (WITH UPGRADE CTA & PREVIEW)
+  // LOCKED BRO VIEW (WITH UPGRADE CTA & TEASER)
   // ─────────────────────────────────────────────
-  if (!isUnlocked) {
+  if (!isUnlocked || !insights) {
     return (
       <div className="space-y-4">
         {/* Boss Upgrade Pitch Card */}
@@ -132,8 +124,8 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-2.5">
+          {/* Action Button */}
+          <div className="flex items-center">
             <Link
               href="/boss"
               className="w-full sm:w-auto flex-1 py-2.5 px-4 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-98"
@@ -141,16 +133,6 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
               <span>Unlock Full Radar with Boss (৳20 / Month)</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-
-            <button
-              type="button"
-              onClick={() => setDemoUnlocked(true)}
-              className="w-full sm:w-auto py-2.5 px-3.5 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors flex items-center justify-center gap-1.5"
-              title="Preview how insights look"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Preview Demo</span>
-            </button>
           </div>
         </div>
 
@@ -192,6 +174,11 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
   // ─────────────────────────────────────────────
   // UNLOCKED BOSS VIEW (FULL ACTIVE RADAR)
   // ─────────────────────────────────────────────
+  const {
+    totalPnl, realizedGainLoss, topHolding, categoryBreakdown, sectorBreakdown,
+    lifetimeCommission, bestMoverToday, worstMoverToday,
+  } = insights;
+
   return (
     <div className="space-y-3">
       {/* Boss Active Header Strip */}
@@ -202,15 +189,6 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
             Portfolio Insights Active
           </span>
         </div>
-        {demoUnlocked && (
-          <button
-            type="button"
-            onClick={() => setDemoUnlocked(false)}
-            className="text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center gap-1"
-          >
-            <EyeOff className="w-3 h-3" /> Exit Demo
-          </button>
-        )}
       </div>
 
       {/* Realized vs Total — the number that separates paper gains from banked ones */}

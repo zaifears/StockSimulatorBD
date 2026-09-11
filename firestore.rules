@@ -34,36 +34,32 @@ service cloud.firestore {
     match /users/{userId} {
       // Server-only fields: privilege flags, welcome-bonus dedup bookkeeping
       // (see app/api/auth/grant-social-bonus/route.ts), educational-use consent,
-      // and Boss Pro subscription expiry. The client may never set, change,
+      // and Boss Pro subscription expiry/metadata. The client may never set, change,
       // or REMOVE any of these.
       function protectedUserFields() {
-        return ['admin', 'welcomeBonusGranted', 'role', 'isGodMode', 'disclaimerAgreedAt', 'promoCodeRedeemedAt', 'tradeSurveyCompletedAt', 'bossUntil'];
+        return [
+          'admin', 'welcomeBonusGranted', 'role', 'isGodMode',
+          'disclaimerAgreedAt', 'promoCodeRedeemedAt', 'tradeSurveyCompletedAt',
+          'bossUntil', 'bossSince', 'lastBossPlan'
+        ];
       }
 
       allow read: if isOwner(userId) || isAdmin();
 
       allow create: if isOwner(userId)
         && !request.resource.data.keys().hasAny(protectedUserFields())
-        && request.resource.data.get('accountTier', 'Bro') != 'Boss';
+        && request.resource.data.get('accountTier', 'Bro') == 'Bro';
 
       // Judged on what actually CHANGED, not on what the finished document
       // happens to contain.
       //
-      // This previously used `request.resource.data.keys().hasAny(...)` for
-      // all writes. On an update, request.resource.data is the whole
-      // post-write document — untouched fields included — so that condition
-      // was true for every user who had a `coins` field, i.e. everyone. Net
-      // effect, confirmed in the Firestore emulator: EVERY client update to
-      // a user document was denied, silently breaking updateUserProfile().
-      //
-      // The same bug had a second face. A full-document setDoc() (no merge)
-      // was ALLOWED, because the replacement document doesn't list the
-      // protected keys — so a client could erase their own coins or wipe
-      // their recorded consent. diff().affectedKeys() covers additions,
-      // changes and removals, which closes both directions at once.
+      // diff().affectedKeys() covers additions, changes and removals.
+      // 🔒 Anti-tampering: A client can NEVER set or modify accountTier to 'Boss'
+      // from the browser console. Only the server (Firebase Admin SDK) can upgrade tiers.
       allow update: if isOwner(userId)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['accountTier']) || request.resource.data.get('accountTier', 'Bro') != 'Boss');
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['accountTier'])
+            || (request.resource.data.accountTier == 'Bro' && resource.data.get('accountTier', 'Bro') == 'Bro'));
 
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()

@@ -17,6 +17,7 @@ import HoldingRow from '@/components/portfolio/HoldingRow';
 import TradeModal from '@/components/simulator/trade/TradeModal';
 import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ViewTab = 'holdings' | 'insights' | 'orders';
 
@@ -47,10 +48,11 @@ function PortfolioScreen() {
 
   // Loaded once here rather than inside OrdersList, since the Insights tab
   // also needs it (lifetime commission) — one listener instead of two.
+  const { isBoss } = useAuth();
   const { trades, loading: tradesLoading, error: tradesError } = useTradeHistory();
   const insights = useMemo(
-    () => getPortfolioInsights(totals, simulatorState.realizedGainLoss || 0, trades),
-    [totals, simulatorState.realizedGainLoss, trades]
+    () => (isBoss ? getPortfolioInsights(totals, simulatorState.realizedGainLoss || 0, trades) : null),
+    [isBoss, totals, simulatorState.realizedGainLoss, trades]
   );
 
   return (
@@ -89,7 +91,7 @@ function PortfolioScreen() {
       )}
       {tab === 'insights' && (
         <div className="px-4 sm:px-0">
-          <PortfolioInsights insights={insights} />
+          <PortfolioInsights insights={insights} isBoss={isBoss} />
         </div>
       )}
       {tab === 'orders' && <OrdersList trades={trades} loading={tradesLoading} error={tradesError} />}
