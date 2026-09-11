@@ -72,41 +72,39 @@ export async function generatePortfolioPdf(data: StatementData) {
   // 1. BRAND HEADER SECTION
   const logoBase64 = await getBase64Image('/favicon-96x96.png');
   if (logoBase64) {
-    doc.addImage(logoBase64, 'PNG', leftMargin, currentY, 14, 14);
+    doc.addImage(logoBase64, 'PNG', leftMargin, currentY, 13, 13);
   }
 
-  // Company info next to logo
-  const textLeft = logoBase64 ? leftMargin + 17 : leftMargin;
+  // Company info next to logo — strictly "StockSimulatorBD" and small description
+  const textLeft = logoBase64 ? leftMargin + 16 : leftMargin;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(15, 23, 42); // slate-900
-  doc.text('StockSimulatorBD Securities', textLeft, currentY + 4);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(30, 41, 59);
-  doc.text('DSE TREC No. 203 (Paper Trading Simulator Terminal)', textLeft, currentY + 8);
+  doc.text('StockSimulatorBD', textLeft, currentY + 4);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text('Eunoos Trade Centre (Level-19), 52-53 Dilkusha C/A, Dhaka-1000.', textLeft, currentY + 11.5);
-  doc.text('Email: support@stocksimulator.tech | Website: www.stocksimulator.tech', textLeft, currentY + 14.5);
+  doc.text('Risk-Free Dhaka Stock Exchange (DSE) Paper Trading Platform', textLeft, currentY + 8.2);
+  doc.text('Email: shahoriar.hossain@gmail.com | Website: www.stocksimulator.tech', textLeft, currentY + 12);
 
   // Right-aligned Statement Title & Date
-  const dateOnlyStr = ticket.dhakaTimeStr.split(' ')[0] || new Date().toLocaleDateString('en-GB');
+  // Formats date cleanly like "11-Sep-2026"
+  const dateParts = ticket.dhakaTimeStr.split(' ');
+  const fullDateStr = dateParts.length >= 3 ? `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}` : dateParts[0];
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42);
-  doc.text(`Portfolio Statement  ${dateOnlyStr}`, rightMargin, currentY + 5, { align: 'right' });
+  doc.text(`Portfolio Statement  ${fullDateStr}`, rightMargin, currentY + 4, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Doc ID: ${ticket.ticketId}`, rightMargin, currentY + 9.5, { align: 'right' });
-  doc.text(`Tier: BOSS TIER (ACTIVE)`, rightMargin, currentY + 13.5, { align: 'right' });
+  doc.text(`Doc ID: ${ticket.ticketId}`, rightMargin, currentY + 8.2, { align: 'right' });
+  doc.text('Tier: BOSS TIER (ACTIVE)', rightMargin, currentY + 12, { align: 'right' });
 
-  currentY += 18;
+  currentY += 16;
 
   // Horizontal divider rule
   doc.setDrawColor(203, 213, 225); // slate-300
@@ -114,13 +112,13 @@ export async function generatePortfolioPdf(data: StatementData) {
   doc.line(leftMargin, currentY, rightMargin, currentY);
   currentY += 4;
 
-  // 2. CLIENT / TRADER BIO BLOCK (2 columns with clean colons)
+  // 2. CLIENT / TRADER BIO BLOCK (Client Code: XXXX, BO ID: UID)
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(30, 41, 59);
 
   const col1KeyX = leftMargin;
-  const col1ValX = leftMargin + 28;
+  const col1ValX = leftMargin + 26;
   const col2KeyX = leftMargin + 105;
   const col2ValX = leftMargin + 138;
 
@@ -140,7 +138,7 @@ export async function generatePortfolioPdf(data: StatementData) {
   doc.setFont('helvetica', 'bold');
   doc.text('Client Code', col1KeyX, currentY);
   doc.setFont('helvetica', 'normal');
-  doc.text(`:  ${ticket.clientCode}`, col1ValX - 4, currentY);
+  doc.text(':  XXXX', col1ValX - 4, currentY);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Account Status', col2KeyX, currentY);
@@ -221,7 +219,7 @@ export async function generatePortfolioPdf(data: StatementData) {
   let sn = 1;
   if (marginable.length > 0) {
     holdingsRows.push([
-      { content: 'Marginable Instrument', colSpan: 12, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      { content: 'Marginable Instrument', colSpan: 13, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
     ]);
     let subCost = 0, subVal = 0, subPnl = 0;
     marginable.forEach((m) => {
@@ -257,7 +255,7 @@ export async function generatePortfolioPdf(data: StatementData) {
 
   if (nonMarginable.length > 0) {
     holdingsRows.push([
-      { content: 'Non Marginable Instrument', colSpan: 12, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      { content: 'Non Marginable Instrument', colSpan: 13, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
     ]);
     let subCost = 0, subVal = 0, subPnl = 0;
     nonMarginable.forEach((m) => {
@@ -293,7 +291,7 @@ export async function generatePortfolioPdf(data: StatementData) {
 
   if (holdingsRows.length === 0) {
     holdingsRows.push([
-      { content: 'No active stock securities currently held in portfolio.', colSpan: 12, styles: { halign: 'center', fontStyle: 'italic' } },
+      { content: 'No active stock securities currently held in portfolio.', colSpan: 13, styles: { halign: 'center', fontStyle: 'italic' } },
     ]);
   } else {
     // Grand Total Row
@@ -374,158 +372,121 @@ export async function generatePortfolioPdf(data: StatementData) {
 
   // Calculate table end position
   const finalY = (doc as any).lastAutoTable?.finalY || currentY + 40;
-  let summaryY = finalY + 4;
+  let summaryY = finalY + 3;
 
   // Check if we need a new page for financial summaries
-  if (summaryY + 65 > pageHeight) {
+  if (summaryY + 70 > pageHeight) {
     doc.addPage();
     summaryY = 14;
   }
 
-  // 4. FINANCIAL STATUS & DEPOSIT SUMMARY (2-column layout matching NBL statement)
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.3);
-
-  const box1Left = leftMargin;
-  const boxWidth = (pageWidth - 28 - 4) / 2;
-  const box2Left = box1Left + boxWidth + 4;
-
+  // 4. FINANCIAL STATUS & DEPOSIT SUMMARY (Clean 4-Column autoTable to eliminate all text overlap)
   const totalEquity = balance + totals.currentValue;
   const netGainLoss = realizedGainLoss + totals.unrealisedPnl;
-
-  // LEFT COLUMN
-  let yLeft = summaryY;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(15, 23, 42);
-  doc.text('Account Status Till Today', box1Left, yLeft);
-  doc.line(box1Left, yLeft + 1, box1Left + boxWidth, yLeft + 1);
-  yLeft += 4.5;
-
-  doc.setFontSize(7.5);
-  const leftFields = [
-    ['Available Balance', fmt(balance, 2)],
-    ['Receivable Sales', '0.00'],
-    ['Cheque In Hand/Transit', '0.00'],
-    ['Ledger Balance', fmt(balance, 2)],
-    ['Accrued Interest & Fees', '0.00'],
-    ['Current Asset / Liabilities', fmt(balance, 2)],
-  ];
-
-  leftFields.forEach(([k, v]) => {
-    doc.setFont('helvetica', 'normal');
-    doc.text(k, box1Left, yLeft);
-    doc.text(':', box1Left + 45, yLeft);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`৳ ${v}`, box1Left + boxWidth, yLeft, { align: 'right' });
-    yLeft += 3.8;
-  });
-
-  yLeft += 2;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Deposit & Withdrawal Status', box1Left, yLeft);
-  doc.line(box1Left, yLeft + 1, box1Left + boxWidth, yLeft + 1);
-  yLeft += 4.5;
-
-  // Assume standard base initial deposit 10,000 plus recharge balance
   const estimatedDeposits = Math.max(10000, balance + totals.investment);
-  const depositFields = [
-    ['Initial Demo Capital', '10,000.00'],
-    ['Total Coins Recharge', fmt(Math.max(0, estimatedDeposits - 10000), 2)],
-    ['Total Deposit', fmt(estimatedDeposits, 2)],
-    ['Withdrawal', '0.00'],
-    ['Net Deposit', fmt(estimatedDeposits, 2)],
+
+  const financialGridBody: any[] = [
+    [
+      { content: 'Account Status Till Today', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+      { content: 'Market Valuation & Portfolio Equity', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+    ],
+    ['Available Balance', `BDT ${fmt(balance, 2)}`, 'Market Value of Securities', `BDT ${fmt(totals.currentValue, 2)}`],
+    ['Receivable Sales', 'BDT 0.00', 'Total Equity', `BDT ${fmt(totalEquity, 2)}`],
+    ['Cheque In Hand/Transit', 'BDT 0.00', 'Loan Ratio', '0.00'],
+    ['Ledger Balance', `BDT ${fmt(balance, 2)}`, 'Purchase Power', `BDT ${fmt(balance, 2)}`],
+    ['Accrued Interest & Fees', 'BDT 0.00', 'Realized Gain / Loss', { content: `BDT ${signed(realizedGainLoss)}`, styles: { textColor: realizedGainLoss >= 0 ? [5, 150, 105] : [220, 38, 38], fontStyle: 'bold' } }],
+    ['Current Asset / Liabilities', `BDT ${fmt(balance, 2)}`, 'Unrealized Gain / Loss', { content: `BDT ${signed(totals.unrealisedPnl)}`, styles: { textColor: totals.unrealisedPnl >= 0 ? [5, 150, 105] : [220, 38, 38], fontStyle: 'bold' } }],
+    [
+      { content: 'Deposit & Withdrawal Status', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+      'Day P&L',
+      { content: `BDT ${signed(totals.dayPnl)}`, styles: { textColor: totals.dayPnl >= 0 ? [5, 150, 105] : [220, 38, 38], fontStyle: 'bold' } },
+    ],
+    ['Initial Demo Capital', 'BDT 10,000.00', 'Net Gain / Loss', { content: `BDT ${signed(netGainLoss)}`, styles: { textColor: netGainLoss >= 0 ? [5, 150, 105] : [220, 38, 38], fontStyle: 'bold' } }],
+    ['Total Coins Recharge', `BDT ${fmt(Math.max(0, estimatedDeposits - 10000), 2)}`, 'Margin Ratio', '0.00'],
+    ['Total Deposit', `BDT ${fmt(estimatedDeposits, 2)}`, 'Amount to be Deposited', 'BDT 0.00'],
+    ['Withdrawal', 'BDT 0.00', '', ''],
+    ['Net Deposit', `BDT ${fmt(estimatedDeposits, 2)}`, '', ''],
   ];
 
-  depositFields.forEach(([k, v]) => {
-    doc.setFont('helvetica', 'normal');
-    doc.text(k, box1Left, yLeft);
-    doc.text(':', box1Left + 45, yLeft);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`৳ ${v}`, box1Left + boxWidth, yLeft, { align: 'right' });
-    yLeft += 3.8;
+  autoTable(doc, {
+    startY: summaryY,
+    body: financialGridBody,
+    theme: 'plain',
+    styles: {
+      fontSize: 7.2,
+      cellPadding: 0.9,
+      textColor: [30, 41, 59],
+      lineColor: [241, 245, 249],
+      lineWidth: 0.1,
+    },
+    columnStyles: {
+      0: { halign: 'left', cellWidth: 48 },
+      1: { halign: 'right', fontStyle: 'bold', cellWidth: 43 },
+      2: { halign: 'left', cellWidth: 48 },
+      3: { halign: 'right', fontStyle: 'bold', cellWidth: 43 },
+    },
+    margin: { left: leftMargin, right: 14 },
   });
 
-  // RIGHT COLUMN
-  let yRight = summaryY;
+  const finalSummaryY = (doc as any).lastAutoTable?.finalY || summaryY + 45;
+
+  // 5. MANDATORY RED LEGAL DISCLAIMER WITH CAUTION ICON
+  const disclaimerStartY = Math.min(finalSummaryY + 3, pageHeight - 32);
+  const cardWidth = pageWidth - 28;
+  const cardHeight = 17.5;
+
+  // Red alert box background & border
+  doc.setFillColor(254, 242, 242); // #FEF2F2 light red
+  doc.setDrawColor(239, 68, 68); // #EF4444 red border
+  doc.setLineWidth(0.4);
+  doc.roundedRect(leftMargin, disclaimerStartY, cardWidth, cardHeight, 2, 2, 'FD');
+
+  // Draw crisp Vector Caution Triangle
+  const tx = leftMargin + 3.5;
+  const ty = disclaimerStartY + 3.2;
+  doc.setFillColor(220, 38, 38); // #DC2626
+  doc.setDrawColor(185, 28, 28);
+  doc.triangle(tx + 3.2, ty, tx, ty + 6.4, tx + 6.4, ty + 6.4, 'FD');
+
+  // Exclamation mark inside triangle
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(15, 23, 42);
-  doc.text('Market Valuation & Portfolio Equity', box2Left, yRight);
-  doc.line(box2Left, yRight + 1, box2Left + boxWidth, yRight + 1);
-  yRight += 4.5;
+  doc.setFontSize(5.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('!', tx + 3.2, ty + 5.2, { align: 'center' });
 
-  doc.setFontSize(7.5);
-  const rightFields = [
-    ['Market Value of Securities', fmt(totals.currentValue, 2)],
-    ['Total Equity', fmt(totalEquity, 2)],
-    ['Loan Ratio', '0.00'],
-    ['Purchase Power', fmt(balance, 2)],
-    ['Realized Gain / Loss', signed(realizedGainLoss)],
-    ['Unrealized Gain / Loss', signed(totals.unrealisedPnl)],
-    ['Day P&L', signed(totals.dayPnl)],
-    ['Net Gain / Loss', signed(netGainLoss)],
-    ['Margin Ratio', '0.00'],
-    ['Amount to be Deposited', '0.00'],
-  ];
-
-  rightFields.forEach(([k, v], idx) => {
-    const isNetGain = idx === 7;
-    doc.setFont('helvetica', isNetGain ? 'bold' : 'normal');
-    doc.text(k, box2Left, yRight);
-    doc.text(':', box2Left + 45, yRight);
-    doc.setFont('helvetica', 'bold');
-
-    if (isNetGain) {
-      doc.setTextColor(netGainLoss >= 0 ? 5 : 220, netGainLoss >= 0 ? 150 : 38, netGainLoss >= 0 ? 105 : 38);
-    } else {
-      doc.setTextColor(30, 41, 59);
-    }
-
-    doc.text(`৳ ${v}`, box2Left + boxWidth, yRight, { align: 'right' });
-    doc.setTextColor(30, 41, 59);
-    yRight += 3.8;
-  });
-
-  const bottomY = Math.max(yLeft, yRight) + 4;
-
-  // 5. MANDATORY LEGAL NOTICES & VIRTUAL CURRENCY LEARNING PURPOSES DISCLAIMER
-  const disclaimerStartY = Math.min(bottomY, pageHeight - 34);
-
-  doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(0.3);
-  doc.line(leftMargin, disclaimerStartY, rightMargin, disclaimerStartY);
-
-  doc.setFont('helvetica', 'italic');
+  // Red Disclaimer Heading
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.2);
-  doc.setTextColor(71, 85, 105);
+  doc.setTextColor(185, 28, 28); // #B91C1C deep red
+  doc.text(
+    'MANDATORY VIRTUAL SIMULATION & EDUCATIONAL DISCLAIMER',
+    leftMargin + 12,
+    disclaimerStartY + 4.8
+  );
+
+  // Red Disclaimer Body Text
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.2);
+  doc.setTextColor(153, 27, 27); // #991B1B readable dark red
+  const disclaimerText =
+    'This portfolio statement is generated strictly for learning and educational paper-trading simulation purposes by StockSimulatorBD (www.stocksimulator.tech). All BDT balances, trades, valuations, and securities shown are 100% VIRTUAL paper currency with ZERO monetary value and do not represent real money, real shares, or an actual DSE brokerage account. StockSimulatorBD is an educational platform and not a licensed broker or investment advisor under BSEC.';
+
+  const splitDisclaimer = doc.splitTextToSize(disclaimerText, cardWidth - 14);
+  doc.text(splitDisclaimer, leftMargin + 12, disclaimerStartY + 8.5);
+
+  // Computer generated notice above or below
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(6.5);
+  doc.setTextColor(100, 116, 139);
   doc.text(
     "'This is a Computer Generated Statement. No Signature is Required.'",
     pageWidth / 2,
-    disclaimerStartY + 4,
+    disclaimerStartY + cardHeight + 3.5,
     { align: 'center' }
   );
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
-  doc.setTextColor(148, 64, 5); // amber-700
-  doc.text(
-    '⚠️ MANDATORY VIRTUAL SIMULATION & EDUCATIONAL DISCLAIMER:',
-    leftMargin,
-    disclaimerStartY + 8
-  );
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.2);
-  doc.setTextColor(100, 116, 139);
-  const disclaimerText =
-    'This portfolio statement is generated strictly for learning and educational paper-trading simulation purposes by StockSimulatorBD (www.stocksimulator.tech). All BDT (৳) balances, trades, valuations, and securities shown are 100% VIRTUAL paper currency with ZERO monetary value and do not represent real money, real shares, or an actual DSE brokerage account. StockSimulatorBD is not a licensed broker or investment advisor under BSEC.';
-
-  const splitDisclaimer = doc.splitTextToSize(disclaimerText, pageWidth - 28);
-  doc.text(splitDisclaimer, leftMargin, disclaimerStartY + 11.5);
-
   // Bottom verification footer
-  const footerY = pageHeight - 8;
+  const footerY = pageHeight - 5.5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184); // slate-400
@@ -535,7 +496,7 @@ export async function generatePortfolioPdf(data: StatementData) {
     footerY
   );
   doc.text(
-    'Powered By StockSimulatorBD Engine  |  XBroker Core Simulator',
+    'Powered By StockSimulatorBD Engine  |  DSE Paper Trading Core',
     pageWidth / 2,
     footerY,
     { align: 'center' }
@@ -548,7 +509,7 @@ export async function generatePortfolioPdf(data: StatementData) {
   );
 
   // Trigger browser download
-  const cleanDate = ticket.dhakaTimeStr.split(' ')[0] || 'statement';
+  const cleanDate = fullDateStr.replace(/[^a-zA-Z0-9-]/g, '_');
   const fileName = `StockSimulatorBD_Portfolio_Statement_${cleanDate}.pdf`;
   doc.save(fileName);
 }

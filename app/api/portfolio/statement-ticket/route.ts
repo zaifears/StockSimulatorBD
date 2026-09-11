@@ -83,11 +83,10 @@ export async function POST(request: NextRequest) {
       lastStatementExportAt: FieldValue.serverTimestamp(),
     });
 
-    // Derive institutional-style IDs
+    // Institutional-style ticket with user UID as BO ID and masked client code
     const ticketId = `SSBD-STMT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const clientCode = `6${userId.replace(/[^0-9]/g, '').padEnd(4, '8').slice(0, 4)}`;
-    const numericPart = userId.replace(/[^0-9]/g, '').padEnd(10, '7').slice(0, 10);
-    const boId = `12039800${numericPart.slice(0, 8)}`;
+    const clientCode = 'XXXX';
+    const boId = userId;
     const userName = userData.displayName || decodedToken.name || userData.name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'Valued Trader');
     const userEmail = decodedToken.email || userData.email || 'N/A';
 
