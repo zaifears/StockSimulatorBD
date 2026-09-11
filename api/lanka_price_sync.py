@@ -67,6 +67,7 @@ USER_AGENT = (
 )
 
 # 0-indexed <td> positions inside a data row, per the table structure above.
+CELL_SECTOR = 2
 CELL_LTP = 3
 CELL_OPEN = 4
 CELL_HIGH = 5
@@ -150,6 +151,11 @@ class DataMatrixPriceParser(HTMLParser):
             self.in_cell = False
         elif tag == "tr":
             if self.current_symbol and CELL_LTP in self.cell_values:
+                # Filter out Government Securities / Treasury Bonds (G-SEC / T.Bond)
+                sector = (self.cell_values.get(CELL_SECTOR) or "").strip()
+                if "G-SEC" in sector or "T.Bond" in sector or self.current_symbol.startswith("TB"):
+                    return
+
                 ltp = _to_float(self.cell_values.get(CELL_LTP))
                 ycp = _to_float(self.cell_values.get(CELL_YCP))
                 change = _to_float(self.cell_values.get(CELL_CHANGE))

@@ -123,7 +123,9 @@ class DataMatrixSectorParser(HTMLParser):
             self.in_cell = False
         elif tag == "tr":
             if self.current_symbol and self.current_sector:
-                self.sectors[self.current_symbol] = self.current_sector
+                # Filter out Government Securities / Treasury Bonds (G-SEC / T.Bond)
+                if "G-SEC" not in self.current_sector and "T.Bond" not in self.current_sector and not self.current_symbol.startswith("TB"):
+                    self.sectors[self.current_symbol] = self.current_sector
 
     def handle_data(self, data):
         if self.in_symbol_anchor:
