@@ -72,16 +72,13 @@ export default function MarketStrip({ onSearchClick }: Props) {
       {/* Row 1 — identity, market state, utilities */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 h-12">
-          <Link href="/" className="flex items-center gap-1 sm:gap-1.5 shrink-0" aria-label="StockSimulatorBD home">
-            <Image src="/favicon.svg" alt="" width={20} height={20} className="h-5 w-5 sm:h-6 sm:w-6 object-contain shrink-0" priority />
-            <span className="text-[11px] xs:text-xs sm:text-sm font-bold tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
-              StockSimulator<span className="text-blue-600 dark:text-blue-400">BD</span>
-            </span>
+          <Link href="/" className="flex items-center shrink-0" aria-label="StockSimulatorBD home">
+            <Image src="/favicon.svg" alt="StockSimulatorBD" width={24} height={24} className="h-6 w-6 object-contain shrink-0" priority />
           </Link>
 
           {/* Market state — the single most important thing on this bar */}
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums shrink-0 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tabular-nums shrink-0 ${
               marketOpen
                 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                 : 'bg-gray-500/10 text-gray-600 dark:text-gray-400'
@@ -98,7 +95,7 @@ export default function MarketStrip({ onSearchClick }: Props) {
             <LiveClock />
           </div>
 
-          <div className="flex-1" />
+          <div className="flex-1 min-w-[6px]" />
 
           {/* Board breadth — real, derived from the symbols we actually have */}
           <div
@@ -116,9 +113,9 @@ export default function MarketStrip({ onSearchClick }: Props) {
                 href="/profile/tier"
                 aria-label="Boss Tier Active"
                 title="Boss Tier active — click to view tier status"
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 border border-amber-400/50 text-amber-700 dark:text-amber-300 text-[11px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shrink-0"
+                className="flex items-center gap-1 px-1.5 py-1 sm:px-2 sm:py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 border border-amber-400/50 text-amber-700 dark:text-amber-300 text-[10px] sm:text-[11px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shrink-0"
               >
-                <Crown className="w-3.5 h-3.5 fill-current text-amber-500" />
+                <Crown className="w-3.5 h-3.5 fill-current text-amber-500 shrink-0" />
                 <span className="hidden sm:inline">Boss</span>
               </Link>
             ) : (
@@ -126,11 +123,11 @@ export default function MarketStrip({ onSearchClick }: Props) {
                 href="/boss"
                 aria-label="Upgrade to Boss Tier"
                 title="Bro Tier (Free) — click to upgrade to Boss"
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/50 active:scale-95 transition-all shrink-0"
+                className="flex items-center gap-1 px-1.5 py-1 sm:px-2 sm:py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] sm:text-[11px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/50 active:scale-95 transition-all shrink-0"
               >
-                <Shield className="w-3.5 h-3.5 text-blue-500" />
+                <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                 <span className="hidden sm:inline">Bro</span>
-                <span className="text-[9px] uppercase tracking-wider font-extrabold px-1 py-0.2 rounded bg-amber-500 text-gray-950">Upgrade</span>
+                <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-extrabold px-1 py-0.2 rounded bg-amber-500 text-gray-950">Upgrade</span>
               </Link>
             )
           )}
@@ -139,7 +136,7 @@ export default function MarketStrip({ onSearchClick }: Props) {
             type="button"
             onClick={onSearchClick}
             aria-label="Search stocks"
-            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+            className="p-1.5 sm:p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
           >
             <Search className="w-[18px] h-[18px]" />
           </button>
@@ -147,7 +144,7 @@ export default function MarketStrip({ onSearchClick }: Props) {
           <Link
             href="/coins"
             aria-label="Add trading credit"
-            className="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 active:scale-95 transition-all shrink-0"
+            className="p-1.5 sm:p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 active:scale-95 transition-all shrink-0"
           >
             <Coins className="w-[18px] h-[18px]" />
           </Link>

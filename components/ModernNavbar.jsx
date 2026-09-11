@@ -48,10 +48,10 @@ const ModernNavbar = () => {
       >
         <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo + Full Brand Name (Always fully visible in small compact size on mobile) */}
+            {/* Logo + Full Brand Name (Only shown on homepage so that coin is always visible on other pages) */}
             <Link 
               href="/" 
-              className="flex items-center gap-1 sm:gap-2 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+              className="flex items-center gap-1.5 sm:gap-2 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
               aria-label="StockSimulatorBD home"
             >
               <Image
@@ -59,12 +59,14 @@ const ModernNavbar = () => {
                 alt="StockSimulatorBD"
                 width={28}
                 height={28}
-                className="h-5 w-5 sm:h-8 sm:w-8 object-contain transform hover:scale-105 transition-transform duration-300 shrink-0"
+                className="h-6 w-6 sm:h-8 sm:w-8 object-contain transform hover:scale-105 transition-transform duration-300 shrink-0"
                 priority
               />
-              <span className="text-[11px] xs:text-xs sm:text-lg font-extrabold tracking-tight whitespace-nowrap">
-                StockSimulator<span className="text-blue-600 dark:text-blue-400">BD</span>
-              </span>
+              {pathname === '/' && (
+                <span className="text-xs sm:text-lg font-extrabold tracking-tight whitespace-nowrap">
+                  StockSimulator<span className="text-blue-600 dark:text-blue-400">BD</span>
+                </span>
+              )}
             </Link>
 
             {/* Desktop Navigation - Hidden on mobile */}
