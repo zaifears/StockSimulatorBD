@@ -115,9 +115,9 @@ const COMPLETE_AUDIT_DATA: AuditCategory[] = [
       },
       {
         name: 'Starting Demo Capital',
-        description: '৳100,000 virtual paper cash upon signup + 10,000 welcome bonus for verified users.',
-        bro: '৳100k + 10k',
-        boss: '৳100k + 10k',
+        description: '৳10,000 virtual trading cash credited automatically upon account verification.',
+        bro: '৳10,000',
+        boss: '৳10,000',
       },
       {
         name: 'Technical Candlestick Charts',

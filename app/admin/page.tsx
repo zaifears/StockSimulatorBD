@@ -71,6 +71,16 @@ export default function AdminDashboard() {
   const handleApproveBoss = async (req: any) => {
     setBossActionLoading(req.id);
     setBossFeedback(null);
+
+    // ⚡️ Optimistic UI update: remove item immediately from table
+    const previousPending = [...pendingBossRequests];
+    setPendingBossRequests((prev) => prev.filter((r) => r.id !== req.id));
+    setStats((prev) => ({
+      ...prev,
+      pendingBossRequests: Math.max(0, prev.pendingBossRequests - 1),
+      activeBossUsers: prev.activeBossUsers + 1,
+    }));
+
     try {
       const res = await fetchWithFreshToken('/api/admin/tier', {
         method: 'POST',
@@ -89,12 +99,13 @@ export default function AdminDashboard() {
         text: `Approved! ${req.userName || req.userEmail} is now active Boss for ${req.durationDays} days.`,
         type: 'success',
       });
+    } catch (err: any) {
+      setPendingBossRequests(previousPending);
       setStats((prev) => ({
         ...prev,
-        pendingBossRequests: Math.max(0, prev.pendingBossRequests - 1),
-        activeBossUsers: prev.activeBossUsers + 1,
+        pendingBossRequests: previousPending.length,
+        activeBossUsers: Math.max(0, prev.activeBossUsers - 1),
       }));
-    } catch (err: any) {
       setBossFeedback({ text: err.message || 'Action failed', type: 'error' });
     } finally {
       setBossActionLoading(null);
@@ -106,6 +117,15 @@ export default function AdminDashboard() {
     if (reason === null) return;
     setBossActionLoading(req.id);
     setBossFeedback(null);
+
+    // ⚡️ Optimistic UI update: remove item immediately from table
+    const previousPending = [...pendingBossRequests];
+    setPendingBossRequests((prev) => prev.filter((r) => r.id !== req.id));
+    setStats((prev) => ({
+      ...prev,
+      pendingBossRequests: Math.max(0, prev.pendingBossRequests - 1),
+    }));
+
     try {
       const res = await fetchWithFreshToken('/api/admin/tier', {
         method: 'POST',
@@ -120,11 +140,12 @@ export default function AdminDashboard() {
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to reject request');
 
       setBossFeedback({ text: `Rejected request for ${req.userName || req.userEmail}.`, type: 'success' });
+    } catch (err: any) {
+      setPendingBossRequests(previousPending);
       setStats((prev) => ({
         ...prev,
-        pendingBossRequests: Math.max(0, prev.pendingBossRequests - 1),
+        pendingBossRequests: previousPending.length,
       }));
-    } catch (err: any) {
       setBossFeedback({ text: err.message || 'Action failed', type: 'error' });
     } finally {
       setBossActionLoading(null);

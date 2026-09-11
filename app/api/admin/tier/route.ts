@@ -82,17 +82,18 @@ export async function GET(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────
-    // 2. FETCH PENDING REQUESTS
+    // 2. FETCH REQUESTS BY STATUS (pending, approved, rejected, or all)
     // ─────────────────────────────────────────────
-    if (pendingOnly === 'true') {
-      const pendingSnap = await db
-        .collection('boss_requests')
-        .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
-        .limit(30)
-        .get();
-
-      const requests = pendingSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const statusQuery = searchParams.get('status')?.trim();
+    if (statusQuery || pendingOnly === 'true') {
+      const targetStatus = statusQuery || (pendingOnly === 'true' ? 'pending' : null);
+      let queryRef: FirebaseFirestore.Query = db.collection('boss_requests');
+      if (targetStatus && targetStatus !== 'all' && targetStatus !== 'manual') {
+        queryRef = queryRef.where('status', '==', targetStatus);
+      }
+      queryRef = queryRef.orderBy('createdAt', 'desc').limit(50);
+      const snap = await queryRef.get();
+      const requests = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       return NextResponse.json({ success: true, requests });
     }
 

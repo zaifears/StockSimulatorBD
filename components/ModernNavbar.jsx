@@ -6,12 +6,12 @@ import { usePathname } from 'next/navigation'
 import AuthStatus from './AuthStatus'
 import { useAuth } from '../contexts/AuthContext'
 import CoinDisplay from './ui/CoinDisplay'
-import { Home, LineChart, BarChart3 } from 'lucide-react'
+import { Home, LineChart, BarChart3, Crown, Shield } from 'lucide-react'
 
 const ModernNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, isBoss } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10)
@@ -79,12 +79,38 @@ const ModernNavbar = () => {
             </div>
 
             {/* Right Side - Maximized touch gaps & guaranteed touch targets */}
-            <div className="flex items-center gap-6 sm:gap-8 shrink-0 relative z-20">
+            <div className="flex items-center gap-2 sm:gap-3 lg:gap-5 shrink-0 relative z-20">
               
+              {/* User Tier Status Button */}
+              {user && (
+                isBoss ? (
+                  <Link
+                    href="/profile/tier"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 border border-amber-400/50 text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-sm shrink-0"
+                    title="Boss Tier active — click to view tier status"
+                  >
+                    <Crown className="w-3.5 h-3.5 fill-current text-amber-500 shrink-0" />
+                    <span className="hidden sm:inline">Boss Tier</span>
+                    <span className="sm:hidden">Boss</span>
+                  </Link>
+                ) : (
+                  <Link
+                    href="/boss"
+                    className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/50 active:scale-95 transition-all shrink-0"
+                    title="Bro Tier (Free) — click to upgrade to Boss"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span className="hidden sm:inline">Bro Tier</span>
+                    <span className="sm:hidden">Bro</span>
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-amber-500 text-gray-950 ml-0.5">Upgrade</span>
+                  </Link>
+                )
+              )}
+
               {/* Coin Display - Now styled as a clear, clickable pill button */}
               <Link 
                 href="/coins"
-                className="flex items-center shrink-0 active:scale-95 transition-all relative z-30 cursor-pointer bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-700/50 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-sm"
+                className="flex items-center shrink-0 active:scale-95 transition-all relative z-30 cursor-pointer bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-700/50 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-sm"
               >
                 <CoinDisplay 
                   className="flex" 
@@ -100,7 +126,7 @@ const ModernNavbar = () => {
               {/* Mobile - Show Profile or Join button */}
               <div className="lg:hidden shrink-0 relative z-30">
                 {user ? (
-                  <Link href="/profile" className="block bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors active:scale-95 shadow-sm">
+                  <Link href="/profile" className="block bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors active:scale-95 shadow-sm">
                     Profile
                   </Link>
                 ) : (

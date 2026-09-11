@@ -13,8 +13,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Coins } from 'lucide-react';
+import { Search, Coins, Crown, Shield } from 'lucide-react';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { getPortfolioTotals, getMarketBreadth } from '@/lib/utils/portfolio';
 import { formatDhakaClock } from '@/lib/utils/dhakaTime';
 
@@ -53,6 +54,7 @@ interface Props {
 
 export default function MarketStrip({ onSearchClick }: Props) {
   const { marketInfo, simulatorState, isMarketOpen } = useSharedSimulator();
+  const { user, isBoss } = useAuth();
   const marketOpen = isMarketOpen();
 
   const totals = useMemo(
@@ -100,18 +102,44 @@ export default function MarketStrip({ onSearchClick }: Props) {
 
           {/* Board breadth — real, derived from the symbols we actually have */}
           <div
-            className="flex items-center gap-1.5 text-xs font-mono font-bold shrink-0"
+            className="hidden md:flex items-center gap-1.5 text-xs font-mono font-bold shrink-0"
             title={`${breadth.advancing} advancing, ${breadth.declining} declining, ${breadth.unchanged} unchanged, ${breadth.notTraded} not traded`}
           >
             <span className="text-emerald-600 dark:text-emerald-400">▲{breadth.advancing}</span>
             <span className="text-rose-600 dark:text-rose-400">▼{breadth.declining}</span>
           </div>
 
+          {/* Tier Status Indicator */}
+          {user && (
+            isBoss ? (
+              <Link
+                href="/profile/tier"
+                aria-label="Boss Tier Active"
+                title="Boss Tier active — click to view tier status"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-yellow-500/20 to-amber-500/15 border border-amber-400/50 text-amber-700 dark:text-amber-300 text-[11px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shrink-0"
+              >
+                <Crown className="w-3.5 h-3.5 fill-current text-amber-500" />
+                <span className="hidden sm:inline">Boss</span>
+              </Link>
+            ) : (
+              <Link
+                href="/boss"
+                aria-label="Upgrade to Boss Tier"
+                title="Bro Tier (Free) — click to upgrade to Boss"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900/50 active:scale-95 transition-all shrink-0"
+              >
+                <Shield className="w-3.5 h-3.5 text-blue-500" />
+                <span className="hidden sm:inline">Bro</span>
+                <span className="text-[9px] uppercase tracking-wider font-extrabold px-1 py-0.2 rounded bg-amber-500 text-gray-950">Upgrade</span>
+              </Link>
+            )
+          )}
+
           <button
             type="button"
             onClick={onSearchClick}
             aria-label="Search stocks"
-            className="p-2 -mr-1 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
+            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all shrink-0"
           >
             <Search className="w-[18px] h-[18px]" />
           </button>

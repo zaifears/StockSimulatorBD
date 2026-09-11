@@ -15,7 +15,7 @@ import PortfolioInsights from '@/components/portfolio/PortfolioInsights';
 import BossBadge from '@/components/ui/BossBadge';
 import HoldingRow from '@/components/portfolio/HoldingRow';
 import TradeModal from '@/components/simulator/trade/TradeModal';
-import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -94,7 +94,7 @@ function PortfolioScreen() {
           <PortfolioInsights insights={insights} isBoss={isBoss} />
         </div>
       )}
-      {tab === 'orders' && <OrdersList trades={trades} loading={tradesLoading} error={tradesError} />}
+      {tab === 'orders' && <OrdersList trades={trades} loading={tradesLoading} error={tradesError} isBoss={isBoss} />}
 
       {modal.showTradeModal && modal.selectedStock && (
         <TradeModal
@@ -206,10 +206,12 @@ function OrdersList({
   trades,
   loading,
   error,
+  isBoss,
 }: {
   trades: import('@/hooks/useTradeHistory').TradeRecord[];
   loading: boolean;
   error: string | null;
+  isBoss: boolean;
 }) {
   if (loading) {
     return (
@@ -256,51 +258,89 @@ function OrdersList({
     );
   }
 
+  const visibleTrades = isBoss ? trades : trades.slice(0, 10);
+  const hiddenCount = !isBoss && trades.length > 10 ? trades.length - 10 : 0;
+
   return (
-    <div className="bg-white dark:bg-[#1A1F26] border-y sm:border sm:rounded-2xl border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
-      {trades.map((t) => {
-        const isBuy = t.type === 'BUY';
-        const when = new Date(t.timestamp);
-        return (
-          <div key={t.id} className="px-4 py-3 flex items-center gap-3">
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                isBuy ? 'bg-emerald-500/10' : 'bg-rose-500/10'
-              }`}
-            >
-              {isBuy ? (
-                <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <ArrowDownRight className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-gray-900 dark:text-white">{t.symbol}</span>
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-wide ${
-                    isBuy ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                  }`}
-                >
-                  {t.type}
-                </span>
+    <div className="space-y-3">
+      <div className="bg-white dark:bg-[#1A1F26] border-y sm:border sm:rounded-2xl border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
+        {visibleTrades.map((t) => {
+          const isBuy = t.type === 'BUY';
+          const when = new Date(t.timestamp);
+          return (
+            <div key={t.id} className="px-4 py-3 flex items-center gap-3">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  isBuy ? 'bg-emerald-500/10' : 'bg-rose-500/10'
+                }`}
+              >
+                {isBuy ? (
+                  <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                )}
               </div>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 font-mono">
-                {when.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}{' '}
-                {when.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-sm text-gray-900 dark:text-white">{t.symbol}</span>
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wide ${
+                      isBuy ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                    }`}
+                  >
+                    {t.type}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-mono">
+                  {when.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}{' '}
+                  {when.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-mono text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+                  {t.quantity} @ {t.price.toFixed(2)}
+                </div>
+                <p className="text-[11px] font-mono text-gray-400 dark:text-gray-500">
+                  ৳{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+
+        {isBoss && (
+          <div className="px-4 py-2.5 bg-gray-50/50 dark:bg-black/20 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1.5 font-bold text-amber-600 dark:text-amber-400">
+              <Crown className="w-3.5 h-3.5 fill-current" /> Boss Tier: Lifetime Audit Active
+            </span>
+            <span className="font-mono text-[11px]">{trades.length} total orders</span>
+          </div>
+        )}
+      </div>
+
+      {hiddenCount > 0 && (
+        <div className="mx-4 sm:mx-0 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5 fill-current" />
+            </div>
+            <div>
+              <p className="font-bold text-xs text-gray-900 dark:text-white">
+                Bro Tier shows last 10 orders ({hiddenCount} older order{hiddenCount === 1 ? '' : 's'} hidden)
               </p>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="font-mono text-sm font-bold text-gray-900 dark:text-white tabular-nums">
-                {t.quantity} @ {t.price.toFixed(2)}
-              </div>
-              <p className="text-[11px] font-mono text-gray-400 dark:text-gray-500">
-                ৳{t.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                Upgrade to Boss Tier to unlock your unlimited lifetime trading ledger and audit past fills.
               </p>
             </div>
           </div>
-        );
-      })}
+          <Link
+            href="/boss"
+            className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-gray-950 font-extrabold text-xs shadow-sm hover:brightness-105 active:scale-95 transition-all"
+          >
+            Unlock All Orders (৳20)
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

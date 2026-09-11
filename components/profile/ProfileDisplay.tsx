@@ -22,8 +22,9 @@ function ProfileDisplay({ user, profile }: ProfileDisplayProps) {
       {/* Account Tier Tag */}
       {profile?.accountTier === 'Boss' ? (
         <Link
-          href="/boss"
+          href="/profile/tier"
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider hover:brightness-110 transition-all shadow-sm"
+          title="View Boss Tier details"
         >
           <Crown className="w-3.5 h-3.5 text-amber-500 fill-current" />
           <span>Boss Tier (Pro)</span>
@@ -36,7 +37,7 @@ function ProfileDisplay({ user, profile }: ProfileDisplayProps) {
         >
           <Shield className="w-3.5 h-3.5 text-blue-500" />
           <span>Account Tier: Bro (Free)</span>
-          <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.2 rounded bg-amber-500 text-gray-950 ml-1">Upgrade</span>
+          <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-amber-500 text-gray-950 ml-1">Upgrade</span>
         </Link>
       )}
 

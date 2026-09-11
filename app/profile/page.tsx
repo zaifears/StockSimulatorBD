@@ -15,8 +15,10 @@ import ProfileActions from '../../components/profile/ProfileActions';
 import ChangePasswordForm from '../../components/profile/ChangePasswordForm';
 import AppShell from '@/components/app/AppShell';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
-import { Wallet, ChevronRight } from 'lucide-react';
+import { Wallet, ChevronRight, Crown, Shield } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import BossBadge from '@/components/ui/BossBadge';
 
 export default function ProfilePage() {
   return (
@@ -33,6 +35,7 @@ function ProfileScreen() {
     handleChangePassword, hasPassword,
   } = useProfile();
   const { simulatorState } = useSharedSimulator();
+  const { isBoss } = useAuth();
 
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -62,6 +65,47 @@ function ProfileScreen() {
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+        </Link>
+
+        {/* Tier status widget */}
+        <Link
+          href={isBoss ? "/profile/tier" : "/boss"}
+          className="flex items-center justify-between gap-4 p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border ${
+              isBoss
+                ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-300 dark:border-amber-500/40 text-amber-600 dark:text-amber-400'
+                : 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400'
+            }`}>
+              {isBoss ? <Crown className="w-5 h-5 fill-current" /> : <Shield className="w-5 h-5" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                  {isBoss ? 'Boss Tier (Pro)' : 'Bro Tier (Free)'}
+                </span>
+                {isBoss ? (
+                  <BossBadge size="xs" interactive={false} />
+                ) : (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    Upgrade Available
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {isBoss ? 'View active perks & subscription details' : 'Unlock Risk Radar, +10% bonus coins & lifetime history'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {!isBoss && (
+              <span className="text-xs font-bold text-gray-950 bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-1 rounded-lg shadow-sm">
+                Upgrade
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+          </div>
         </Link>
 
         {/* Avatar */}

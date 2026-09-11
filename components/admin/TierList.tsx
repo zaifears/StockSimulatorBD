@@ -80,10 +80,25 @@ export default function TierList() {
     if (user) fetchStats();
   }, [user, fetchStats]);
 
-  // Real-time listener for requests
+  // Fast initial fetch + Real-time listener for requests
   useEffect(() => {
     if (!user) return;
     setLoading(true);
+
+    let isSubscribed = true;
+
+    // Fast initial fetch via Admin API endpoint so data appears immediately without waiting on WebChannel handshake
+    fetchWithFreshToken(`/api/admin/tier?status=${activeTab}`, { method: 'GET' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (isSubscribed && json.success && Array.isArray(json.requests)) {
+          setRequests(json.requests);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Initial tier requests fetch error:', err);
+      });
 
     const baseCol = collection(db, 'boss_requests');
     const q = activeTab === 'manual'
@@ -93,17 +108,21 @@ export default function TierList() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
+        if (!isSubscribed) return;
         const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as BossRequest[];
         setRequests(data);
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching boss requests:', error);
-        setLoading(false);
+        console.error('Error listening to boss requests:', error);
+        if (isSubscribed) setLoading(false);
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
   }, [user, activeTab]);
 
   // Real-time count badges
@@ -141,6 +160,27 @@ export default function TierList() {
     setActionInProgress(req.id);
     setMessage(null);
 
+    // ⚡️ Optimistic UI update: remove item immediately so it vanishes with 0ms delay
+    const previousRequests = [...requests];
+    const previousCounts = { ...counts };
+    const previousStats = { ...stats };
+
+    if (activeTab === 'pending') {
+      setRequests((prev) => prev.filter((r) => r.id !== req.id));
+    }
+    setCounts((prev) => ({
+      ...prev,
+      pending: Math.max(0, prev.pending - 1),
+      [action === 'approve' ? 'approved' : 'rejected']: prev[action === 'approve' ? 'approved' : 'rejected'] + 1,
+    }));
+    setStats((prev) => ({
+      ...prev,
+      pendingCount: Math.max(0, prev.pendingCount - 1),
+      approvedCount: action === 'approve' ? prev.approvedCount + 1 : prev.approvedCount,
+      rejectedCount: action === 'reject' ? prev.rejectedCount + 1 : prev.rejectedCount,
+      activeBossCount: action === 'approve' ? prev.activeBossCount + 1 : prev.activeBossCount,
+    }));
+
     try {
       const res = await fetchWithFreshToken('/api/admin/tier', {
         method: 'POST',
@@ -165,6 +205,10 @@ export default function TierList() {
       });
       fetchStats();
     } catch (err: any) {
+      // Rollback on error
+      setRequests(previousRequests);
+      setCounts(previousCounts);
+      setStats(previousStats);
       setMessage({ text: err.message || 'Action failed', type: 'error' });
     } finally {
       setActionInProgress(null);
