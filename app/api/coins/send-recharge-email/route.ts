@@ -13,6 +13,10 @@ interface EmailData {
   userEmail: string;
   amount: number;
   coins: number;
+  bonusCoins?: number;
+  totalCoins?: number;
+  isBoss?: boolean;
+  accountTier?: string;
   transactionId: string;
   bkashNumber: string;
   createdAt: string;
@@ -55,53 +59,77 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { requestId, userName, userEmail, amount, coins, transactionId, bkashNumber, createdAt } = emailData;
+    const {
+      requestId,
+      userName,
+      userEmail,
+      amount,
+      coins,
+      bonusCoins = 0,
+      totalCoins,
+      isBoss = false,
+      accountTier,
+      transactionId,
+      bkashNumber,
+      createdAt,
+    } = emailData;
+
+    const finalCoins = totalCoins || (coins + bonusCoins);
+    const tierLabel = isBoss || accountTier === 'Boss' ? '👑 Boss Tier (+10% Bonus)' : 'Bro Tier (Standard)';
 
     const emailResponse = await sendAdminAlertEmail({
-      subject: `💰 New Coin Recharge Request - ${coins.toLocaleString()} coins from ${userName}`,
+      subject: `💰 New Coin Recharge Request - ${finalCoins.toLocaleString()} coins${isBoss ? ' (👑 Boss)' : ''} from ${userName}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0;">💰 New Recharge Request</h1>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 800;">💰 New Coin Recharge Request</h1>
+            <p style="color: #bfdbfe; margin: 4px 0 0 0; font-size: 13px;">bKash manual payment received</p>
           </div>
           
-          <div style="background: #f7fafc; padding: 20px; border: 1px solid #e2e8f0;">
-            <table style="width: 100%; border-collapse: collapse;">
+          <div style="background: #ffffff; padding: 24px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
               <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">User Name:</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #1a202c;">${userName}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">User Name:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a; font-weight: bold;">${userName}</td>
               </tr>
               <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">User Email:</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #1a202c;"><a href="mailto:${userEmail}" style="color: #667eea; text-decoration: none;">${userEmail}</a></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">User Email:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;"><a href="mailto:${userEmail}" style="color: #2563eb; text-decoration: none;">${userEmail}</a></td>
               </tr>
               <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Amount (BDT):</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #1a202c; font-size: 18px; font-weight: bold;">৳ ${amount}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">Account Tier:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: ${isBoss ? '#b45309' : '#475569'}; font-weight: bold;">${tierLabel}</td>
               </tr>
               <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Coins to Credit:</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #667eea; font-size: 18px; font-weight: bold;">${coins.toLocaleString()}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">Amount (BDT):</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #059669; font-size: 18px; font-weight: 800;">৳ ${amount}</td>
               </tr>
               <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">Transaction ID:</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #1a202c; font-family: monospace; background: #edf2f7; padding: 8px;">${transactionId}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">Coins to Credit:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #2563eb; font-size: 16px; font-weight: bold;">
+                  ${coins.toLocaleString()}
+                  ${bonusCoins > 0 ? `<span style="color: #d97706; font-size: 13px; font-weight: 800;"> + ${bonusCoins.toLocaleString()} (👑 10% Boss Bonus) = ${finalCoins.toLocaleString()} Total</span>` : ''}
+                </td>
               </tr>
               <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #2d3748;">bKash Number:</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #1a202c; font-family: monospace; background: #edf2f7; padding: 8px;">${bkashNumber}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">Transaction ID:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a; font-family: monospace; font-weight: bold; font-size: 15px; background: #f8fafc; padding-left: 6px;">${transactionId}</td>
               </tr>
               <tr>
-                <td style="padding: 12px; font-weight: bold; color: #2d3748;">Submitted At:</td>
-                <td style="padding: 12px; color: #718096;">${new Date(createdAt).toLocaleString()}</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">bKash Number:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a; font-family: monospace;">${bkashNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; font-weight: bold; color: #64748b;">Submitted At:</td>
+                <td style="padding: 10px 0; color: #64748b;">${new Date(createdAt).toLocaleString()}</td>
               </tr>
             </table>
-          </div>
 
-          <div style="background: white; padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-top: none;">
-            <a href="${APP_URL}/admin" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
-              ✅ Review Request in Admin Panel
-            </a>
+            <div style="margin-top: 24px; text-align: center;">
+              <a href="${APP_URL}/admin/recharge" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);">
+                ✅ Review & Approve in Admin Panel
+              </a>
+            </div>
           </div>
 
           <div style="background: #f7fafc; padding: 15px; font-size: 12px; color: #718096; text-align: center; border: 1px solid #e2e8f0; border-top: none;">

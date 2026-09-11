@@ -15,6 +15,7 @@
 // page inside it renders, so link previews and any indexing that already
 // applied to this URL are unaffected by this rewrite.
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import AppShell from '@/components/app/AppShell';
@@ -22,10 +23,11 @@ import Image from 'next/image';
 import { getFirestore, collection, query, where, orderBy, addDoc, onSnapshot } from 'firebase/firestore';
 import {
   Gift, TrendingUp, Copy, CheckCircle2, XCircle, Clock, Plus, Minus,
-  Send, AlertCircle, ArrowRight, Zap, Check, Ticket, Loader2,
+  Send, AlertCircle, ArrowRight, Zap, Check, Ticket, Loader2, Crown,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
+import BossBadge from '@/components/ui/BossBadge';
 
 const BKASH_NUMBER = '01865333143';
 const PRICE_PER_10K_COINS = 20; // 20 BDT = 10,000 Coins (500 coins per taka)
@@ -42,7 +44,7 @@ export default function CoinsPage() {
 }
 
 function FundsScreen() {
-  const { user } = useAuth();
+  const { user, accountTier, isBoss } = useAuth();
   const router = useRouter();
   const { simulatorState } = useSharedSimulator();
   const balance = Math.floor(simulatorState.balance);
@@ -61,7 +63,9 @@ function FundsScreen() {
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
 
-  const coinsToReceive = Math.floor(rechargeAmount / PRICE_PER_10K_COINS) * COINS_PER_10_BDT;
+  const baseCoins = Math.floor(rechargeAmount / PRICE_PER_10K_COINS) * COINS_PER_10_BDT;
+  const bonusCoins = isBoss ? Math.round(baseCoins * 0.10) : 0;
+  const coinsToReceive = baseCoins + bonusCoins;
 
   useEffect(() => {
     if (!user) return;
@@ -130,7 +134,7 @@ function FundsScreen() {
       setRechargeError('Invalid Transaction ID format. It should be 5-20 alphanumeric characters.');
       return;
     }
-    if (rechargeAmount < MIN_RECHARGE_BDT || rechargeAmount > MAX_RECHARGE_BDT || rechargeAmount % PRICE_PER_10K_COINS !== 0 || coinsToReceive <= 0) {
+    if (rechargeAmount < MIN_RECHARGE_BDT || rechargeAmount > MAX_RECHARGE_BDT || rechargeAmount % PRICE_PER_10K_COINS !== 0 || baseCoins <= 0) {
       setRechargeError(`Invalid amount. Must be between ${MIN_RECHARGE_BDT} and ${MAX_RECHARGE_BDT} BDT, and a multiple of ${PRICE_PER_10K_COINS}.`);
       return;
     }
@@ -146,7 +150,10 @@ function FundsScreen() {
         userName: user.displayName || user.email?.split('@')[0] || 'User',
         userEmail: user.email,
         amount: rechargeAmount,
-        coins: coinsToReceive,
+        coins: baseCoins, // Matches firestore.rules exchange rate: (amount / 20) * 10000
+        bonusCoins: bonusCoins,
+        totalCoins: coinsToReceive,
+        isBoss: !!isBoss,
         transactionId: trimmedTrxId,
         trxId: trimmedTrxId,
         bkashNumber: BKASH_NUMBER,
@@ -166,7 +173,11 @@ function FundsScreen() {
               userName: user.displayName || user.email?.split('@')[0] || 'User',
               userEmail: user.email,
               amount: rechargeAmount,
-              coins: coinsToReceive,
+              coins: baseCoins,
+              bonusCoins: bonusCoins,
+              totalCoins: coinsToReceive,
+              isBoss: !!isBoss,
+              accountTier: accountTier || 'Bro',
               transactionId: trimmedTrxId,
               bkashNumber: BKASH_NUMBER,
               createdAt: new Date().toISOString(),
@@ -217,6 +228,59 @@ function FundsScreen() {
           </button>
         </div>
       </div>
+
+      {/* 👑 Boss Mode +10% Coin Bonus Banner */}
+      {isBoss ? (
+        <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/5 dark:from-amber-500/20 dark:via-[#1a2130] dark:to-[#131822] border-2 border-amber-500/40 dark:border-amber-500/30 rounded-2xl p-4 mb-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-gray-950 flex items-center justify-center shrink-0 shadow-md">
+                <Crown className="w-5 h-5 fill-current" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 font-black text-sm text-gray-900 dark:text-white">
+                  <span>Boss Perk Active: +10% Coins</span>
+                  <BossBadge size="xs" interactive={false} />
+                </div>
+                <p className="text-xs text-amber-800 dark:text-amber-300 font-medium mt-0.5">
+                  You automatically receive <strong className="font-extrabold">+10% extra coins</strong> (550 coins / ৳) on all bKash recharges!
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/boss"
+              className="shrink-0 text-xs font-bold text-amber-700 dark:text-amber-300 hover:underline hidden sm:block"
+            >
+              Boss Perks →
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent dark:from-amber-950/30 dark:via-yellow-950/10 dark:to-transparent border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Crown className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-extrabold text-amber-900 dark:text-amber-200 uppercase tracking-wide flex items-center gap-1">
+                  <span>Boss Superpower: +10% Recharge Bonus</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                  Boss members get <strong className="text-amber-600 dark:text-amber-400 font-bold">550 coins / ৳</strong> (10% extra free) on every bKash recharge.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/boss"
+              className="shrink-0 inline-flex items-center justify-center gap-1 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 text-xs font-extrabold shadow-sm transition-all"
+            >
+              <Crown className="w-3.5 h-3.5 fill-current" />
+              <span>Upgrade to Boss (৳20)</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Promo code redemption — single-use codes credited server-side via
           app/api/simulator/promo-redeem, one redemption allowed per account. */}
@@ -356,9 +420,32 @@ function FundsScreen() {
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-center text-sm font-bold text-blue-600 dark:text-blue-400 mt-2.5">
-                  You receive: {coinsToReceive.toLocaleString()} Coins
-                </p>
+                {isBoss ? (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center mt-3">
+                    <div className="text-xs text-amber-800 dark:text-amber-300">
+                      <span>Base: <strong>{baseCoins.toLocaleString()}</strong></span>
+                      <span className="mx-1.5">•</span>
+                      <span className="font-extrabold text-amber-600 dark:text-amber-400">+10% Boss Bonus: +{bonusCoins.toLocaleString()}</span>
+                    </div>
+                    <div className="text-base font-black text-amber-600 dark:text-amber-400 mt-1 flex items-center justify-center gap-1.5">
+                      <Crown className="w-4 h-4 fill-current" />
+                      <span>You receive: {coinsToReceive.toLocaleString()} Coins</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 text-center">
+                    <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                      You receive: {baseCoins.toLocaleString()} Coins
+                    </p>
+                    <Link
+                      href="/boss"
+                      className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-bold mt-1"
+                    >
+                      <Crown className="w-3 h-3" />
+                      <span>Boss members get {Math.round(baseCoins * 1.1).toLocaleString()} coins (+10% extra). Upgrade for ৳20 →</span>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -415,8 +502,14 @@ function FundsScreen() {
                   className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#111418] flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
-                    <div className="font-bold text-sm text-gray-900 dark:text-white">
-                      {req.amount} BDT <span className="text-gray-400 font-normal mx-1">→</span> {req.coins?.toLocaleString()}
+                    <div className="font-bold text-sm text-gray-900 dark:text-white flex flex-wrap items-center gap-1.5">
+                      <span>{req.amount} BDT <span className="text-gray-400 font-normal mx-0.5">→</span> {(req.creditedCoins || req.totalCoins || req.coins)?.toLocaleString()} Coins</span>
+                      {req.bonusCoins > 0 && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-extrabold border border-amber-500/30">
+                          <Crown className="w-2.5 h-2.5 fill-current" />
+                          +{req.bonusCoins.toLocaleString()} Boss Bonus
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-gray-500 font-mono truncate">TrxID: {req.trxId}</div>
                   </div>

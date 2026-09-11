@@ -33,18 +33,18 @@ service cloud.firestore {
     // ===== USERS COLLECTION =====
     match /users/{userId} {
       // Server-only fields: privilege flags, welcome-bonus dedup bookkeeping
-      // (see app/api/auth/grant-social-bonus/route.ts), and the
-      // educational-use consent timestamp written by
-      // app/api/disclaimer/agree/route.ts. The client may never set, change,
+      // (see app/api/auth/grant-social-bonus/route.ts), educational-use consent,
+      // and Boss Pro subscription expiry. The client may never set, change,
       // or REMOVE any of these.
       function protectedUserFields() {
-        return ['admin', 'welcomeBonusGranted', 'role', 'isGodMode', 'disclaimerAgreedAt', 'promoCodeRedeemedAt', 'tradeSurveyCompletedAt'];
+        return ['admin', 'welcomeBonusGranted', 'role', 'isGodMode', 'disclaimerAgreedAt', 'promoCodeRedeemedAt', 'tradeSurveyCompletedAt', 'bossUntil'];
       }
 
       allow read: if isOwner(userId) || isAdmin();
 
       allow create: if isOwner(userId)
-        && !request.resource.data.keys().hasAny(protectedUserFields());
+        && !request.resource.data.keys().hasAny(protectedUserFields())
+        && request.resource.data.get('accountTier', 'Bro') != 'Boss';
 
       // Judged on what actually CHANGED, not on what the finished document
       // happens to contain.
@@ -62,7 +62,8 @@ service cloud.firestore {
       // their recorded consent. diff().affectedKeys() covers additions,
       // changes and removals, which closes both directions at once.
       allow update: if isOwner(userId)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields());
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['accountTier']) || request.resource.data.get('accountTier', 'Bro') != 'Boss');
 
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()
@@ -119,6 +120,19 @@ service cloud.firestore {
         // a forged request from ever landing in the pending queue an admin
         // has to review by eye.
         && request.resource.data.coins == (request.resource.data.amount / 20) * 10000;
+      allow update, delete: if false;
+    }
+    
+    // ===== BOSS UPGRADE REQUESTS =====
+    match /boss_requests/{requestId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAdmin();
+      allow create: if isAuthenticated()
+        && hasRequiredFields(['userId', 'amount', 'planId', 'durationDays', 'transactionId', 'status', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.amount in [20, 99]
+        && request.resource.data.durationDays in [31, 185];
       allow update, delete: if false;
     }
     

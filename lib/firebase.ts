@@ -30,6 +30,8 @@ export interface UserProfile {
     email?: string;
     phone?: string;
     coins?: number;
+    accountTier?: 'Bro' | 'Boss';
+    bossUntil?: number;
 }
 
 interface SignUpProfileData {
@@ -126,6 +128,7 @@ export const handleSocialSignInResult = async (user: any) => {
             status: 'Other', 
             phone: '',
             provider: user.providerData[0]?.providerId || 'unknown',
+            accountTier: 'Bro',
             createdAt: new Date().toISOString()
         }, { merge: true });
         console.log('✅ Social user document created');
@@ -339,6 +342,7 @@ export const signUpWithEmailPasswordAndProfile = async (profileData: SignUpProfi
         phone: profileData.phone || null,
         email: profileData.email,
         provider: 'password',
+        accountTier: 'Bro',
         createdAt: new Date().toISOString()
     };
     // merge:true, not a plain overwrite. A full-document write would strip any

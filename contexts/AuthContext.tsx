@@ -28,6 +28,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isEmailVerified: boolean;
+  accountTier: 'Bro' | 'Boss';
+  isBoss: boolean;
   sendVerificationEmail: () => Promise<void>;
   refreshVerificationStatus: () => Promise<void>;
   logout: () => Promise<void>;
@@ -37,6 +39,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null, 
   loading: true,
   isEmailVerified: false,
+  accountTier: 'Bro',
+  isBoss: false,
   sendVerificationEmail: async () => {},
   refreshVerificationStatus: async () => {},
   logout: async () => {}
@@ -46,6 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [accountTier, setAccountTier] = useState<'Bro' | 'Boss'>('Bro');
+  const [isBoss, setIsBoss] = useState<boolean>(false);
   const [userCountUpdated, setUserCountUpdated] = useState(false);
   const userCountUpdatedRef = useRef(false);
   const welcomeBonusAttemptedRef = useRef(false);
@@ -294,10 +300,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               photoURL: user.photoURL || null,
               status: 'Other',
               provider: provider,
+              accountTier: 'Bro',
               createdAt: new Date().toISOString(),
             }, { merge: true });
             
-            console.log('✅ User document created');
+            setAccountTier('Bro');
+            setIsBoss(false);
+            console.log('✅ User document created with Bro tier');
             
             // ✅ FIXED: Pass user.uid to updateUserCount
             if (!userCountUpdatedRef.current) {
@@ -307,10 +316,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 console.error('Failed to update user count:', err)
               );
             }
+          } else {
+            // Existing user: check tier and backfill accountTier if missing
+            const activeBoss = (userData?.accountTier === 'Boss') || (typeof userData?.bossUntil === 'number' && userData.bossUntil > Date.now());
+            const currentTier = activeBoss ? 'Boss' : 'Bro';
+            setAccountTier(currentTier);
+            setIsBoss(activeBoss);
+
+            if (!userData.accountTier) {
+              await setDoc(userDocRef, { accountTier: currentTier }, { merge: true });
+            }
           }
           
         } catch (error) {
-          console.error('❌ Failed to create user document:', error);
+          console.error('❌ Failed to create or load user document:', error);
         }
         
         console.log('🔍 User email verified:', nowVerified);
@@ -318,6 +337,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsEmailVerified(false);
         setUserCountUpdated(false);
         userCountUpdatedRef.current = false;
+        setAccountTier('Bro');
+        setIsBoss(false);
       }
       
       // Don't set loading to false here directly — we gate it below
@@ -395,6 +416,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user, 
       loading, 
       isEmailVerified,
+      accountTier,
+      isBoss,
       sendVerificationEmail,
       refreshVerificationStatus,
       logout 

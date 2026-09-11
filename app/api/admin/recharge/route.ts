@@ -104,8 +104,11 @@ export async function POST(req: NextRequest) {
 
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
     const simulatorStateRef = db.doc(`artifacts/${appId}/users/${userId}/simulator/state`);
+    const userDocRef = db.collection('users').doc(userId);
 
     let creditedCoins = 0;
+    let bonusCoins = 0;
+    let isBossUser = false;
 
     // Run as a Firestore transaction — either both writes succeed or neither does
     await db.runTransaction(async (transaction) => {
@@ -132,13 +135,27 @@ export async function POST(req: NextRequest) {
       if (typeof requestAmount !== 'number' || !Number.isFinite(requestAmount) || requestAmount <= 0 || requestAmount > 5000) {
         throw new Error('Recharge request has an invalid amount and cannot be approved');
       }
-      creditedCoins = coinsForAmount(requestAmount);
-      if (creditedCoins <= 0 || creditedCoins > MAX_COINS_PER_REQUEST) {
+      const baseCoins = coinsForAmount(requestAmount);
+      if (baseCoins <= 0 || baseCoins > MAX_COINS_PER_REQUEST) {
         throw new Error('Computed coin amount is out of the allowed range');
       }
-      if (typeof coins === 'number' && coins !== creditedCoins) {
+
+      // 👑 Check if user is on active Boss tier for +10% coin bonus
+      const userDoc = await transaction.get(userDocRef);
+      const userData = userDoc.exists ? userDoc.data() : null;
+      const now = Date.now();
+      isBossUser = userData?.accountTier === 'Boss' || (typeof userData?.bossUntil === 'number' && userData.bossUntil > now);
+
+      if (isBossUser) {
+        bonusCoins = Math.round(baseCoins * 0.10);
+        creditedCoins = baseCoins + bonusCoins;
+      } else {
+        creditedCoins = baseCoins;
+      }
+
+      if (typeof coins === 'number' && coins !== baseCoins) {
         console.warn(
-          `⚠️ Recharge request ${requestId}: client-submitted coins (${coins}) did not match amount-derived coins (${creditedCoins}). Crediting the amount-derived value.`
+          `⚠️ Recharge request ${requestId}: client-submitted coins (${coins}) did not match base amount-derived coins (${baseCoins}). Crediting the authoritative value.`
         );
       }
 
@@ -165,16 +182,21 @@ export async function POST(req: NextRequest) {
         processedAt: FieldValue.serverTimestamp(),
         processedBy: adminCheck.uid,
         creditedCoins,
+        baseCoins,
+        bonusCoins,
+        isBossUser,
       });
     });
 
     console.log(
-      `✅ Admin ${adminCheck.uid} approved recharge: ${creditedCoins.toLocaleString()} coins → user ${userId} (request ${requestId})`
+      `✅ Admin ${adminCheck.uid} approved recharge: ${creditedCoins.toLocaleString()} coins (bonus: ${bonusCoins.toLocaleString()}) → user ${userId} (request ${requestId})`
     );
 
     return NextResponse.json({
       success: true,
-      message: `Approved! ${creditedCoins.toLocaleString()} coins credited to ${userName || userId}`,
+      message: isBossUser
+        ? `Approved! ${creditedCoins.toLocaleString()} coins (including +10% Boss bonus: +${bonusCoins.toLocaleString()}) credited to ${userName || userId}`
+        : `Approved! ${creditedCoins.toLocaleString()} coins credited to ${userName || userId}`,
     });
   } catch (error: any) {
     console.error('❌ Admin recharge error:', error);

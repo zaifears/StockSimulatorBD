@@ -12,6 +12,7 @@ import { useTradeHistory } from '@/hooks/useTradeHistory';
 import { getPortfolioTotals, getPortfolioInsights } from '@/lib/utils/portfolio';
 import PortfolioSummary from '@/components/portfolio/PortfolioSummary';
 import PortfolioInsights from '@/components/portfolio/PortfolioInsights';
+import BossBadge from '@/components/ui/BossBadge';
 import HoldingRow from '@/components/portfolio/HoldingRow';
 import TradeModal from '@/components/simulator/trade/TradeModal';
 import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight } from 'lucide-react';
@@ -68,7 +69,13 @@ function PortfolioScreen() {
       {/* Tabs */}
       <div className="flex items-center gap-1 px-4 sm:px-0 mb-2">
         <TabButton active={tab === 'holdings'} onClick={() => setTab('holdings')} icon={Briefcase} label="Holdings" />
-        <TabButton active={tab === 'insights'} onClick={() => setTab('insights')} icon={BarChart3} label="Insights" />
+        <TabButton
+          active={tab === 'insights'}
+          onClick={() => setTab('insights')}
+          icon={BarChart3}
+          label="Insights"
+          badge={<BossBadge size="xs" interactive={false} />}
+        />
         <TabButton active={tab === 'orders'} onClick={() => setTab('orders')} icon={Receipt} label="Orders" />
       </div>
 
@@ -115,11 +122,13 @@ function TabButton({
   onClick,
   icon: Icon,
   label,
+  badge,
 }: {
   active: boolean;
   onClick: () => void;
   icon: typeof Briefcase;
   label: string;
+  badge?: React.ReactNode;
 }) {
   return (
     <button
@@ -132,7 +141,8 @@ function TabButton({
       }`}
     >
       <Icon className="w-4 h-4" />
-      {label}
+      <span>{label}</span>
+      {badge}
     </button>
   );
 }

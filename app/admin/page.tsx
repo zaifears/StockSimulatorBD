@@ -11,7 +11,7 @@ import { fetchWithToken } from '@/lib/utils/fetchWithToken';
 import SiteAnalyticsSection, { SiteAnalyticsData } from '@/components/admin/SiteAnalyticsSection';
 import {
   Users, Receipt, Banknote, Clock, CheckCircle2, XCircle, Zap,
-  Home, Database, Link2, ShieldAlert, ArrowRight, Gift, Vote,
+  Home, Database, Link2, ShieldAlert, ArrowRight, Gift, Vote, Crown,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -24,6 +24,8 @@ export default function AdminDashboard() {
     rejectedRequests: 0,
     totalRequests: 0,
     surveyResponses: 0,
+    pendingBossRequests: 0,
+    activeBossUsers: 0,
   });
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,14 +48,25 @@ export default function AdminDashboard() {
         const adminMode = await checkAdminMode(user.uid);
         setIsAdminMode(adminMode);
 
-        // Get all users count
-        const [usersSnapshot, rechargeSnapshot, pendingSnapshot, approvedSnapshot, rejectedSnapshot, surveySnapshot] = await Promise.all([
+        // Get all users count & pipeline stats
+        const [
+          usersSnapshot,
+          rechargeSnapshot,
+          pendingSnapshot,
+          approvedSnapshot,
+          rejectedSnapshot,
+          surveySnapshot,
+          pendingBossSnapshot,
+          activeBossSnapshot,
+        ] = await Promise.all([
           getCountFromServer(collection(db, 'users')),
           getCountFromServer(collection(db, 'recharge_requests')),
           getCountFromServer(query(collection(db, 'recharge_requests'), where('status', '==', 'pending'))),
           getCountFromServer(query(collection(db, 'recharge_requests'), where('status', '==', 'approved'))),
           getCountFromServer(query(collection(db, 'recharge_requests'), where('status', '==', 'rejected'))),
-          getCountFromServer(collection(db, 'survey_responses')).catch(() => ({ data: () => ({ count: 0 }) }))
+          getCountFromServer(collection(db, 'survey_responses')).catch(() => ({ data: () => ({ count: 0 }) })),
+          getCountFromServer(query(collection(db, 'boss_requests'), where('status', '==', 'pending'))).catch(() => ({ data: () => ({ count: 0 }) })),
+          getCountFromServer(query(collection(db, 'users'), where('accountTier', '==', 'Boss'))).catch(() => ({ data: () => ({ count: 0 }) })),
         ]);
 
         const totalUsers = usersSnapshot.data().count;
@@ -66,6 +79,8 @@ export default function AdminDashboard() {
           rejectedRequests: rejectedSnapshot.data().count,
           totalRequests: rechargeSnapshot.data().count,
           surveyResponses: surveySnapshot.data().count,
+          pendingBossRequests: pendingBossSnapshot.data().count,
+          activeBossUsers: activeBossSnapshot.data().count,
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -145,7 +160,19 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/admin/tier"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-300 shadow-lg shadow-amber-500/20 transform hover:-translate-y-1"
+              >
+                <Crown className="w-4 h-4 fill-current" />
+                Boss Subscriptions
+                {stats.pendingBossRequests > 0 && (
+                  <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1">
+                    {stats.pendingBossRequests}
+                  </span>
+                )}
+              </Link>
               <Link
                 href="/admin/survey"
                 className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
@@ -184,8 +211,58 @@ export default function AdminDashboard() {
 
       <div className="max-w-6xl mx-auto px-4 pb-12 space-y-8">
 
+        {/* 👑 TOP PRIORITY: Boss Tier Pipeline Card */}
+        <div className="pt-8">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/5 dark:from-amber-500/20 dark:via-[#1a2130] dark:to-[#131822] border-2 border-amber-500/40 dark:border-amber-500/30 p-6 shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-gray-950 shadow-md shrink-0">
+                  <Crown className="w-7 h-7 fill-current" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                      Boss Tier Subscriptions
+                    </h2>
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
+                      Tier Pipeline
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 max-w-xl leading-relaxed">
+                    Verify bKash transactions, activate 31-day (৳20) and 185-day (৳99) Boss memberships, or override user tiers manually.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-[#111620] border border-amber-300 dark:border-amber-500/30 text-xs shadow-sm">
+                  <span className="text-gray-500 dark:text-gray-400">Active Bosses:</span>
+                  <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-sm">
+                    {stats.activeBossUsers}
+                  </span>
+                </div>
+
+                <Link
+                  href="/admin/tier"
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                >
+                  <Crown className="w-4 h-4 fill-current" />
+                  <span>Review Subscriptions</span>
+                  {stats.pendingBossRequests > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black animate-pulse">
+                      {stats.pendingBossRequests} Action Needed
+                    </span>
+                  ) : (
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  )}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Top Level Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Total Users */}
           <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 transition-transform group-hover:scale-110 duration-500">
