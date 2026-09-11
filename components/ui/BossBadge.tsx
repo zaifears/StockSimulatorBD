@@ -36,26 +36,27 @@ export default function BossBadge({
   }[size];
 
   const cornerClasses = corner
-    ? 'absolute top-3 right-3 z-10 shadow-md'
-    : 'inline-flex items-center';
+    ? 'absolute top-3 right-3 z-10'
+    : '';
 
   const badgeContent = (
     <span
       className={`
-        ${!interactive && corner ? cornerClasses : 'inline-flex items-center'}
+        inline-flex items-center justify-center flex-row flex-nowrap shrink-0
+        ${!interactive && corner ? cornerClasses : ''}
         ${sizeClasses}
-        font-extrabold rounded-full uppercase
-        bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600
+        font-black rounded-full uppercase tracking-wider
+        bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500
         text-gray-950 dark:text-gray-950
-        border border-amber-300 dark:border-amber-400
-        shadow-[0_0_12px_rgba(245,158,11,0.3)]
-        select-none whitespace-nowrap
+        border border-amber-300/80 dark:border-amber-400/80
+        shadow-sm
+        select-none whitespace-nowrap leading-none
         ${className}
       `}
       title="Boss Pro Feature"
     >
-      {showIcon && <Crown className={`${iconSizes} fill-current shrink-0`} />}
-      <span>{text}</span>
+      {showIcon && <Crown className={`${iconSizes} fill-current shrink-0 -mt-[0.5px]`} />}
+      <span className="leading-none">{text}</span>
     </span>
   );
 
@@ -63,7 +64,7 @@ export default function BossBadge({
     return (
       <Link
         href="/boss"
-        className={`${corner ? cornerClasses : 'inline-flex'} transition-transform hover:scale-105 active:scale-95 focus:outline-none`}
+        className={`${corner ? cornerClasses : 'inline-flex'} inline-flex items-center justify-center flex-row flex-nowrap transition-transform hover:scale-105 active:scale-95 focus:outline-none`}
         title="View Boss Membership"
       >
         {badgeContent}

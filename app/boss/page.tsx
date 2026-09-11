@@ -366,130 +366,82 @@ export default function BossPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090E17] text-gray-900 dark:text-gray-100 transition-colors">
-      {/* Background Gradients & Ambient Glow */}
-      <div className="relative overflow-hidden pt-16 pb-12 sm:pt-24 sm:pb-20 md:pt-32 md:pb-24 border-b border-gray-200 dark:border-gray-800">
+      {/* Above-the-fold Hero & Tier Plans (Zero scrolling needed on mobile) */}
+      <section className="relative overflow-hidden pt-4 pb-6 sm:pt-8 sm:pb-10 border-b border-gray-200 dark:border-gray-800">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800c_1px,transparent_1px),linear-gradient(to_bottom,#8080800c_1px,transparent_1px)] bg-[size:24px_24px] sm:bg-[size:32px_32px] pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[320px] sm:h-[450px] bg-gradient-to-b from-amber-500/15 via-yellow-500/5 to-transparent blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[200px] bg-gradient-to-b from-amber-500/15 via-yellow-500/5 to-transparent blur-3xl pointer-events-none" />
 
-        <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          {/* Top Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 mb-4 sm:mb-6 animate-fade-in-up">
-            <BossBadge size="xs" interactive={false} />
-            <span className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-300">
-              Upgrade from Bro to Boss
-            </span>
+        <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Header starts directly with Trade Like a Boss. */}
+          <div className="text-center max-w-2xl mx-auto mb-3 sm:mb-5">
+            <h1 className="text-2xl xs:text-3xl sm:text-5xl font-black tracking-tight text-gray-900 dark:text-white leading-tight">
+              <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent">
+                Trade Like a Boss.
+              </span>
+            </h1>
+            <p className="text-[11px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1 sm:mt-1.5 leading-relaxed">
+              Paper trading is 100% free forever. Upgrade to Boss for portfolio insights, official PDF statements, and 10% extra coins for free.
+            </p>
           </div>
 
-          <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight">
-            <span className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 bg-clip-text text-transparent">
-              Trade Like a Boss.
-            </span>
-          </h1>
-
-          <p className="max-w-3xl mx-auto text-xs sm:text-base md:text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-6 sm:mb-8">
-            Every user is by default a <strong className="text-blue-600 dark:text-blue-400 font-bold">Bro</strong> with 100% free lifetime DSE trading.
-            Upgrade to <strong className="text-amber-600 dark:text-amber-400 font-bold">Boss</strong> to unlock full portfolio insights,
-            official PDF statements, unlimited trade audits, and 10% extra coins for free.
-          </p>
-
-          {/* Current User Tier Indicator */}
-          <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3.5 py-2 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm text-xs font-medium">
-            <span className="text-gray-500 dark:text-gray-400">
-              Your Current Status:
-            </span>
-            {isBoss ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black">
-                <Crown className="w-3.5 h-3.5 fill-current" /> Boss Tier Active
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold">
-                <Shield className="w-3 h-3" /> Bro Tier (Free)
-              </span>
-            )}
-            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">•</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-              Paper Trading Always 100% Free
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Pricing Cards Section */}
-      <section className="py-10 sm:py-16 md:py-20 max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-xl mx-auto mb-8 sm:mb-12">
-          <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
-            Affordable, Transparent Pricing
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            No auto-renewals. No surprise charges. Pay once with bKash and enjoy uninterrupted Boss access.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          {/* Box 1: Bro Plan (Free Forever) */}
-          <div className="lg:col-span-4 bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                  Bro Plan
-                </span>
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                  Free Forever
-                </span>
-              </div>
-              <div className="mb-4">
-                <div className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
-                  ৳0
+          {/* Tier Plans Directly Below (Above-the-Fold on Mobile) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6 items-stretch">
+            {/* Box 1: Bro Plan (Free Forever) */}
+            <div className="lg:col-span-4 bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between shadow-sm">
+              <div>
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <span className="text-[10px] sm:text-[11px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    Bro Plan
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    Free Forever
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Default lifetime access for all
+                <div className="mb-2 sm:mb-3">
+                  <div className="text-2xl sm:text-4xl font-black text-gray-900 dark:text-white">
+                    ৳0
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                    Default lifetime access for all
+                  </div>
+                </div>
+                <p className="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400 mb-3 sm:mb-4 leading-relaxed">
+                  Everything you need to master Dhaka Stock Exchange trading mechanics without risking real money.
+                </p>
+
+                <div className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-xs text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>Real-time DSE Market Board (400+ stocks)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>Buy/Sell Orders & T+1 Settlement</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>৳100,000 Demo Cash + 10k Welcome Bonus</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>90-Day Daily Candlestick Charts</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400 dark:text-gray-600">
+                    <X className="w-3.5 h-3.5 text-gray-300 dark:text-gray-700 shrink-0" />
+                    <span>Portfolio Insights & Risk Radar</span>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                Everything you need to master Dhaka Stock Exchange trading mechanics without risking real money.
-              </p>
 
-              <div className="space-y-3 text-xs text-gray-700 dark:text-gray-300">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>Real-time DSE Market Board (400+ stocks)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>Buy/Sell Orders & T+1 Settlement</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>৳100,000 Demo Cash + 10k Welcome Bonus</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>90-Day Daily Candlestick Charts</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>Basic Holdings Table & Last 10 Trades</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-400 dark:text-gray-600">
-                  <X className="w-4 h-4 text-gray-300 dark:text-gray-700 shrink-0" />
-                  <span>Portfolio Insights & Risk Radar</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-400 dark:text-gray-600">
-                  <X className="w-4 h-4 text-gray-300 dark:text-gray-700 shrink-0" />
-                  <span>Official PDF Statement Download</span>
-                </div>
+              <div className="mt-3 sm:mt-5 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <Link
+                  href="/trade"
+                  className="w-full block text-center py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold text-xs transition-colors"
+                >
+                  Trade as Bro (Current Tier)
+                </Link>
               </div>
             </div>
-
-            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-              <Link
-                href="/trade"
-                className="w-full block text-center py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold text-xs transition-colors"
-              >
-                Trade as Bro (Current Tier)
-              </Link>
-            </div>
-          </div>
 
           {/* Box 2: ONE Rectangle Box for the 2 Boss Tiers */}
           <div className="lg:col-span-8 bg-gradient-to-b from-amber-500/10 via-white to-white dark:from-amber-500/15 dark:via-[#111620] dark:to-[#111620] border-2 border-amber-500/40 dark:border-amber-500/30 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-lg relative overflow-hidden">
@@ -649,7 +601,8 @@ export default function BossPage() {
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* Showcase: The 4 Signature Boss Features */}
       <section className="py-12 sm:py-20 bg-white dark:bg-[#0c111c] border-y border-gray-200 dark:border-gray-800">
@@ -670,7 +623,6 @@ export default function BossPage() {
             {/* Feature 1: Official Portfolio PDF */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
                   <Download className="w-5 h-5" />
                 </div>
@@ -695,7 +647,6 @@ export default function BossPage() {
             {/* Feature 2: Portfolio Insights & Sector Radar */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
                   <PieChart className="w-5 h-5" />
                 </div>
@@ -720,7 +671,6 @@ export default function BossPage() {
             {/* Feature 3: Unlimited Lifetime Order History */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-purple-500/15 flex items-center justify-center text-purple-600 dark:text-purple-400 mb-4">
                   <History className="w-5 h-5" />
                 </div>
@@ -744,7 +694,6 @@ export default function BossPage() {
             {/* Feature 4: 10% Extra Coins For Free */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-[#131926] border border-gray-200 dark:border-gray-800 relative overflow-hidden group hover:border-amber-500/50 transition-colors flex flex-col justify-between">
               <div>
-                <BossBadge corner size="xs" interactive={false} />
                 <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4">
                   <Coins className="w-5 h-5" />
                 </div>
