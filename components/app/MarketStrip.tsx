@@ -72,9 +72,9 @@ export default function MarketStrip({ onSearchClick }: Props) {
       {/* Row 1 — identity, market state, utilities */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 h-12">
-          <Link href="/" className="flex items-center gap-1.5 shrink-0" aria-label="StockSimulatorBD home">
-            <Image src="/favicon.svg" alt="" width={24} height={24} className="h-6 w-6" priority />
-            <span className="hidden sm:inline text-sm font-bold tracking-tight text-gray-900 dark:text-white">
+          <Link href="/" className="flex items-center gap-1 sm:gap-1.5 shrink-0" aria-label="StockSimulatorBD home">
+            <Image src="/favicon.svg" alt="" width={20} height={20} className="h-5 w-5 sm:h-6 sm:w-6 object-contain shrink-0" priority />
+            <span className="text-[11px] xs:text-xs sm:text-sm font-bold tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
               StockSimulator<span className="text-blue-600 dark:text-blue-400">BD</span>
             </span>
           </Link>

@@ -7,7 +7,7 @@
 
 import { Resend } from 'resend';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'niqqahigga1@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'alshahoriar.hossain@gmail.com';
 
 export interface SendAdminAlertResult {
   success: boolean;

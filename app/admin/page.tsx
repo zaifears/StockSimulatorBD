@@ -293,7 +293,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 pt-24 pb-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
@@ -311,49 +311,53 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Quick Action Navigation Buttons */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5">
               <Link
                 href="/admin/tier"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-300 shadow-lg shadow-amber-500/20 transform hover:-translate-y-1"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md shadow-amber-500/20 active:scale-95 shrink-0"
               >
-                <Crown className="w-4 h-4 fill-current" />
-                Boss Subscriptions
+                <Crown className="w-4 h-4 fill-current shrink-0" />
+                <span>Boss Subscriptions</span>
                 {stats.pendingBossRequests > 0 && (
-                  <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1">
+                  <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                     {stats.pendingBossRequests}
                   </span>
                 )}
               </Link>
+
+              <Link
+                href="/admin/recharge"
+                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md shadow-blue-500/25 active:scale-95 shrink-0"
+              >
+                <Banknote className="w-4 h-4 shrink-0" />
+                <span>Recharges</span>
+                {stats.pendingRequests > 0 && (
+                  <span className="bg-white/25 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {stats.pendingRequests}
+                  </span>
+                )}
+              </Link>
+
               <Link
                 href="/admin/survey"
-                className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
+                className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shrink-0"
               >
-                <Vote className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                Community Polls
+                <Vote className="w-4 h-4 text-blue-500 shrink-0" />
+                <span>Polls</span>
                 {stats.surveyResponses > 0 && (
-                  <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1">
+                  <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                     {stats.surveyResponses}
                   </span>
                 )}
               </Link>
+
               <Link
                 href="/admin/promo-codes"
-                className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
+                className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shrink-0"
               >
-                <Gift className="w-4 h-4" />
-                Promo Codes
-              </Link>
-              <Link
-                href="/admin/recharge"
-                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-blue-500/30 transform hover:-translate-y-1"
-              >
-                <Banknote className="w-4 h-4" />
-                Manage Recharges
-                {stats.pendingRequests > 0 && (
-                  <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">
-                    {stats.pendingRequests}
-                  </span>
-                )}
+                <Gift className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Promo Codes</span>
               </Link>
             </div>
           </div>
