@@ -464,8 +464,8 @@ export default function TierList() {
                     onChange={(e) => setManualDays(Number(e.target.value))}
                     className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#131822] text-xs font-bold text-gray-900 dark:text-white"
                   >
-                    <option value={31}>31 Days (Monthly)</option>
-                    <option value={185}>185 Days (6 Months)</option>
+                    <option value={31}>1 Month (31 Days)</option>
+                    <option value={185}>6 Months (185 Days)</option>
                     <option value={365}>365 Days (1 Year)</option>
                     <option value={7}>7 Days (Trial)</option>
                   </select>

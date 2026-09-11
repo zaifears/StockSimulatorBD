@@ -138,7 +138,7 @@ export default function PortfolioInsights({ insights, isBoss: isBossProp }: Port
               href="/boss"
               className="w-full sm:w-auto flex-1 py-2.5 px-4 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-98"
             >
-              <span>Unlock Full Radar with Boss (৳20 / 31 Days)</span>
+              <span>Unlock Full Radar with Boss (৳20 / Month)</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
 

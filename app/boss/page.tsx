@@ -58,7 +58,7 @@ const PLANS: PlanDetails[] = [
     id: 'monthly',
     name: 'Monthly Boss',
     durationDays: 31,
-    durationLabel: '31 Days Access',
+    durationLabel: '1 Month (31 Days)',
     priceBdt: 20,
     perDayText: '৳0.65 / day',
   },
@@ -220,7 +220,7 @@ const FAQS = [
   },
   {
     q: 'Why ৳20 or ৳99 instead of a recurring monthly subscription?',
-    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 31 days or 185 days via bKash, and it simply expires when the time is up.',
+    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via bKash, and it simply expires when the time is up.',
   },
   {
     q: 'What happens when my Boss membership expires?',
@@ -456,7 +456,7 @@ export default function BossPage() {
                       <Crown className="w-3.5 h-3.5 fill-current" /> Boss Tier (Pro)
                     </span>
                     <span className="text-[11px] sm:text-xs font-extrabold text-amber-600 dark:text-amber-400">
-                      Choose 31 Days or 6 Months
+                      Choose 1 Month or 6 Months
                     </span>
                   </div>
                   <div className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -502,18 +502,18 @@ export default function BossPage() {
                           <Crown className="w-3.5 h-3.5" /> Monthly Boss
                         </span>
                         <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          31 Days
+                          1 Month (31 Days)
                         </span>
                       </div>
                       <div className="flex items-baseline gap-1 my-1">
                         <span className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">৳20</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">/ 31 days</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">/ month (31 days)</span>
                       </div>
                       <div className="text-[10px] sm:text-[11px] text-amber-600 dark:text-amber-400 font-semibold mb-1">
                         ৳0.65 / day • No commitment
                       </div>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Full insights & 1-click statements for 31 days.
+                        Full insights & 1-click statements for 1 month.
                       </p>
                     </div>
 
@@ -529,7 +529,7 @@ export default function BossPage() {
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-amber-500 hover:text-gray-950'
                       }`}
                     >
-                      <span>Select 31 Days (৳20)</span>
+                      <span>Select 1 Month (৳20)</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
