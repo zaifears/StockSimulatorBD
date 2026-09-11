@@ -12,9 +12,13 @@ web
 
 **Primary — new investors stepping out of safe instruments.** People already comfortable with Sanchayapatra (government savings certificates) or fixed deposits, who find the stock market intimidating and are afraid of losing savings they worked for. Their blocker is nerve, not information. Both framings are load-bearing in user-facing copy; dropping either one narrows the product.
 
+**User Tiers (Bro vs. Boss):**
+- **Bro (Default / Free Forever):** All core trading, live DSE data, orders, portfolio tracking, and charts.
+- **Boss (Pro Learning Tier):** Active paper traders looking for advanced risk management, 21-sector DSE exposure, banked realized P&L, commission audit, and +10% bonus coins on balance recharges.
+
 **Secondary — experienced traders testing strategies.** Acknowledged on the About page, but never the audience a decision is optimized for.
 
-**Operator — the maintainer as admin.** A single person reviews the bKash recharge queue, watches site analytics, and audits balance integrity through `/admin`. This is a real recurring workflow, not an afterthought surface.
+**Operator — the maintainer as admin.** A single person reviews the bKash recharge queue, manages Boss tier subscription requests and manual email grants, watches site analytics, and audits balance integrity through `/admin` and `/admin/tier`. This is a real recurring workflow, not an afterthought surface.
 
 ## Product Purpose
 
@@ -41,7 +45,9 @@ Success is nerve, not engagement: a user who practices here should approach thei
 
 **Simulation rules currently enforced:** live DSE prices during market hours; T+1 settlement per purchase lot; 0.4% commission (`COMMISSION_RATE = 0.004`); market-hours and holiday gating on both client and server; a 100,000,000 sane-balance cap re-checked by hand on every privileged write path because Admin SDK writes bypass Firestore rules entirely.
 
-**Virtual economy:** new verified accounts receive 10,000 free coins. Recharge is 20 BDT per 10,000 coins (500 coins per taka), minimum 20 BDT, maximum 5,000 BDT per request, in multiples of 20, subject to admin approval. Paying is a **practice-realism device**, not a business model: running out of virtual capital is meant to carry weight so practice feels consequential. Revenue is incidental. Future work should **not** design pricing pages, upsell funnels, or conversion-optimized paywalls around it.
+**Virtual economy and account tiers:** new verified accounts receive 10,000 free coins on the default **Bro Tier** (100% free core trading forever). Recharge is 20 BDT per 10,000 coins (500 coins per taka), minimum 20 BDT, maximum 5,000 BDT per request, in multiples of 20, subject to admin approval. Users desiring advanced risk analytics, sector exposure breakdown, and a +10% coin bonus (550 coins per taka) can upgrade to the **Boss Tier** for 20 BDT/month (31 days) or 99 BDT/6 months (185 days) via manual bKash verification at `/boss`. Core simulation mechanics and trading remain 100% free forever. Revenue from recharges and subscriptions is a practice-realism device and project sustainability mechanism, not an aggressive paywall or speculative business model.
+
+**Tamper-proof security guarantees:** Client console writes cannot escalate permissions or alter `accountTier`, `role`, or `bossUntil` because Firestore security rules enforce `protectedUserFields()`. Sensitive analytics (Portfolio Insights & Risk Radar) are isolated server-side and never injected into DOM or memory for Bro accounts.
 
 **Coverage:** all currently tradeable DSE-listed companies (~300+), each with a symbol page carrying candlestick history.
 

@@ -93,13 +93,23 @@ StockSimulatorBD is a **risk-free paper-trading simulator** for the Dhaka Stock 
   </tr>
 </table>
 
+### 👑 Account Tiers: Bro vs. Boss
+
+| Tier | Price | Who it's for | Key Capabilities |
+|---|---|---|---|
+| **Bro Tier** | **Free forever** | Beginners, students, cautious learners | 10,000 welcome coins, live DSE prices, candlestick charts, real-time portfolio holdings, and basic order history. |
+| **Boss Tier** | **৳20 / Month** (31 days)<br/>**৳99 / 6 Months** (185 days) | Active learners & disciplined paper traders | **Portfolio Insights & Risk Radar** (banked realized P&L, 21-sector DSE exposure, concentration risk alerts, 0.4% commission tracking), **+10% free coins bonus** on every recharge, and gold profile recognition. |
+
+> **Security & Privacy by Design**: Portfolio Insights are strictly isolated in memory and the DOM for Boss users only. Non-Boss accounts receive zero insight data in their React tree, preventing any client-side inspection bypass.
+
 ### Platform & Content
 
 | Area | Description |
 |---|---|
-| **Auth** | Firebase Auth — email/password, Google Sign-In, and Google One Tap. |
+| **Auth** | Firebase Auth — email/password, Google Sign-In, and Google One Tap. Real-time `onSnapshot` tier synchronization. |
+| **Boss Tier Hub** | `/boss` — transparent 1-month and 6-month plans, 14-feature audit comparison, mobile-friendly payment flow via bKash. |
 | **DSE Learning Blog** | Headless-CMS-powered (Contentful) articles on BO account opening, brokers, and DSE investing basics. |
-| **Admin Dashboard** | `/admin` — site-wide analytics (visits, retention, device/location breakdown, revenue/recharge tracking, a balance-integrity watchlist, and full exportable user lists). Firebase custom-claim gated. |
+| **Admin Command Center** | `/admin` & `/admin/tier` — 1-click Boss tier approvals/rejections, user email/UID search & manual grant, recharge queue, tamperproof security audit, and site analytics. Firebase custom-claim gated. |
 
 <br/>
 
