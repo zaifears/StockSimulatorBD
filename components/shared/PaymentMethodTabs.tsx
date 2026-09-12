@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import {
-  Copy, Check, Send, CreditCard, Building2, Smartphone, AlertTriangle
+  Copy, Check, Send, CreditCard, Building2, Smartphone, AlertTriangle, ArrowRight
 } from 'lucide-react';
 
 export type PaymentTabId = 'bkash_send' | 'bkash_pay' | 'other';
@@ -145,40 +145,47 @@ export default function PaymentMethodTabs({
             </span>
           </div>
 
-          {/* Visual Step Illustration */}
-          <div className="mx-4 sm:mx-5 my-3.5 p-3 sm:p-4 rounded-xl bg-black/20 border border-white/15">
+          {/* Visual Step Illustration (Connected Directional Timeline - Non-selectable) */}
+          <div className="mx-4 sm:mx-5 my-3.5 p-3 sm:p-3.5 rounded-xl bg-black/25 border border-white/10">
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-white/80 mb-2.5">
-              <span>Quick 3-Step Flow</span>
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono font-bold">Personal Send Money</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-white/70" />
+                Transfer Roadmap (Follow in order)
+              </span>
+              <span className="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono">3 Steps</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5 p-2.5 rounded-lg bg-white/10 border border-white/10">
-                <div className="w-8 h-8 rounded-full bg-white text-[#D12053] font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-white/20 text-white font-black text-xs flex items-center justify-center shrink-0 border border-white/30">
                   1
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-extrabold text-white">Open bKash</div>
-                  <div className="text-[10px] text-white/80 font-mono">App or *247#</div>
+                  <div className="text-xs font-bold text-white truncate">Open bKash</div>
+                  <div className="text-[10px] text-white/75 truncate font-mono">App or *247#</div>
                 </div>
               </div>
 
-              <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5 p-2.5 rounded-lg bg-white/10 border border-white/10">
-                <div className="w-8 h-8 rounded-full bg-white text-[#D12053] font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+              <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-white/40 shrink-0" />
+
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-white/20 text-white font-black text-xs flex items-center justify-center shrink-0 border border-white/30">
                   2
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-extrabold text-white">Send Money</div>
-                  <div className="text-[10px] text-white/80 font-mono">01865333143</div>
+                  <div className="text-xs font-bold text-white truncate">Send Money</div>
+                  <div className="text-[10px] text-white/75 truncate font-mono">01865333143</div>
                 </div>
               </div>
 
-              <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5 p-2.5 rounded-lg bg-emerald-400/20 border border-emerald-400/40">
-                <div className="w-8 h-8 rounded-full bg-emerald-400 text-gray-950 font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+              <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-white/40 shrink-0" />
+
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-white/20 text-white font-black text-xs flex items-center justify-center shrink-0 border border-white/30">
                   3
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-extrabold text-emerald-300">Submit TrxID</div>
-                  <div className="text-[10px] text-white/80">Instant Verification</div>
+                  <div className="text-xs font-bold text-white truncate">Submit TrxID</div>
+                  <div className="text-[10px] text-white/75 truncate">Instant Verification</div>
                 </div>
               </div>
             </div>
@@ -291,40 +298,47 @@ export default function PaymentMethodTabs({
             </span>
           </div>
 
-          {/* Visual Step Illustration */}
-          <div className="mx-4 sm:mx-5 my-3.5 p-3 sm:p-4 rounded-xl bg-black/20 border border-white/15">
+          {/* Visual Step Illustration (Connected Directional Timeline - Non-selectable) */}
+          <div className="mx-4 sm:mx-5 my-3.5 p-3 sm:p-3.5 rounded-xl bg-black/25 border border-white/10">
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-white/80 mb-2.5">
-              <span>Quick 3-Step Flow</span>
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono font-bold">Merchant Payment</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-white/70" />
+                Transfer Roadmap (Follow in order)
+              </span>
+              <span className="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono">3 Steps</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5 p-2.5 rounded-lg bg-white/10 border border-white/10">
-                <div className="w-8 h-8 rounded-full bg-white text-[#C41A4E] font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-white/20 text-white font-black text-xs flex items-center justify-center shrink-0 border border-white/30">
                   1
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-extrabold text-white">Open bKash</div>
-                  <div className="text-[10px] text-white/80 font-mono">App or *247#</div>
+                  <div className="text-xs font-bold text-white truncate">Open bKash</div>
+                  <div className="text-[10px] text-white/75 truncate font-mono">App or *247#</div>
                 </div>
               </div>
 
-              <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5 p-2.5 rounded-lg bg-white/10 border border-white/10">
-                <div className="w-8 h-8 rounded-full bg-white text-[#C41A4E] font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+              <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-white/40 shrink-0" />
+
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-white/20 text-white font-black text-xs flex items-center justify-center shrink-0 border border-white/30">
                   2
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-extrabold text-white">Make Payment</div>
-                  <div className="text-[10px] text-white/80 font-mono">01581401895</div>
+                  <div className="text-xs font-bold text-white truncate">Make Payment</div>
+                  <div className="text-[10px] text-white/75 truncate font-mono">01581401895</div>
                 </div>
               </div>
 
-              <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5 p-2.5 rounded-lg bg-emerald-400/20 border border-emerald-400/40">
-                <div className="w-8 h-8 rounded-full bg-emerald-400 text-gray-950 font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+              <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-white/40 shrink-0" />
+
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-white/20 text-white font-black text-xs flex items-center justify-center shrink-0 border border-white/30">
                   3
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-extrabold text-emerald-300">Submit TrxID</div>
-                  <div className="text-[10px] text-white/80">Instant Verification</div>
+                  <div className="text-xs font-bold text-white truncate">Submit TrxID</div>
+                  <div className="text-[10px] text-white/75 truncate">Instant Verification</div>
                 </div>
               </div>
             </div>
@@ -447,7 +461,7 @@ export default function PaymentMethodTabs({
               type="button"
               onClick={() => {
                 setMfsSubTab('bank');
-                onTabChange('other', 'Bank Transfer (Standard Chartered)');
+                onTabChange('other', 'Bank Transfer');
               }}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
                 mfsSubTab === 'bank'
@@ -456,7 +470,7 @@ export default function PaymentMethodTabs({
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>Standard Chartered Bank</span>
+              <span>Bank Transfer</span>
             </button>
           </div>
 
@@ -482,24 +496,50 @@ export default function PaymentMethodTabs({
               </div>
 
               <div className="p-4 sm:p-5 space-y-3.5 text-xs text-gray-700 dark:text-gray-300">
-                {/* Visual 3-Step Flow */}
-                <div className="p-3 sm:p-4 rounded-xl bg-orange-500/10 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-orange-800 dark:text-orange-300 mb-2">
-                    <span>Quick Transfer Flow</span>
-                    <span className="text-[10px] bg-orange-200/60 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-bold">Personal MFS</span>
+                {/* Visual Step Illustration (Connected Directional Timeline - Non-selectable) */}
+                <div className="p-3 sm:p-3.5 rounded-xl bg-orange-500/10 dark:bg-orange-950/20 border border-orange-200/70 dark:border-orange-900/30">
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-orange-900 dark:text-orange-300 mb-2.5">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                      Transfer Roadmap (Follow in order)
+                    </span>
+                    <span className="text-[10px] bg-orange-200/50 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-mono">
+                      Personal MFS
+                    </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
-                    <div className="p-2 rounded-lg bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase block">1. Open App</span>
-                      <span className="font-bold text-gray-800 dark:text-gray-200 block mt-0.5 text-[11px]">Cellfin / Nagad / Rocket</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 font-bold text-xs flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-800">
+                        1
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Open MFS App</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Cellfin / Nagad / Rocket</div>
+                      </div>
                     </div>
-                    <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/50 flex flex-col justify-center items-center">
-                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase block">2. Send Money</span>
-                      <span className="font-mono font-bold text-orange-700 dark:text-orange-300 block text-xs">01865333143</span>
+
+                    <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-orange-400/60 dark:text-orange-500/40 shrink-0" />
+
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 font-bold text-xs flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-800">
+                        2
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Send Money</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate font-mono">To 01865333143</div>
+                      </div>
                     </div>
-                    <div className="p-2 rounded-lg bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase block">3. Confirmation</span>
-                      <span className="font-bold text-gray-800 dark:text-gray-200 block mt-0.5 text-[11px]">Copy TrxID Below</span>
+
+                    <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-orange-400/60 dark:text-orange-500/40 shrink-0" />
+
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 font-bold text-xs flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-800">
+                        3
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Paste TrxID Below</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Instant Verification</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -605,24 +645,51 @@ export default function PaymentMethodTabs({
                 </div>
               </div>
 
-              {/* Visual NPSB Transfer Route */}
-              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-emerald-500/10 border border-blue-200 dark:border-blue-900/40 mx-4 sm:mx-5 mt-4">
-                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 mb-2">
-                  <span>Instant NPSB Route</span>
-                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">24/7 Real-Time</span>
+              {/* Visual NPSB Transfer Route (Connected Directional Timeline - Non-selectable) */}
+              <div className="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-100 dark:border-blue-900/30 mx-4 sm:mx-5 mt-4">
+                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300 mb-2.5">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    How to Transfer (Any Bank App ➔ Standard Chartered)
+                  </span>
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                    NPSB 24/7 Real-Time
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
-                  <div className="p-2 rounded-lg bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase block">1. Any Bank App</span>
-                    <span className="font-bold text-gray-800 dark:text-gray-200 block mt-0.5 text-[11px]">Citytouch, Astha, Cellfin...</span>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
+                      1
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Open Your Bank App</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Citytouch, Astha, Cellfin...</div>
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 flex flex-col justify-center items-center">
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase block">2. Transfer Mode</span>
-                    <span className="font-extrabold text-blue-700 dark:text-blue-300 block text-xs">NPSB (Instant)</span>
+
+                  <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-blue-400/60 dark:text-blue-500/40 shrink-0" />
+
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
+                      2
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Transfer Mode</div>
+                      <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold truncate">Select NPSB (Instant)</div>
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-white dark:bg-[#111620] border border-gray-200 dark:border-gray-800">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase block">3. Standard Chartered</span>
-                    <span className="font-mono font-bold text-gray-800 dark:text-gray-200 block mt-0.5 text-[11px]">A/C 18246161201</span>
+
+                  <ArrowRight className="hidden sm:block w-3.5 h-3.5 text-blue-400/60 dark:text-blue-500/40 shrink-0" />
+
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
+                      3
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-gray-900 dark:text-white truncate">Deposit to SCB</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate font-mono">A/C 18246161201</div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { getAllDseStocks as fetchAllStocks, type DseStock } from '@/lib/dseStock
 import { classifyInstrument, getInstrumentProfile, pickFitting } from '@/lib/dseInstrumentTypes';
 import StockChart from '@/components/StockChart';
 import StockTradingSection from '@/components/StockTradingSection';
+import StockBackButton from '@/components/stocks/StockBackButton';
 import { SITE_URL } from '@/lib/siteUrl';
 
 const getAllDseStocks = cache(fetchAllStocks);
@@ -225,6 +226,9 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-8 sm:pt-40 sm:pb-12">
+
+        {/* Prominent Back Button */}
+        <StockBackButton symbol={stock.symbol} />
 
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="mb-5 text-sm">

@@ -52,15 +52,28 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
   // breaking both navigation and the Buy/Sell clicks. Instead the row
   // navigates via a click handler, and each button stops propagation so a
   // trade tap doesn't also open the chart.
+  const handleNavigate = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('ssbd_last_stock_source', '/trade');
+      sessionStorage.setItem('ssbd_trade_scroll_state', JSON.stringify({
+        scrollY: window.scrollY,
+        symbol: stock.symbol.toLowerCase(),
+        timestamp: Date.now(),
+      }));
+    }
+    router.push(symbolHref);
+  };
+
   return (
     <div
+      id={`market-row-${stock.symbol.toLowerCase()}`}
       role="link"
       tabIndex={0}
-      onClick={() => router.push(symbolHref)}
+      onClick={handleNavigate}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          router.push(symbolHref);
+          handleNavigate();
         }
       }}
       className="px-4 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors"
@@ -70,7 +83,10 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
           <div className="flex items-center gap-1.5">
             <Link
               href={symbolHref}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNavigate();
+              }}
               className="font-bold text-base text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               {stock.symbol}

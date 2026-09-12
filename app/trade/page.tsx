@@ -113,6 +113,59 @@ function MarketScreen() {
     });
   }, []);
 
+  // Restore trade page state and scroll position when returning from a stock chart page
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedStr = sessionStorage.getItem('ssbd_trade_scroll_state');
+    if (!savedStr) return;
+
+    let t1: ReturnType<typeof setTimeout> | undefined;
+    let t2: ReturnType<typeof setTimeout> | undefined;
+    let t3: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      const saved = JSON.parse(savedStr);
+      if (Date.now() - (saved.timestamp || 0) < 4 * 60 * 60 * 1000) {
+        if (saved.sector) setSelectedSector(saved.sector);
+        if (saved.search) {
+          setSearchInput(saved.search);
+          setSearchQuery(saved.search);
+        }
+        if (saved.visibleCount && saved.visibleCount > 50) {
+          setVisibleCount(saved.visibleCount);
+        }
+
+        const performScroll = () => {
+          if (saved.symbol) {
+            const el = document.getElementById(`market-row-${saved.symbol}`) || document.getElementById(`market-card-${saved.symbol}`);
+            if (el) {
+              el.scrollIntoView({ block: 'center', behavior: 'instant' });
+              return true;
+            }
+          }
+          if (saved.scrollY > 0) {
+            window.scrollTo({ top: saved.scrollY, behavior: 'instant' });
+          }
+          return false;
+        };
+
+        performScroll();
+        requestAnimationFrame(() => performScroll());
+        t1 = setTimeout(performScroll, 80);
+        t2 = setTimeout(performScroll, 200);
+        t3 = setTimeout(performScroll, 450);
+      }
+    } catch (e) {
+      console.warn('Failed to restore trade scroll state:', e);
+    }
+
+    return () => {
+      if (t1) clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+      if (t3) clearTimeout(t3);
+    };
+  }, []);
+
   const portfolioBySymbol = useMemo(
     () => new Map(simulatorState.portfolio.map((item) => [item.symbol, item])),
     [simulatorState.portfolio]

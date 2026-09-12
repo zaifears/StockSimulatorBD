@@ -1,12 +1,84 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, BarChart2 } from 'lucide-react';
 import { DseStock } from '@/lib/dseStocks'; // Assuming this is your type
 
 export default function StockGrid({ initialStocks }: { initialStocks: DseStock[] }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [highlightedSymbol, setHighlightedSymbol] = useState<string | null>(null);
+
+  // Restore scroll position and search query when returning from an individual stock page
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedStr = sessionStorage.getItem('ssbd_stocks_grid_state');
+    if (!savedStr) return;
+
+    let tHighlight: ReturnType<typeof setTimeout> | undefined;
+    let t1: ReturnType<typeof setTimeout> | undefined;
+    let t2: ReturnType<typeof setTimeout> | undefined;
+    let t3: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      const saved = JSON.parse(savedStr);
+      // Valid within 4 hours
+      if (Date.now() - (saved.timestamp || 0) < 4 * 60 * 60 * 1000) {
+        if (saved.searchQuery) {
+          setSearchQuery(saved.searchQuery);
+        }
+
+        if (saved.symbol) {
+          setHighlightedSymbol(saved.symbol);
+          tHighlight = setTimeout(() => setHighlightedSymbol(null), 2500);
+
+          const performScroll = () => {
+            const el = document.getElementById(`stock-card-${saved.symbol}`);
+            if (el) {
+              el.scrollIntoView({ block: 'center', behavior: 'instant' });
+              return true;
+            }
+            if (saved.scrollY > 0) {
+              window.scrollTo({ top: saved.scrollY, behavior: 'instant' });
+            }
+            return false;
+          };
+
+          // Execute in multiple phases for iOS Safari layout completion
+          performScroll();
+          requestAnimationFrame(() => performScroll());
+          t1 = setTimeout(performScroll, 60);
+          t2 = setTimeout(performScroll, 180);
+          t3 = setTimeout(performScroll, 400);
+        } else if (saved.scrollY > 0) {
+          window.scrollTo({ top: saved.scrollY, behavior: 'instant' });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore StockGrid state:', e);
+    }
+
+    return () => {
+      if (tHighlight) clearTimeout(tHighlight);
+      if (t1) clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+      if (t3) clearTimeout(t3);
+    };
+  }, []);
+
+  const handleStockClick = (symbol: string) => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem('ssbd_last_stock_source', '/stocks');
+    sessionStorage.setItem(
+      'ssbd_stocks_grid_state',
+      JSON.stringify({
+        searchQuery,
+        scrollY: window.scrollY,
+        symbol: symbol.toLowerCase(),
+        timestamp: Date.now(),
+      })
+    );
+  };
 
   const filteredStocks = initialStocks.filter(stock => 
     stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -36,20 +108,29 @@ export default function StockGrid({ initialStocks }: { initialStocks: DseStock[]
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {filteredStocks.map((stock) => (
-            <Link
-              key={stock.symbol}
-              href={`/stocks/${stock.symbol.toLowerCase()}`}
-              className="group p-4 bg-white dark:bg-[#1A1F26] rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-blue-400 dark:hover:border-blue-500 transition-all hover:shadow-lg hover:-translate-y-1"
-            >
-              <div className="font-extrabold text-lg text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                {stock.symbol}
-              </div>
-              <div className="text-xs text-gray-500 truncate mt-1">
-                {stock.name || 'Company Name'}
-              </div>
-            </Link>
-          ))}
+          {filteredStocks.map((stock) => {
+            const isHighlighted = highlightedSymbol === stock.symbol.toLowerCase();
+            return (
+              <Link
+                id={`stock-card-${stock.symbol.toLowerCase()}`}
+                key={stock.symbol}
+                href={`/stocks/${stock.symbol.toLowerCase()}`}
+                onClick={() => handleStockClick(stock.symbol)}
+                className={`group p-4 bg-white dark:bg-[#1A1F26] rounded-2xl border transition-all hover:shadow-lg hover:-translate-y-1 ${
+                  isHighlighted
+                    ? 'border-blue-500 dark:border-blue-400 ring-4 ring-blue-500/25 dark:ring-blue-400/25 bg-blue-50/60 dark:bg-blue-950/30 shadow-md scale-[1.02]'
+                    : 'border-gray-100 dark:border-gray-800 hover:border-blue-400 dark:hover:border-blue-500'
+                }`}
+              >
+                <div className="font-extrabold text-lg text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                  {stock.symbol}
+                </div>
+                <div className="text-xs text-gray-500 truncate mt-1">
+                  {stock.name || 'Company Name'}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -82,7 +82,22 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
         </td>
         <td className="px-5 py-3 text-right whitespace-nowrap">
           <div className="flex justify-end items-center gap-1.5 whitespace-nowrap shrink-0">
-            <Link href={`/stocks/${stock.symbol.toLowerCase()}`} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white shrink-0 active:scale-95">Chart</Link>
+            <Link
+              href={`/stocks/${stock.symbol.toLowerCase()}`}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('ssbd_last_stock_source', '/trade');
+                  sessionStorage.setItem('ssbd_trade_scroll_state', JSON.stringify({
+                    scrollY: window.scrollY,
+                    symbol: stock.symbol.toLowerCase(),
+                    timestamp: Date.now(),
+                  }));
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white shrink-0 active:scale-95"
+            >
+              Chart
+            </Link>
             <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
             <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
           </div>
@@ -92,7 +107,10 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
   }
 
   return (
-    <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+    <tr
+      id={`market-row-${stock.symbol.toLowerCase()}`}
+      className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+    >
       <td className="px-5 lg:px-6 py-3.5">
         <div className="flex flex-col">
           <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-500 transition-colors">{stock.symbol}</span>
@@ -144,7 +162,22 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
       </td>
       <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
         <div className="flex justify-end items-center gap-1.5 sm:gap-2">
-          <Link href={`/stocks/${stock.symbol.toLowerCase()}`} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white shrink-0 active:scale-95">Chart</Link>
+          <Link
+            href={`/stocks/${stock.symbol.toLowerCase()}`}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('ssbd_last_stock_source', '/trade');
+                sessionStorage.setItem('ssbd_trade_scroll_state', JSON.stringify({
+                  scrollY: window.scrollY,
+                  symbol: stock.symbol.toLowerCase(),
+                  timestamp: Date.now(),
+                }));
+              }
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white shrink-0 active:scale-95"
+          >
+            Chart
+          </Link>
           <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
           <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
         </div>

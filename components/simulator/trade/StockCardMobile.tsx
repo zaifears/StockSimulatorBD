@@ -84,7 +84,22 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
         </div>
         
         <div className="flex gap-2">
-          <Link href={`/stocks/${stock.symbol}`} className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400">Chart</Link>
+          <Link
+            href={`/stocks/${stock.symbol.toLowerCase()}`}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('ssbd_last_stock_source', '/trade');
+                sessionStorage.setItem('ssbd_trade_scroll_state', JSON.stringify({
+                  scrollY: window.scrollY,
+                  symbol: stock.symbol.toLowerCase(),
+                  timestamp: Date.now(),
+                }));
+              }
+            }}
+            className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+          >
+            Chart
+          </Link>
           <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${marketOpen && isTraded ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
           <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${marketOpen && isTraded ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-sm' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
         </div>
@@ -93,7 +108,10 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
   }
 
   return (
-    <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+    <div
+      id={`market-card-${stock.symbol.toLowerCase()}`}
+      className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -119,7 +137,22 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
       </div>
       
       <div className="flex gap-2">
-        <Link href={`/stocks/${stock.symbol}`} className="flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400">Chart</Link>
+        <Link
+          href={`/stocks/${stock.symbol.toLowerCase()}`}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('ssbd_last_stock_source', '/trade');
+              sessionStorage.setItem('ssbd_trade_scroll_state', JSON.stringify({
+                scrollY: window.scrollY,
+                symbol: stock.symbol.toLowerCase(),
+                timestamp: Date.now(),
+              }));
+            }
+          }}
+          className="flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+        >
+          Chart
+        </Link>
         <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${marketOpen && isTraded ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
         <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${marketOpen && isTraded ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-sm' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
       </div>
