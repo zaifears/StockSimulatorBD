@@ -281,21 +281,21 @@ export default function TierList() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-3.5 sm:px-4 py-2 sm:py-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1.5">
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors py-1 px-2.5 rounded-lg bg-gray-100 dark:bg-gray-800"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Admin
             </Link>
           </div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-              <Crown className="w-7 h-7 text-amber-500 fill-current" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <h1 className="text-xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+              <Crown className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500 fill-current shrink-0" />
               <span>Boss Tier Subscriptions</span>
             </h1>
             <BossBadge size="sm" interactive={false} />
@@ -306,11 +306,11 @@ export default function TierList() {
         </div>
 
         {/* Action Pills */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/boss"
             target="_blank"
-            className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 transition-colors flex items-center gap-1.5"
+            className="w-full sm:w-auto px-3.5 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 transition-colors flex items-center justify-center gap-1.5 active:scale-95"
           >
             <Crown className="w-3.5 h-3.5" />
             <span>View /boss Page</span>
@@ -321,7 +321,7 @@ export default function TierList() {
       {/* Global Feedback Banner */}
       {message && (
         <div
-          className={`p-4 rounded-2xl mb-6 text-xs sm:text-sm font-semibold flex items-center gap-2 ${
+          className={`p-3.5 sm:p-4 rounded-2xl mb-6 text-xs sm:text-sm font-semibold flex items-center gap-2 ${
             message.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
               : 'bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
@@ -337,59 +337,59 @@ export default function TierList() {
       )}
 
       {/* Top Level Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span>Pending Action</span>
-            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="truncate">Pending Action</span>
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+          <div className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span>{counts.pending}</span>
             {counts.pending > 0 && (
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400">
                 Action Needed
               </span>
             )}
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span>Active Boss Users</span>
-            <Crown className="w-4 h-4 text-amber-500" />
+            <span className="truncate">Active Boss Users</span>
+            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+          <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
             {stats.activeBossCount}
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span>Approved Subscriptions</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <span className="truncate">Approved</span>
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white font-mono">
+          <div className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white font-mono">
             {counts.approved}
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span>Rejected / Declined</span>
-            <XCircle className="w-4 h-4 text-rose-500" />
+            <span className="truncate">Rejected</span>
+            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white font-mono">
+          <div className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white font-mono">
             {counts.rejected}
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-200 dark:border-gray-800 pb-3">
+      {/* Tab Navigation — smooth touch scroll on mobile */}
+      <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-gray-800 pb-3 overflow-x-auto no-scrollbar flex-nowrap">
         <button
           type="button"
           onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+          className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold transition-all active:scale-95 ${
             activeTab === 'pending'
               ? 'bg-amber-500 text-gray-950 shadow-sm'
               : 'bg-white dark:bg-[#131822] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
@@ -407,7 +407,7 @@ export default function TierList() {
         <button
           type="button"
           onClick={() => setActiveTab('approved')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+          className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold transition-all active:scale-95 ${
             activeTab === 'approved'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'bg-white dark:bg-[#131822] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
@@ -421,7 +421,7 @@ export default function TierList() {
         <button
           type="button"
           onClick={() => setActiveTab('rejected')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+          className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold transition-all active:scale-95 ${
             activeTab === 'rejected'
               ? 'bg-rose-600 text-white shadow-sm'
               : 'bg-white dark:bg-[#131822] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
@@ -435,7 +435,7 @@ export default function TierList() {
         <button
           type="button"
           onClick={() => setActiveTab('manual')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+          className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold transition-all active:scale-95 ${
             activeTab === 'manual'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'bg-white dark:bg-[#131822] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
@@ -457,18 +457,18 @@ export default function TierList() {
             Look up any registered trader by their email address (e.g. user@gmail.com) or Firebase UID to grant or revoke Boss access instantly.
           </p>
 
-          <form onSubmit={handleManualSearch} className="flex flex-col sm:flex-row gap-3 mb-6">
+          <form onSubmit={handleManualSearch} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mb-6">
             <input
               type="text"
               value={manualQuery}
               onChange={(e) => setManualQuery(e.target.value)}
               placeholder="Enter user email (e.g. trader@gmail.com) or Firebase UID..."
-              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a2130] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a2130] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
               disabled={manualSearching || !manualQuery.trim()}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
             >
               {manualSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
               <span>Search & Inspect</span>
@@ -476,8 +476,8 @@ export default function TierList() {
           </form>
 
           {manualUserDoc && (
-            <div className="p-5 rounded-2xl bg-gray-50 dark:bg-[#182030] border border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-[#182030] border border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
                 <div>
                   <div className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
                     <span>{manualUserDoc.name || 'Anonymous User'}</span>
@@ -489,8 +489,8 @@ export default function TierList() {
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{manualUserDoc.email}</div>
-                  <div className="text-[10px] font-mono text-gray-400 mt-0.5">UID: {manualUserDoc.id}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-all">{manualUserDoc.email}</div>
+                  <div className="text-[10px] font-mono text-gray-400 mt-0.5 break-all">UID: {manualUserDoc.id}</div>
                 </div>
 
                 <div className="text-left sm:text-right text-xs">
@@ -505,13 +505,13 @@ export default function TierList() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Duration:</label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 shrink-0">Duration:</label>
                   <select
                     value={manualDays}
                     onChange={(e) => setManualDays(Number(e.target.value))}
-                    className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#131822] text-xs font-bold text-gray-900 dark:text-white"
+                    className="flex-1 sm:flex-none px-3 py-2 min-h-[44px] sm:min-h-0 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#131822] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
                   >
                     <option value={31}>1 Month (31 Days)</option>
                     <option value={185}>6 Months (185 Days)</option>
@@ -520,27 +520,29 @@ export default function TierList() {
                   </select>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleManualGrant('manual_grant')}
-                  disabled={actionInProgress === 'manual'}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm"
-                >
-                  <Crown className="w-3.5 h-3.5 fill-current" />
-                  <span>Grant Boss Access</span>
-                </button>
-
-                {manualUserDoc.accountTier === 'Boss' && (
+                <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
                   <button
                     type="button"
-                    onClick={() => handleManualGrant('revoke')}
+                    onClick={() => handleManualGrant('manual_grant')}
                     disabled={actionInProgress === 'manual'}
-                    className="px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs transition-all flex items-center gap-1.5"
+                    className="flex-1 sm:flex-none px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl bg-amber-500 hover:bg-amber-600 text-gray-950 font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                   >
-                    <UserX className="w-3.5 h-3.5" />
-                    <span>Revoke to Bro</span>
+                    <Crown className="w-3.5 h-3.5 fill-current" />
+                    <span>Grant Boss</span>
                   </button>
-                )}
+
+                  {manualUserDoc.accountTier === 'Boss' && (
+                    <button
+                      type="button"
+                      onClick={() => handleManualGrant('revoke')}
+                      disabled={actionInProgress === 'manual'}
+                      className="flex-1 sm:flex-none px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                      <span>Revoke</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -557,7 +559,7 @@ export default function TierList() {
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
               placeholder="Filter requests by trader name, email, plan, or bKash TrxID..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#131822] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+              className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#131822] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
             />
           </div>
         </div>
@@ -600,16 +602,16 @@ export default function TierList() {
             .map((req) => (
             <div
               key={req.id}
-              className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:border-amber-400/50 transition-colors"
+              className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:border-amber-400/50 transition-colors"
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Left: User & Plan Details */}
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className="font-bold text-sm text-gray-900 dark:text-white">
                       {req.userName}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 break-all">
                       ({req.userEmail})
                     </span>
                     <span
@@ -640,13 +642,13 @@ export default function TierList() {
 
                   <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-mono">
                     <span className="text-gray-500">bKash TrxID:</span>
-                    <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold">
+                    <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold break-all">
                       {req.transactionId}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleCopy(req.transactionId, req.id)}
-                      className="text-[11px] font-sans font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                      className="text-[11px] font-sans font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 active:scale-95"
                     >
                       {copiedId === req.id ? (
                         <>
@@ -660,7 +662,7 @@ export default function TierList() {
                         </>
                       )}
                     </button>
-                    <span className="text-gray-400 font-sans text-[10px]">
+                    <span className="text-gray-400 font-sans text-[10px] break-all">
                       UID: <code>{req.userId}</code>
                     </span>
                   </div>
@@ -674,12 +676,12 @@ export default function TierList() {
 
                 {/* Right: Actions */}
                 {req.status === 'pending' && (
-                  <div className="flex items-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800">
+                  <div className="flex flex-row items-center gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800 w-full md:w-auto shrink-0">
                     <button
                       type="button"
                       disabled={actionInProgress === req.id}
                       onClick={() => handleAction('approve', req)}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                      className="flex-1 md:flex-none justify-center px-4 py-2.5 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                     >
                       {actionInProgress === req.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -696,7 +698,7 @@ export default function TierList() {
                         const reason = window.prompt('Enter rejection reason (optional):', 'Transaction ID not found in bKash account');
                         if (reason !== null) handleAction('reject', req, reason);
                       }}
-                      className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                      className="flex-1 md:flex-none justify-center px-3.5 py-2.5 min-h-[44px] rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                     >
                       <X className="w-3.5 h-3.5" />
                       <span>Reject</span>

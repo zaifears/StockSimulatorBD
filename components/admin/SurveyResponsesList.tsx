@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   Layers,
   PlusCircle,
+  ArrowLeft,
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import { VALID_DOMAIN_CHOICES } from '@/lib/surveyConstants';
@@ -38,6 +39,7 @@ interface SurveyResponse {
   domainChoiceLabelEn: string;
   domainChoiceLabelBn: string;
   submittedAtIso: string | null;
+  createdAt?: any;
 }
 
 interface ChoiceStat {
@@ -48,23 +50,23 @@ interface ChoiceStat {
   percentage: number;
 }
 
-interface SurveyStats {
+interface PollStats {
   totalResponses: number;
   averageExperience: number;
   choiceStats: ChoiceStat[];
 }
 
 export default function SurveyResponsesList() {
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<SurveyStats | null>(null);
+  const [stats, setStats] = useState<PollStats | null>(null);
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
   // Dropdown open state for Poll #1 (expanded by default)
-  const [isPoll1Open, setIsPoll1Open] = useState(true);
+  const [isPoll1Open, setIsPoll1Open] = useState<boolean>(true);
 
   const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -72,7 +74,9 @@ export default function SurveyResponsesList() {
     setError(null);
 
     try {
-      const res = await fetchWithFreshToken('/api/survey/trade-questionnaire');
+      const res = await fetchWithFreshToken('/api/admin/survey', {
+        method: 'GET',
+      });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -97,15 +101,20 @@ export default function SurveyResponsesList() {
   // Filtered responses for Poll #1
   const filteredResponses = useMemo(() => {
     return responses.filter((r) => {
-      const matchesFilter = selectedFilter === 'all' || r.domainChoice === selectedFilter;
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        r.userEmail.toLowerCase().includes(q) ||
-        r.domainChoiceLabelEn.toLowerCase().includes(q) ||
-        r.domainChoiceLabelBn.toLowerCase().includes(q) ||
-        r.uid.toLowerCase().includes(q);
-      return matchesFilter && matchesSearch;
+      // Category filter
+      if (selectedFilter !== 'all' && r.domainChoice !== selectedFilter) {
+        return false;
+      }
+      // Search query filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const emailMatch = r.userEmail?.toLowerCase().includes(query);
+        const nameMatch = r.displayName?.toLowerCase().includes(query);
+        const uidMatch = r.uid?.toLowerCase().includes(query);
+        const choiceMatch = r.domainChoiceLabelEn?.toLowerCase().includes(query);
+        return emailMatch || nameMatch || uidMatch || choiceMatch;
+      }
+      return true;
     });
   }, [responses, selectedFilter, searchQuery]);
 
@@ -165,33 +174,32 @@ export default function SurveyResponsesList() {
   };
 
   return (
-    // pt-24 sm:pt-28 ensures full clearance below the fixed ModernNavbar (fixed top-0)
-    <div className="min-h-screen pt-24 sm:pt-28 pb-16 bg-gray-50/60 dark:bg-[#090E17] text-gray-900 dark:text-gray-100">
+    // pt-20 sm:pt-28 ensures full clearance below the fixed ModernNavbar (fixed top-0)
+    <div className="min-h-screen pt-20 sm:pt-28 pb-24 sm:pb-16 bg-gray-50/60 dark:bg-[#090E17] text-gray-900 dark:text-gray-100">
       
       {/* Top Breadcrumb & Page Title Container */}
-      <div className="max-w-6xl mx-auto px-4 mb-8">
+      <div className="max-w-6xl mx-auto px-3.5 sm:px-4 mb-6 sm:mb-8">
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2.5">
           <Link
             href="/admin"
-            className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors py-1 px-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm"
           >
-            <Home className="w-3.5 h-3.5" />
-            Command Center
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Admin
           </Link>
           <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-gray-900 dark:text-gray-200 font-bold">Community Polls & Surveys</span>
+          <span className="text-gray-900 dark:text-gray-200 font-bold">Community Polls</span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5 sm:gap-3">
               <span className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                 <Vote className="w-5 h-5" />
               </span>
-              Community Polls <span className="text-blue-600 dark:text-blue-400">Archive</span>
+              <span>Community Polls <span className="text-blue-600 dark:text-blue-400">Archive</span></span>
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Organized archive of /trade community polls. Each poll is categorized under its own dropdown section.
+              Organized archive of /trade community polls with vote distribution and export tools.
             </p>
           </div>
 
@@ -200,7 +208,7 @@ export default function SurveyResponsesList() {
               type="button"
               onClick={() => fetchData(true)}
               disabled={refreshing || loading}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1F26] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] sm:min-h-0 text-xs font-bold rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1F26] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 active:scale-95 shadow-sm"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh Data

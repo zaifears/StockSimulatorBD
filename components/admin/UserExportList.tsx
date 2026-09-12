@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { fetchWithToken } from '@/lib/utils/fetchWithToken';
 import {
-  Search, Download, LayoutDashboard, Loader2, TrendingUp, TrendingDown, Coins, SlidersHorizontal, X,
+  ArrowLeft, Search, Download, LayoutDashboard, Loader2, TrendingUp, TrendingDown, Coins, SlidersHorizontal, X,
 } from 'lucide-react';
 
 type ListType = 'most-active' | 'going-quiet' | 'top-coins';
@@ -272,24 +272,35 @@ export default function UserExportList({ type }: { type: ListType }) {
   };
 
   return (
-    <div className="min-h-screen pt-24 px-4 pb-12 bg-gray-50/50 dark:bg-[#090E17]">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen pt-20 sm:pt-28 px-3.5 sm:px-6 pb-24 sm:pb-12 bg-gray-50/50 dark:bg-[#090E17]">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
+        {/* Back link */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-100 dark:border-gray-800 pb-6 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-gray-100 dark:border-gray-800 pb-5 sm:pb-6 gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${ACCENT_CLASSES[config.accent]}`}>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${ACCENT_CLASSES[config.accent]}`}>
                 <Icon className="w-5 h-5" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
                 {config.title}
               </h1>
             </div>
-            <p className="text-gray-500 dark:text-gray-400">{config.description}</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{config.description}</p>
           </div>
           <Link
             href="/admin"
-            className="inline-flex items-center gap-2 bg-white dark:bg-[#1A1F26] hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
+            className="hidden sm:inline-flex items-center gap-2 bg-white dark:bg-[#1A1F26] hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm shrink-0"
           >
             <LayoutDashboard className="w-4 h-4" />
             Dashboard
@@ -297,47 +308,50 @@ export default function UserExportList({ type }: { type: ListType }) {
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-2.5 sm:gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3.5 top-3.5 w-4 sm:w-5 h-4 sm:h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+              className="w-full pl-10 sm:pl-11 pr-4 min-h-[44px] sm:h-12 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
             />
           </div>
-          <button
-            onClick={() => setFiltersOpen((v) => !v)}
-            className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all border whitespace-nowrap ${
-              filtersOpen || activeFilterCount > 0
-                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
-                : 'bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={handleDownload}
-            disabled={loading || filteredRows.length === 0}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-blue-500/30 transform hover:-translate-y-1 disabled:opacity-50 disabled:transform-none disabled:shadow-none whitespace-nowrap"
-          >
-            <Download className="w-4 h-4" />
-            Download CSV ({filteredRows.length.toLocaleString()})
-          </button>
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 sm:gap-4">
+            <button
+              onClick={() => setFiltersOpen((v) => !v)}
+              className={`inline-flex items-center justify-center gap-2 px-4 sm:px-5 min-h-[44px] rounded-xl text-xs sm:text-sm font-bold transition-all border whitespace-nowrap active:scale-95 ${
+                filtersOpen || activeFilterCount > 0
+                  ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
+                  : 'bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={loading || filteredRows.length === 0}
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-5 min-h-[44px] rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 shadow-lg shadow-blue-500/30 active:scale-95 disabled:opacity-50 disabled:transform-none disabled:shadow-none whitespace-nowrap"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download CSV ({filteredRows.length.toLocaleString()})</span>
+              <span className="sm:hidden">CSV ({formatCompact(filteredRows.length)})</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter panel */}
         {filtersOpen && (
-          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                   Min {config.metricFilterLabel}
@@ -349,7 +363,7 @@ export default function UserExportList({ type }: { type: ListType }) {
                   value={minMetric}
                   onChange={(e) => setMinMetric(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-base sm:text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div>
@@ -363,7 +377,7 @@ export default function UserExportList({ type }: { type: ListType }) {
                   value={maxMetric}
                   onChange={(e) => setMaxMetric(e.target.value)}
                   placeholder="No limit"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-base sm:text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div>
@@ -374,7 +388,7 @@ export default function UserExportList({ type }: { type: ListType }) {
                   type="date"
                   value={toDateInputValue(joinedFrom)}
                   onChange={(e) => setJoinedFrom(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-base sm:text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div>
@@ -385,11 +399,11 @@ export default function UserExportList({ type }: { type: ListType }) {
                   type="date"
                   value={toDateInputValue(joinedTo)}
                   onChange={(e) => setJoinedTo(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-base sm:text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               {config.showInactivityColumns && (
-                <div>
+                <div className="sm:col-span-2 lg:col-span-4">
                   <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                     Inactive for at least (days)
                   </label>
@@ -399,7 +413,7 @@ export default function UserExportList({ type }: { type: ListType }) {
                     value={minInactiveDays}
                     onChange={(e) => setMinInactiveDays(e.target.value)}
                     placeholder="e.g. 14"
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#111418] border border-gray-100 dark:border-gray-800 rounded-lg text-base sm:text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               )}
@@ -424,70 +438,79 @@ export default function UserExportList({ type }: { type: ListType }) {
 
         {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center py-24">
+          <div className="flex items-center justify-center py-20 sm:py-24">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : error ? (
-          <div className="bg-white dark:bg-[#1A1F26] border border-red-100 dark:border-red-500/20 rounded-3xl p-8 text-center">
+          <div className="bg-white dark:bg-[#1A1F26] border border-red-100 dark:border-red-500/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           </div>
         ) : filteredRows.length === 0 ? (
-          <div className="bg-white dark:bg-[#1A1F26] rounded-3xl p-16 text-center border border-gray-200 dark:border-gray-800 border-dashed">
+          <div className="bg-white dark:bg-[#1A1F26] rounded-2xl sm:rounded-3xl p-10 sm:p-16 text-center border border-gray-200 dark:border-gray-800 border-dashed">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
               {searchTerm || activeFilterCount > 0 ? 'No users match your search/filters' : 'No users found yet'}
             </p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden">
+          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 text-left">
-                    <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">#</th>
-                    <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Name</th>
-                    <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Email</th>
-                    <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">
+                  <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+                    <th className="px-3.5 sm:px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-10 sm:w-12">#</th>
+                    <th className="px-3.5 sm:px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">User</th>
+                    <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Email</th>
+                    <th className="px-3.5 sm:px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">
                       {config.metricLabel}
                     </th>
                     {config.showInactivityColumns ? (
                       <>
-                        <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                        <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">
                           Account Age
                         </th>
-                        <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                        <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">
                           Inactive For
                         </th>
                       </>
                     ) : (
-                      <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">
                         {type === 'top-coins' ? 'Joined' : 'Last Visit'}
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-900">
                   {filteredRows.map((r, i) => (
                     <tr
                       key={r.uid}
-                      className="border-b border-gray-50 dark:border-gray-900 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                      className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40 transition-colors"
                     >
-                      <td className="px-5 py-3 text-[11px] font-semibold text-gray-300 dark:text-gray-600">{i + 1}</td>
-                      <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">{r.name}</td>
-                      <td className="px-5 py-3 text-gray-500 dark:text-gray-400 break-all">{r.email || '—'}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-gray-700 dark:text-gray-200">
-                        {type === 'top-coins' ? formatCompact(r.coins || 0) : (r.visitCount || 0).toLocaleString()}
+                      <td className="px-3.5 sm:px-5 py-3 text-[11px] font-semibold text-gray-300 dark:text-gray-600">{i + 1}</td>
+                      <td className="px-3.5 sm:px-5 py-3">
+                        <div className="font-medium text-gray-900 dark:text-white leading-tight">{r.name}</div>
+                        <div className="text-[11px] text-gray-400 dark:text-gray-500 sm:hidden mt-0.5 break-all">{r.email || '—'}</div>
+                      </td>
+                      <td className="px-5 py-3 text-gray-500 dark:text-gray-400 break-all hidden sm:table-cell">{r.email || '—'}</td>
+                      <td className="px-3.5 sm:px-5 py-3 text-right font-semibold text-gray-700 dark:text-gray-200">
+                        {type === 'top-coins' ? (
+                          <span className="text-amber-600 dark:text-amber-400 font-bold">
+                            ৳{formatCompact(r.coins || 0)}
+                          </span>
+                        ) : (
+                          (r.visitCount || 0).toLocaleString()
+                        )}
                       </td>
                       {config.showInactivityColumns ? (
                         <>
-                          <td className="px-5 py-3 text-gray-400 dark:text-gray-500 hidden sm:table-cell">
+                          <td className="px-5 py-3 text-gray-400 dark:text-gray-500 hidden md:table-cell">
                             {daysLabel(daysSince(r.createdAt))}
                           </td>
-                          <td className="px-5 py-3 text-gray-400 dark:text-gray-500 hidden sm:table-cell">
+                          <td className="px-5 py-3 text-gray-400 dark:text-gray-500 hidden md:table-cell">
                             {daysLabel(daysSince(r.lastVisitAt))}
                           </td>
                         </>
                       ) : (
-                        <td className="px-5 py-3 text-gray-400 dark:text-gray-500 hidden sm:table-cell">
+                        <td className="px-5 py-3 text-gray-400 dark:text-gray-500 hidden md:table-cell">
                           {type === 'top-coins' ? formatDate(r.createdAt) : formatDate(r.lastVisitAt)}
                         </td>
                       )}

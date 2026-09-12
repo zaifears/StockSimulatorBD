@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode, type MouseEvent } from 'react';
+import { useMemo, useState, type ReactNode, type MouseEvent, type TouchEvent } from 'react';
 import Link from 'next/link';
 import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart } from 'lucide-react';
 import { BD_GEO_BUCKETS, type GeoBucketKey } from '@/lib/utils/geoBucket';
@@ -192,14 +192,14 @@ function StatTile({
   icon: ReactNode;
 }) {
   return (
-    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 truncate">{label}</p>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
-          {sublabel && <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{sublabel}</p>}
+    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5">
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0 pr-1">
+          <p className="text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 truncate">{label}</p>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{value}</div>
+          {sublabel && <p className="text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500 mt-1 truncate">{sublabel}</p>}
         </div>
-        <div className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center ${ACCENT_CLASSES[accent]}`}>
+        <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-full flex items-center justify-center ${ACCENT_CLASSES[accent]}`}>
           {icon}
         </div>
       </div>
@@ -266,6 +266,18 @@ function TrendChart({ data }: { data: DailyTrendPoint[] }) {
   const handleMove = (e: MouseEvent<SVGRectElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const relX = ((e.clientX - rect.left) / rect.width) * width;
+    const n = points.length;
+    const plotW = width - padding.left - padding.right;
+    let idx = Math.round(((relX - padding.left) / plotW) * (n - 1));
+    idx = Math.max(0, Math.min(n - 1, idx));
+    setHoverIndex(idx);
+  };
+
+  const handleTouch = (e: TouchEvent<SVGRectElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = ((touch.clientX - rect.left) / rect.width) * width;
     const n = points.length;
     const plotW = width - padding.left - padding.right;
     let idx = Math.round(((relX - padding.left) / plotW) * (n - 1));
@@ -348,7 +360,7 @@ function TrendChart({ data }: { data: DailyTrendPoint[] }) {
         </g>
       )}
 
-      {/* Transparent hit-area for mouse tracking */}
+      {/* Transparent hit-area for mouse and touch tracking */}
       <rect
         x={padding.left}
         y={padding.top}
@@ -357,6 +369,8 @@ function TrendChart({ data }: { data: DailyTrendPoint[] }) {
         fill="transparent"
         onMouseMove={handleMove}
         onMouseLeave={() => setHoverIndex(null)}
+        onTouchMove={handleTouch}
+        onTouchEnd={() => setHoverIndex(null)}
       />
     </svg>
   );
@@ -528,15 +542,15 @@ function BangladeshMap({ breakdown }: { breakdown: SiteAnalyticsData['geoBreakdo
         {rankedRows.map((r) => {
           const pct = totalAll > 0 ? Math.round((r.value / totalAll) * 100) : 0;
           return (
-            <li key={r.label} className="flex items-center gap-3">
-              <span className="text-xs text-gray-500 dark:text-gray-400 w-28 shrink-0 truncate">{r.label}</span>
+            <li key={r.label} className="flex items-center gap-2.5 sm:gap-3">
+              <span className="text-xs text-gray-500 dark:text-gray-400 w-24 sm:w-28 shrink-0 truncate">{r.label}</span>
               <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-blue-600 dark:bg-blue-500"
                   style={{ width: `${Math.max(pct, r.value > 0 ? 3 : 0)}%` }}
                 />
               </div>
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 w-16 text-right shrink-0">
+              <span className="text-[11px] sm:text-xs font-semibold text-gray-700 dark:text-gray-200 w-16 text-right shrink-0">
                 {formatCompact(r.value)} · {pct}%
               </span>
             </li>
@@ -614,7 +628,7 @@ function BalanceIntegrityCard({ data }: { data: SiteAnalyticsData['balanceIntegr
   const isClean = data.flaggedCount === 0;
   return (
     <div
-      className={`rounded-3xl p-5 border ${
+      className={`rounded-2xl sm:rounded-3xl p-4 sm:p-5 border ${
         isClean
           ? 'bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800'
           : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30'
@@ -673,7 +687,7 @@ function BalanceIntegrityCard({ data }: { data: SiteAnalyticsData['balanceIntegr
 function AccountIntegrityCard({ data }: { data: SiteAnalyticsData['accountIntegrity'] }) {
   if (!data || 'error' in data) {
     return (
-      <div className="rounded-3xl p-5 border bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800">
+      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800">
         <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Account Integrity</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {(data as any)?.error || 'Unavailable right now.'}
@@ -686,7 +700,7 @@ function AccountIntegrityCard({ data }: { data: SiteAnalyticsData['accountIntegr
 
   return (
     <div
-      className={`rounded-3xl p-5 border ${
+      className={`rounded-2xl sm:rounded-3xl p-4 sm:p-5 border ${
         isClean
           ? 'bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800'
           : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30'
@@ -887,7 +901,7 @@ function RankedListCard({
   emptyText: string;
 }) {
   return (
-    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
       <div className="flex items-center gap-2 mb-4">
         <div className={`w-7 h-7 rounded-full flex items-center justify-center ${ACCENT_CLASSES[accent]}`}>{icon}</div>
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>
@@ -931,7 +945,7 @@ function UserListCard({
   viewAllHref?: string;
 }) {
   return (
-    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center ${ACCENT_CLASSES[accent]}`}>{icon}</div>
@@ -970,7 +984,7 @@ function UserListCard({
 
 function CoinLeaderboardCard({ users, viewAllHref }: { users: CoinRow[]; viewAllHref?: string }) {
   return (
-    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center ${ACCENT_CLASSES.amber}`}>
@@ -1021,9 +1035,9 @@ export default function SiteAnalyticsSection({
 }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-[92px] rounded-3xl bg-gray-100 dark:bg-[#1A1F26] animate-pulse" />
+          <div key={i} className="h-[92px] rounded-2xl sm:rounded-3xl bg-gray-100 dark:bg-[#1A1F26] animate-pulse" />
         ))}
       </div>
     );
@@ -1031,27 +1045,27 @@ export default function SiteAnalyticsSection({
 
   if (error || !data) {
     return (
-      <div className="bg-white dark:bg-[#1A1F26] border border-red-100 dark:border-red-500/20 rounded-3xl p-5">
+      <div className="bg-white dark:bg-[#1A1F26] border border-red-100 dark:border-red-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
         <p className="text-sm text-red-600 dark:text-red-400">{error || 'Site analytics unavailable right now.'}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Visits KPI row */}
       <div>
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Icon.TrendUp />
             Site Visits
           </h2>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 text-green-700 dark:text-green-400 text-xs font-bold">
+          <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 text-green-700 dark:text-green-400 text-xs font-bold shrink-0">
             <Radio className="w-3 h-3 animate-pulse" />
             {data.activeRightNow.toLocaleString()} online now
           </span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
           <StatTile label="Visits today" value={formatCompact(data.visitors.today)} accent="blue" icon={<Icon.Users />} />
           <StatTile label="Last 7 days" value={formatCompact(data.visitors.last7Days)} accent="blue" icon={<Icon.Users />} />
           <StatTile label="Last 30 days" value={formatCompact(data.visitors.last30Days)} accent="blue" icon={<Icon.Users />} />
@@ -1066,12 +1080,12 @@ export default function SiteAnalyticsSection({
       </div>
 
       {/* Trend chart + device split */}
-      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-4">
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Visits — last 30 days</h3>
           <TrendChart data={data.dailyTrend} />
         </div>
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Device split (30d)</h3>
           <DeviceBreakdown breakdown={data.deviceBreakdown} />
         </div>
@@ -1079,23 +1093,23 @@ export default function SiteAnalyticsSection({
 
       {/* Visitor location — Bangladesh divisional cities */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
           <MapPin className="w-4 h-4" />
           Visitor Location (30d)
         </h2>
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
           <BangladeshMap breakdown={data.geoBreakdown} />
         </div>
       </div>
 
       {/* Traffic sources, visitor loyalty, bounce rate */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
           <Icon.Compass />
           Traffic & Engagement Quality
         </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Traffic sources (30d)</h3>
             <HorizontalBarList
               emptyText="No traffic data yet"
@@ -1105,11 +1119,11 @@ export default function SiteAnalyticsSection({
               }))}
             />
           </div>
-          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">New vs returning visitors (30d)</h3>
             <NewVsReturningBar data={data.newVsReturning} />
           </div>
-          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Bounce rate (7d)</h3>
             <Meter
               value={data.bounceRate}
@@ -1122,8 +1136,8 @@ export default function SiteAnalyticsSection({
       </div>
 
       {/* Peak hours + top landing pages */}
-      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-4">
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Peak activity hours (7d, Dhaka time)</h3>
           <PeakHoursChart hours={data.peakHours} />
         </div>
@@ -1137,7 +1151,7 @@ export default function SiteAnalyticsSection({
       </div>
 
       {/* Content performance — which blog posts and stock pages pull traffic */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <RankedListCard
           title="Top Blog Posts"
           icon={<Newspaper className="w-4 h-4" />}
@@ -1156,13 +1170,13 @@ export default function SiteAnalyticsSection({
 
       {/* Registrations KPI row */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
           <Icon.UserPlus />
           New Registrations
         </h2>
         {/* State the source explicitly: these counts come from Firebase Auth,
             so they should match the Firebase console exactly. */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
           {data.registrations.source === 'firebase-auth' ? (
             <>Counted from Firebase Auth — matches the Firebase console.</>
           ) : (
@@ -1171,7 +1185,7 @@ export default function SiteAnalyticsSection({
             </span>
           )}
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
           <StatTile label="Today" value={formatCompact(data.registrations.today)} accent="indigo" icon={<Icon.UserPlus />} />
           <StatTile label="Last 7 days" value={formatCompact(data.registrations.last7Days)} accent="indigo" icon={<Icon.UserPlus />} />
           <StatTile label="Last 30 days" value={formatCompact(data.registrations.last30Days)} accent="indigo" icon={<Icon.UserPlus />} />
@@ -1193,11 +1207,11 @@ export default function SiteAnalyticsSection({
           One per account, ever, so these are first-time agreements on that
           day, not an active-users count. */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4" />
           Disclaimer Agreements
         </h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
           <StatTile
             label="Today"
             value={formatCompact(data.disclaimerAgreements.today)}
@@ -1220,8 +1234,8 @@ export default function SiteAnalyticsSection({
       </div>
 
       {/* Retention + growth funnel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Retention</h3>
           <RetentionRow retention={data.retention} />
           <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-4">
@@ -1229,7 +1243,7 @@ export default function SiteAnalyticsSection({
             {data.retention.truncated ? ' (capped sample)' : ''}.
           </p>
         </div>
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Growth Funnel (30d)</h3>
           <FunnelBars stages={data.growthFunnel} />
         </div>
@@ -1241,11 +1255,11 @@ export default function SiteAnalyticsSection({
 
       {/* Revenue & recharges */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
           <Wallet className="w-4 h-4" />
           Revenue &amp; Recharges
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
           <StatTile
             label="Approved (30d)"
             value={formatBdt(data.revenue.approvedLast30Days.bdt)}
@@ -1277,9 +1291,9 @@ export default function SiteAnalyticsSection({
         {data.revenue.pending.count > 0 && (
           <Link
             href="/admin/recharge/pending"
-            className="flex items-center justify-between gap-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl px-5 py-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300"
+            className="flex items-center justify-between gap-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl px-4 sm:px-5 py-3.5 sm:py-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300"
           >
-            <span className="text-sm text-orange-800 dark:text-orange-300">
+            <span className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
               <strong>{data.revenue.pending.count}</strong> recharge{data.revenue.pending.count === 1 ? '' : 's'} awaiting approval — {formatBdt(data.revenue.pending.bdt)} total
             </span>
             <ArrowRight className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
@@ -1294,11 +1308,11 @@ export default function SiteAnalyticsSection({
 
       {/* Engagement — who's active, who's gone quiet, who's rich */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
           <Icon.Users />
           Engagement
         </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           <UserListCard
             title="Most Active Users"
             icon={<Icon.TrendUp />}
@@ -1323,11 +1337,11 @@ export default function SiteAnalyticsSection({
 
       {/* Trading activity — the metric most specific to a paper-trading simulator */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
           <Icon.Activity />
           Trading Activity
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
           <StatTile
             label="Trades today"
             value={formatCompact(data.trading?.trades.today ?? 0)}
@@ -1356,12 +1370,12 @@ export default function SiteAnalyticsSection({
         </div>
 
         {data.tradingError ? (
-          <p className="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-3xl p-4">
+          <p className="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-2xl sm:rounded-3xl p-4">
             {data.tradingError}
           </p>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[40fr_60fr] gap-4">
-            <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-[40fr_60fr] gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Buy vs sell orders (30d)</h3>
               <BuyVsSellBar data={data.trading?.buyVsSell ?? { buys: 0, sells: 0 }} />
             </div>

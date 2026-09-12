@@ -292,7 +292,7 @@ export default function AdminDashboard() {
           <div className="absolute top-0 left-1/4 w-full max-w-md h-[220px] bg-blue-500/10 dark:bg-blue-600/15 blur-[100px] rounded-full"></div>
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 pt-24 pb-8">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 pt-20 sm:pt-28 pb-6 sm:pb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -312,15 +312,15 @@ export default function AdminDashboard() {
             </div>
 
             {/* Quick Action Navigation Buttons */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5">
               <Link
                 href="/admin/tier"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md shadow-amber-500/20 active:scale-95 shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 px-3 sm:px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md shadow-amber-500/20 active:scale-95"
               >
                 <Crown className="w-4 h-4 fill-current shrink-0" />
-                <span>Boss Subscriptions</span>
+                <span className="truncate">Boss Tier</span>
                 {stats.pendingBossRequests > 0 && (
-                  <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                  <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0 animate-pulse">
                     {stats.pendingBossRequests}
                   </span>
                 )}
@@ -328,12 +328,12 @@ export default function AdminDashboard() {
 
               <Link
                 href="/admin/recharge"
-                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md shadow-blue-500/25 active:scale-95 shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md shadow-blue-500/25 active:scale-95"
               >
                 <Banknote className="w-4 h-4 shrink-0" />
-                <span>Recharges</span>
+                <span className="truncate">Recharges</span>
                 {stats.pendingRequests > 0 && (
-                  <span className="bg-white/25 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  <span className="bg-white/25 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
                     {stats.pendingRequests}
                   </span>
                 )}
@@ -341,12 +341,12 @@ export default function AdminDashboard() {
 
               <Link
                 href="/admin/survey"
-                className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 sm:px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95"
               >
                 <Vote className="w-4 h-4 text-blue-500 shrink-0" />
-                <span>Polls</span>
+                <span className="truncate">Polls</span>
                 {stats.surveyResponses > 0 && (
-                  <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
                     {stats.surveyResponses}
                   </span>
                 )}
@@ -354,29 +354,29 @@ export default function AdminDashboard() {
 
               <Link
                 href="/admin/promo-codes"
-                className="inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 sm:px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95"
               >
                 <Gift className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>Promo Codes</span>
+                <span className="truncate">Promo Codes</span>
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-12 space-y-8">
+      <div className="max-w-6xl mx-auto px-3.5 sm:px-4 pb-24 sm:pb-12 space-y-6 sm:space-y-8">
 
         {/* 👑 TOP PRIORITY: Boss Tier Pipeline Card */}
-        <div className="pt-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/5 dark:from-amber-500/20 dark:via-[#1a2130] dark:to-[#131822] border-2 border-amber-500/40 dark:border-amber-500/30 p-6 shadow-md">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-gray-950 shadow-md shrink-0">
-                  <Crown className="w-7 h-7 fill-current" />
+        <div className="pt-4 sm:pt-8">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/5 dark:from-amber-500/20 dark:via-[#1a2130] dark:to-[#131822] border-2 border-amber-500/40 dark:border-amber-500/30 p-4 sm:p-6 shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500 flex items-center justify-center text-gray-950 shadow-md shrink-0">
+                  <Crown className="w-5 h-5 sm:w-7 sm:h-7 fill-current" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                    <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-1.5">
                       Boss Tier Subscriptions
                     </h2>
                     <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
@@ -389,8 +389,8 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-[#111620] border border-amber-300 dark:border-amber-500/30 text-xs shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
+                <div className="flex items-center justify-between sm:justify-start gap-2 px-3.5 py-2 rounded-xl sm:rounded-2xl bg-white dark:bg-[#111620] border border-amber-300 dark:border-amber-500/30 text-xs shadow-sm">
                   <span className="text-gray-500 dark:text-gray-400">Active Bosses:</span>
                   <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-sm">
                     {stats.activeBossUsers}
@@ -399,9 +399,9 @@ export default function AdminDashboard() {
 
                 <Link
                   href="/admin/tier"
-                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                  className="w-full sm:w-auto px-4 sm:px-5 py-2.5 min-h-[44px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
                 >
-                  <Crown className="w-4 h-4 fill-current" />
+                  <Crown className="w-4 h-4 fill-current shrink-0" />
                   <span>Review Subscriptions</span>
                   {stats.pendingBossRequests > 0 ? (
                     <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black animate-pulse">
@@ -442,7 +442,7 @@ export default function AdminDashboard() {
                     <Clock className="w-3.5 h-3.5 text-amber-500" />
                     Pending Boss Upgrades ({pendingBossRequests.length})
                   </h3>
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">Direct 1-Click Verification</span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 hidden sm:inline">Direct 1-Click Verification</span>
                 </div>
                 <div className="space-y-2.5">
                   {pendingBossRequests.map((req) => (
@@ -450,20 +450,20 @@ export default function AdminDashboard() {
                       key={req.id}
                       className="p-3.5 rounded-2xl bg-white dark:bg-[#111620] border border-amber-300/50 dark:border-amber-500/20 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-xs text-gray-900 dark:text-white truncate">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <span className="font-extrabold text-xs text-gray-900 dark:text-white">
                             {req.userName}
                           </span>
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400 break-all">
                             ({req.userEmail})
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] mt-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px]">
                           <span className="font-bold text-amber-600 dark:text-amber-400">{req.planName}</span>
                           <span className="font-mono font-bold text-gray-900 dark:text-white">৳{req.amount}</span>
-                          <span className="text-gray-400">•</span>
-                          <span className="font-mono text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[10px]">
+                          <span className="text-gray-400 hidden xs:inline">•</span>
+                          <span className="font-mono text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[10px] break-all">
                             Trx: {req.transactionId}
                           </span>
                           <button
@@ -473,18 +473,18 @@ export default function AdminDashboard() {
                               setCopiedBossTrx(req.id);
                               setTimeout(() => setCopiedBossTrx(null), 2000);
                             }}
-                            className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                            className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-bold inline-flex items-center gap-0.5 active:scale-95 py-0.5 px-1.5 rounded bg-blue-50 dark:bg-blue-900/30"
                           >
-                            {copiedBossTrx === req.id ? 'Copied!' : 'Copy'}
+                            {copiedBossTrx === req.id ? '✓ Copied' : 'Copy Trx'}
                           </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-800/80">
                         <button
                           type="button"
                           disabled={bossActionLoading === req.id}
                           onClick={() => handleApproveBoss(req)}
-                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 text-xs font-black transition-all flex items-center gap-1 shadow-sm active:scale-95 disabled:opacity-50"
+                          className="flex-1 sm:flex-none justify-center px-4 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                         >
                           {bossActionLoading === req.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                           type="button"
                           disabled={bossActionLoading === req.id}
                           onClick={() => handleRejectBoss(req)}
-                          className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-semibold transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                          className="flex-1 sm:flex-none justify-center px-3.5 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                         >
                           <X className="w-3.5 h-3.5" />
                           <span>Reject</span>
@@ -522,13 +522,13 @@ export default function AdminDashboard() {
                     value={quickEmail}
                     onChange={(e) => setQuickEmail(e.target.value)}
                     placeholder="Enter trader's registered email (e.g. user@gmail.com)..."
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111620] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                    className="w-full px-3.5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111620] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
                   />
                 </div>
                 <select
                   value={quickDays}
                   onChange={(e) => setQuickDays(Number(e.target.value))}
-                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111620] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
+                  className="px-3 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111620] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
                 >
                   <option value={31}>1 Month (31 Days)</option>
                   <option value={185}>6 Months (185 Days)</option>
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
                 <button
                   type="submit"
                   disabled={quickGrantLoading || !quickEmail.trim()}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                  className="px-4 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                 >
                   {quickGrantLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Crown className="w-3.5 h-3.5 fill-current" />}
                   <span>Grant Boss</span>
@@ -549,16 +549,16 @@ export default function AdminDashboard() {
         </div>
 
         {/* Top Level Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {/* Total Users */}
-          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-6 relative overflow-hidden group">
+          <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 transition-transform group-hover:scale-110 duration-500">
               <Users className="w-24 h-24 text-blue-600" />
             </div>
             <div className="relative z-10 flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Users</p>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">{stats.totalUsers.toLocaleString()}</div>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Users</p>
+                <div className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">{stats.totalUsers.toLocaleString()}</div>
               </div>
               <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
                 <Users className="w-5 h-5" />
@@ -567,14 +567,14 @@ export default function AdminDashboard() {
           </div>
 
           {/* Total Recharge Requests */}
-          <Link href="/admin/recharge" className="block bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-3xl p-6 relative overflow-hidden group hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+          <Link href="/admin/recharge" className="block bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 relative overflow-hidden group hover:-translate-y-1 hover:shadow-md transition-all duration-300 active:scale-[0.99]">
             <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 transition-transform group-hover:scale-110 duration-500">
               <Receipt className="w-24 h-24 text-indigo-600" />
             </div>
             <div className="relative z-10 flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Requests</p>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">{stats.totalRequests.toLocaleString()}</div>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Requests</p>
+                <div className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">{stats.totalRequests.toLocaleString()}</div>
               </div>
               <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Receipt className="w-5 h-5" />
@@ -588,44 +588,44 @@ export default function AdminDashboard() {
 
         {/* Requests Breakdown */}
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-gray-400" />
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
             Recharge Pipeline
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* Pending */}
-            <Link href="/admin/recharge/pending" className="block bg-white dark:bg-[#1A1F26] border border-orange-100 dark:border-orange-500/20 rounded-2xl p-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-3 mb-3">
+            <Link href="/admin/recharge/pending" className="block bg-white dark:bg-[#1A1F26] border border-orange-100 dark:border-orange-500/20 rounded-2xl p-4 sm:p-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300 active:scale-[0.99]">
+              <div className="flex items-center gap-3 mb-2 sm:mb-3">
                 <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
                   <Clock className="w-4 h-4 text-orange-500" />
                 </div>
-                <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">Action Needed</span>
+                <span className="text-xs sm:text-sm font-semibold text-orange-600 dark:text-orange-400">Action Needed</span>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.pendingRequests}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.pendingRequests}</div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Pending reviews</p>
             </Link>
 
             {/* Approved */}
-            <Link href="/admin/recharge/approved" className="block bg-white dark:bg-[#1A1F26] border border-green-100 dark:border-green-500/20 rounded-2xl p-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-3 mb-3">
+            <Link href="/admin/recharge/approved" className="block bg-white dark:bg-[#1A1F26] border border-green-100 dark:border-green-500/20 rounded-2xl p-4 sm:p-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300 active:scale-[0.99]">
+              <div className="flex items-center gap-3 mb-2 sm:mb-3">
                 <div className="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-500/10 flex items-center justify-center">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 </div>
-                <span className="text-sm font-semibold text-green-600 dark:text-green-400">Approved</span>
+                <span className="text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400">Approved</span>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.approvedRequests}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.approvedRequests}</div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Successfully processed</p>
             </Link>
 
             {/* Rejected */}
-            <Link href="/admin/recharge/rejected" className="block bg-white dark:bg-[#1A1F26] border border-red-100 dark:border-red-500/20 rounded-2xl p-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-3 mb-3">
+            <Link href="/admin/recharge/rejected" className="block bg-white dark:bg-[#1A1F26] border border-red-100 dark:border-red-500/20 rounded-2xl p-4 sm:p-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300 active:scale-[0.99]">
+              <div className="flex items-center gap-3 mb-2 sm:mb-3">
                 <div className="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
                   <XCircle className="w-4 h-4 text-red-500" />
                 </div>
-                <span className="text-sm font-semibold text-red-600 dark:text-red-400">Rejected</span>
+                <span className="text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400">Rejected</span>
               </div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.rejectedRequests}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{stats.rejectedRequests}</div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Declined requests</p>
             </Link>
           </div>
@@ -633,16 +633,16 @@ export default function AdminDashboard() {
 
         {/* Quick Links */}
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-gray-400" />
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+            <Link2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
             System Links
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
 
             {/* Home Portal */}
             <a
               href="/"
-              className="flex items-center gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-4 rounded-2xl hover:border-blue-500 dark:hover:border-blue-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group"
+              className="flex items-center gap-3.5 sm:gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-3.5 sm:p-4 rounded-2xl hover:border-blue-500 dark:hover:border-blue-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group active:scale-[0.99]"
             >
               <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 group-hover:text-blue-500 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 transition-colors">
                 <Home className="w-5 h-5" />
@@ -656,7 +656,7 @@ export default function AdminDashboard() {
             {/* Manage Recharges Link */}
             <a
               href="/admin/recharge"
-              className="flex items-center gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-4 rounded-2xl hover:border-indigo-500 dark:hover:border-indigo-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group relative overflow-hidden"
+              className="flex items-center gap-3.5 sm:gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-3.5 sm:p-4 rounded-2xl hover:border-indigo-500 dark:hover:border-indigo-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group relative overflow-hidden active:scale-[0.99]"
             >
               <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 group-hover:text-indigo-500 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 transition-colors">
                 <Banknote className="w-5 h-5" />
@@ -670,7 +670,7 @@ export default function AdminDashboard() {
             {/* Promo Codes */}
             <Link
               href="/admin/promo-codes"
-              className="flex items-center gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-4 rounded-2xl hover:border-emerald-500 dark:hover:border-emerald-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group"
+              className="flex items-center gap-3.5 sm:gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-3.5 sm:p-4 rounded-2xl hover:border-emerald-500 dark:hover:border-emerald-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group active:scale-[0.99]"
             >
               <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 group-hover:text-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors">
                 <Gift className="w-5 h-5" />
@@ -687,7 +687,7 @@ export default function AdminDashboard() {
                 href="https://console.firebase.google.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-4 rounded-2xl hover:border-amber-500 dark:hover:border-amber-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group"
+                className="flex items-center gap-3.5 sm:gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-3.5 sm:p-4 rounded-2xl hover:border-amber-500 dark:hover:border-amber-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group active:scale-[0.99]"
               >
                 <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 group-hover:text-amber-500 group-hover:bg-amber-50 dark:group-hover:bg-amber-500/10 transition-colors">
                   <Database className="w-5 h-5" />
