@@ -207,7 +207,9 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
             {code.rewardType === 'boss' || (code.bossDays && code.bossDays > 0) ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-extrabold text-[10px] border border-amber-500/30">
                 <Crown className="w-3 h-3 fill-current" />
-                Boss Tier ({code.bossDays || 31} Days)
+                {code.bossDays && code.bossDays <= 7
+                  ? `Boss Trial (${code.bossDays} Days)`
+                  : `Boss Tier (${code.bossDays || 31} Days)`}
               </span>
             ) : (
               <span className="font-bold text-gray-700 dark:text-gray-300">

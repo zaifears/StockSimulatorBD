@@ -82,7 +82,65 @@ export async function GET(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────
-    // 2. FETCH REQUESTS BY STATUS (pending, approved, rejected, or all)
+    // 2. FETCH EXPIRED BOSS USERS (FOR RE-ENGAGEMENT / PROMO CAMPAIGNS)
+    // ─────────────────────────────────────────────
+    const view = searchParams.get('view')?.trim();
+    if (view === 'expired' || searchParams.get('status') === 'expired') {
+      const nowMs = Date.now();
+      const usersSnap = await db.collection('users').limit(10000).get();
+
+      const expiredUsers: any[] = [];
+      for (const docSnap of usersSnap.docs) {
+        const u = docSnap.data();
+        const bossUntilMs = u.bossUntil
+          ? typeof u.bossUntil === 'number'
+            ? u.bossUntil
+            : typeof u.bossUntil.toMillis === 'function'
+            ? u.bossUntil.toMillis()
+            : Date.parse(u.bossUntil) || 0
+          : 0;
+
+        const isCurrentlyBoss = u.accountTier === 'Boss' && bossUntilMs > nowMs;
+        if (isCurrentlyBoss) continue;
+
+        const hadBoss = Boolean(
+          bossUntilMs > 0 ||
+          u.bossSince ||
+          u.lastBossPlan
+        );
+
+        if (hadBoss) {
+          const plan = u.lastBossPlan || (bossUntilMs > 0 ? 'Boss Tier' : 'Past Access');
+          const isTrial = Boolean(plan.toLowerCase().includes('trial') || plan.toLowerCase().includes('7 day'));
+          const daysExpiredAgo = bossUntilMs > 0 ? Math.max(0, Math.floor((nowMs - bossUntilMs) / 86400000)) : null;
+
+          expiredUsers.push({
+            uid: docSnap.id,
+            name: u.name || u.displayName || (u.email ? u.email.split('@')[0] : 'Trader'),
+            email: u.email || null,
+            lastBossPlan: plan,
+            bossUntil: bossUntilMs || null,
+            bossSince: u.bossSince ? (typeof u.bossSince.toDate === 'function' ? u.bossSince.toDate().toISOString() : u.bossSince) : null,
+            expiredAt: bossUntilMs > 0 ? new Date(bossUntilMs).toISOString() : null,
+            daysExpiredAgo,
+            isTrial,
+            redeemedPromoCodes: Array.isArray(u.redeemedPromoCodes) ? u.redeemedPromoCodes : [],
+          });
+        }
+      }
+
+      // Sort by bossUntil descending (most recently expired first)
+      expiredUsers.sort((a, b) => (b.bossUntil || 0) - (a.bossUntil || 0));
+
+      return NextResponse.json({
+        success: true,
+        expiredUsers,
+        totalCount: expiredUsers.length,
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // 3. FETCH REQUESTS BY STATUS (pending, approved, rejected, or all)
     // ─────────────────────────────────────────────
     const statusQuery = searchParams.get('status')?.trim();
     if (statusQuery || pendingOnly === 'true') {
@@ -98,7 +156,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────
-    // 3. STATS SUMMARY
+    // 4. STATS SUMMARY
     // ─────────────────────────────────────────────
     const [pendingSnap, approvedSnap, rejectedSnap, activeBossSnap] = await Promise.all([
       db.collection('boss_requests').where('status', '==', 'pending').count().get(),
@@ -107,6 +165,14 @@ export async function GET(req: NextRequest) {
       db.collection('users').where('accountTier', '==', 'Boss').count().get(),
     ]);
 
+    let expiredBossCount = 0;
+    try {
+      const expiredQuerySnap = await db.collection('users').where('bossUntil', '>', 0).where('bossUntil', '<=', Date.now()).count().get();
+      expiredBossCount = expiredQuerySnap.data().count;
+    } catch {
+      // Fallback if index is not ready
+    }
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -114,6 +180,7 @@ export async function GET(req: NextRequest) {
         approvedCount: approvedSnap.data().count,
         rejectedCount: rejectedSnap.data().count,
         activeBossCount: activeBossSnap.data().count,
+        expiredBossCount,
       },
     });
   } catch (error: any) {

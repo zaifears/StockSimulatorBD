@@ -136,35 +136,40 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
           </div>
         </div>
 
-        {/* Blurred Teaser Behind Frosted Layer */}
-        <div className="relative rounded-2xl overflow-hidden filter blur-[2px] opacity-60 pointer-events-none select-none space-y-3">
-          <div className="bg-white dark:bg-[#1A1F26] border sm:rounded-2xl border-gray-200 dark:border-gray-800 p-4 grid grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
-                <Landmark className="w-3 h-3" /> Realized P&L
-              </div>
-              <div className="font-mono font-bold text-base text-emerald-600">+৳12,450.00</div>
-              <p className="text-[10px] text-gray-400 mt-0.5">Banked from closed trades</p>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
-                Lifetime Result
-              </div>
-              <div className="font-mono font-bold text-base text-emerald-600">+৳18,920.00</div>
-              <p className="text-[10px] text-gray-400 mt-0.5">Realized + unrealized</p>
-            </div>
-          </div>
+        {/* Heavily Blurred Teaser Behind Frosted Security Layer */}
+        <div className="relative rounded-2xl overflow-hidden pointer-events-none select-none">
+          {/* Frosted glass backdrop wash */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-100/30 dark:via-[#1A1F26]/50 to-gray-200/60 dark:to-[#0B0F17]/80 backdrop-blur-sm z-10 rounded-2xl" />
 
-          <div className="bg-white dark:bg-[#1A1F26] border sm:rounded-2xl border-gray-200 dark:border-gray-800 p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
-              Industry Exposure (21 Sectors)
+          <div className="filter blur-md sm:blur-lg opacity-25 space-y-3">
+            <div className="bg-white dark:bg-[#1A1F26] border sm:rounded-2xl border-gray-200 dark:border-gray-800 p-4 grid grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  <Landmark className="w-3 h-3" /> Realized P&L
+                </div>
+                <div className="font-mono font-bold text-base text-emerald-600">+৳12,450.00</div>
+                <p className="text-[10px] text-gray-400 mt-0.5">Banked from closed trades</p>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                  Lifetime Result
+                </div>
+                <div className="font-mono font-bold text-base text-emerald-600">+৳18,920.00</div>
+                <p className="text-[10px] text-gray-400 mt-0.5">Realized + unrealized</p>
+              </div>
             </div>
-            <div className="flex h-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-800 mb-2">
-              <span className="bg-blue-500 flex-1" />
-              <span className="bg-emerald-500 flex-1" />
-              <span className="bg-amber-500 flex-1" />
+
+            <div className="bg-white dark:bg-[#1A1F26] border sm:rounded-2xl border-gray-200 dark:border-gray-800 p-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                Industry Exposure (21 Sectors)
+              </div>
+              <div className="flex h-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-800 mb-2">
+                <span className="bg-blue-500 flex-1" />
+                <span className="bg-emerald-500 flex-1" />
+                <span className="bg-amber-500 flex-1" />
+              </div>
+              <div className="text-xs text-gray-400 font-mono">Pharmaceuticals 42% • Bank 35% • Fuel 23%</div>
             </div>
-            <div className="text-xs text-gray-400 font-mono">Pharmaceuticals 42% • Bank 35% • Fuel 23%</div>
           </div>
         </div>
       </div>

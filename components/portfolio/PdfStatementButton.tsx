@@ -136,9 +136,9 @@ export default function PdfStatementButton({
             title={
               cooldownActive
                 ? 'Please wait before generating another statement'
-                : 'Download Official DSE Portfolio Statement PDF'
+                : 'Download Portfolio Statement PDF'
             }
-            aria-label="Download Official Portfolio Statement PDF"
+            aria-label="Download Portfolio Statement PDF"
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-sm shrink-0 active:scale-95 ${
               cooldownActive || isGenerating
                 ? 'bg-amber-500/10 border border-amber-400/30 text-amber-700/60 dark:text-amber-300/60 cursor-not-allowed'
@@ -220,14 +220,14 @@ export default function PdfStatementButton({
             </div>
 
             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
-              Export official, audit-ready DSE Portfolio Statements formatted to standard broker specifications (XBroker / NBL layout), complete with lot-by-lot T+1 lock-in maturity, gain/loss breakdowns, and portfolio equity valuation.
+              Download clean, professional DSE paper-trading portfolio statements complete with lot-by-lot T+1 lock-in maturity, gain/loss breakdowns, and portfolio equity valuation for your simulated trading records.
             </p>
 
             <div className="space-y-2 mb-6 bg-amber-50/60 dark:bg-amber-500/5 border border-amber-200/80 dark:border-amber-500/20 rounded-xl p-3.5">
               <div className="flex items-start gap-2 text-xs">
                 <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <span className="font-semibold text-gray-800 dark:text-gray-200">
-                  Institutional DSE Broker Layout with Instrument Table
+                  Standard DSE Instrument & Holdings Statement Table
                 </span>
               </div>
               <div className="flex items-start gap-2 text-xs">

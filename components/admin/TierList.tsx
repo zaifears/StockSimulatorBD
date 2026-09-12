@@ -14,12 +14,12 @@ import {
 import {
   Crown, Shield, Check, X, Clock, CheckCircle2, XCircle,
   Copy, Search, ArrowLeft, Loader2, UserCheck, UserX, AlertTriangle,
-  Flame, RefreshCw,
+  Flame, RefreshCw, Mail, Download, Sparkles, Send,
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import BossBadge from '@/components/ui/BossBadge';
 
-type TierTab = 'pending' | 'approved' | 'rejected' | 'manual';
+type TierTab = 'pending' | 'approved' | 'rejected' | 'expired' | 'manual';
 
 interface BossRequest {
   id: string;
@@ -39,6 +39,19 @@ interface BossRequest {
   rejectionReason?: string;
 }
 
+export interface ExpiredBossUser {
+  uid: string;
+  name: string;
+  email: string | null;
+  lastBossPlan: string;
+  bossUntil: number | null;
+  bossSince: string | null;
+  expiredAt: string | null;
+  daysExpiredAgo: number | null;
+  isTrial: boolean;
+  redeemedPromoCodes: string[];
+}
+
 export default function TierList() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TierTab>('pending');
@@ -47,6 +60,11 @@ export default function TierList() {
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Expired Boss CRM state
+  const [expiredUsers, setExpiredUsers] = useState<ExpiredBossUser[]>([]);
+  const [loadingExpired, setLoadingExpired] = useState(false);
+  const [copiedAllEmails, setCopiedAllEmails] = useState(false);
 
   // Manual grant state
   const [manualQuery, setManualQuery] = useState('');
@@ -62,6 +80,7 @@ export default function TierList() {
     approvedCount: 0,
     rejectedCount: 0,
     activeBossCount: 0,
+    expiredBossCount: 0,
   });
 
   const fetchStats = useCallback(async () => {
@@ -76,13 +95,35 @@ export default function TierList() {
     }
   }, []);
 
+  const fetchExpiredUsers = useCallback(async () => {
+    setLoadingExpired(true);
+    try {
+      const res = await fetchWithFreshToken('/api/admin/tier?view=expired', { method: 'GET' });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.expiredUsers)) {
+        setExpiredUsers(json.expiredUsers);
+      }
+    } catch (err) {
+      console.error('Failed to fetch expired boss users:', err);
+    } finally {
+      setLoadingExpired(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) fetchStats();
   }, [user, fetchStats]);
 
-  // Fast initial fetch + Real-time listener for requests
   useEffect(() => {
     if (!user) return;
+    if (activeTab === 'expired' && expiredUsers.length === 0) {
+      fetchExpiredUsers();
+    }
+  }, [user, activeTab, expiredUsers.length, fetchExpiredUsers]);
+
+  // Fast initial fetch + Real-time listener for requests
+  useEffect(() => {
+    if (!user || activeTab === 'expired') return;
     setLoading(true);
 
     let isSubscribed = true;
@@ -215,17 +256,16 @@ export default function TierList() {
     }
   };
 
-  const handleManualSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const queryTerm = manualQuery.trim();
-    if (!queryTerm) return;
+  const searchUserDirect = async (queryTerm: string) => {
+    const term = queryTerm.trim();
+    if (!term) return;
 
     setManualSearching(true);
     setManualUserDoc(null);
     setMessage(null);
 
     try {
-      const res = await fetchWithFreshToken(`/api/admin/tier?search=${encodeURIComponent(queryTerm)}`, {
+      const res = await fetchWithFreshToken(`/api/admin/tier?search=${encodeURIComponent(term)}`, {
         method: 'GET',
       });
       const json = await res.json();
@@ -238,6 +278,65 @@ export default function TierList() {
     } finally {
       setManualSearching(false);
     }
+  };
+
+  const handleManualSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await searchUserDirect(manualQuery);
+  };
+
+  const handleSelectExpiredForRenewal = (u: ExpiredBossUser) => {
+    const target = u.email || u.uid;
+    setManualQuery(target);
+    setActiveTab('manual');
+    searchUserDirect(target);
+  };
+
+  const filteredExpiredUsers = expiredUsers.filter((u) => {
+    if (!filterQuery.trim()) return true;
+    const q = filterQuery.toLowerCase().trim();
+    return (
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.uid?.toLowerCase().includes(q) ||
+      u.lastBossPlan?.toLowerCase().includes(q) ||
+      u.redeemedPromoCodes?.some((code) => code.toLowerCase().includes(q))
+    );
+  });
+
+  const handleDownloadCSV = () => {
+    if (filteredExpiredUsers.length === 0) return;
+    const headers = ['Name', 'Email', 'Plan', 'Is Trial', 'Boss Since', 'Expired At', 'Days Ago', 'Promo Codes', 'UID'];
+    const rows = filteredExpiredUsers.map((u) => [
+      `"${(u.name || '').replace(/"/g, '""')}"`,
+      `"${(u.email || '').replace(/"/g, '""')}"`,
+      `"${(u.lastBossPlan || '').replace(/"/g, '""')}"`,
+      u.isTrial ? 'Yes' : 'No',
+      `"${u.bossSince || ''}"`,
+      `"${u.expiredAt || ''}"`,
+      u.daysExpiredAgo ?? '',
+      `"${(u.redeemedPromoCodes || []).join('; ')}"`,
+      `"${u.uid}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `expired_boss_users_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyAllEmails = () => {
+    const validEmails = filteredExpiredUsers
+      .map((u) => u.email?.trim())
+      .filter((e): e is string => Boolean(e && e.includes('@')));
+    const unique = Array.from(new Set(validEmails));
+    if (unique.length === 0) return;
+    navigator.clipboard.writeText(unique.join(', '));
+    setCopiedAllEmails(true);
+    setTimeout(() => setCopiedAllEmails(false), 2500);
   };
 
   const handleManualGrant = async (action: 'manual_grant' | 'revoke') => {
@@ -337,8 +436,11 @@ export default function TierList() {
       )}
 
       {/* Top Level Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mb-6">
+        <div
+          onClick={() => setActiveTab('pending')}
+          className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm cursor-pointer hover:border-amber-400/50 transition-colors"
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span className="truncate">Pending Action</span>
             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
@@ -355,7 +457,7 @@ export default function TierList() {
 
         <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span className="truncate">Active Boss Users</span>
+            <span className="truncate">Active Boss</span>
             <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
           </div>
           <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
@@ -363,7 +465,26 @@ export default function TierList() {
           </div>
         </div>
 
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div
+          onClick={() => setActiveTab('expired')}
+          className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm cursor-pointer hover:border-purple-400/50 transition-colors"
+        >
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <span className="truncate">Expired Boss</span>
+            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-500 shrink-0" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 font-mono flex items-baseline gap-1.5">
+            <span>{expiredUsers.length > 0 ? expiredUsers.length : (stats.expiredBossCount || 0)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase font-sans">
+              Re-engage
+            </span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveTab('approved')}
+          className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm cursor-pointer hover:border-emerald-400/50 transition-colors"
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span className="truncate">Approved</span>
             <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
@@ -373,7 +494,10 @@ export default function TierList() {
           </div>
         </div>
 
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div
+          onClick={() => setActiveTab('rejected')}
+          className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm cursor-pointer hover:border-rose-400/50 transition-colors"
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span className="truncate">Rejected</span>
             <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
@@ -430,6 +554,24 @@ export default function TierList() {
           <XCircle className="w-3.5 h-3.5" />
           <span>Rejected</span>
           <span className="text-[10px] opacity-75 font-mono font-bold">({counts.rejected})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('expired')}
+          className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+            activeTab === 'expired'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-white dark:bg-[#131822] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
+          }`}
+        >
+          <Mail className="w-3.5 h-3.5" />
+          <span>Expired (Re-engage)</span>
+          {(stats.expiredBossCount > 0 || expiredUsers.length > 0) && (
+            <span className="text-[10px] opacity-75 font-mono font-bold">
+              ({expiredUsers.length > 0 ? expiredUsers.length : (stats.expiredBossCount || 0)})
+            </span>
+          )}
         </button>
 
         <button
@@ -549,166 +691,403 @@ export default function TierList() {
         </div>
       )}
 
-      {/* Search/Filter Bar for Requests */}
-      {activeTab !== 'manual' && requests.length > 0 && (
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder="Filter requests by trader name, email, plan, or bKash TrxID..."
-              className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#131822] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
-            />
+      {/* Tab: Expired Boss Users (Re-engagement CRM) */}
+      {activeTab === 'expired' && (
+        <div className="space-y-4 mb-8">
+          {/* Header Card with Controls */}
+          <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-purple-500 shrink-0" />
+                  <span>Expired Boss Users — Re-engagement CRM</span>
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-2xl leading-relaxed">
+                  Traders who previously held Boss Tier (via trial promo code, monthly plan, or manual grant) whose access has ended. Copy emails for promo campaigns or grant 1-click renewals.
+                </p>
+              </div>
+
+              {/* Action Buttons: Copy All Emails & Download CSV & Refresh */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={fetchExpiredUsers}
+                  disabled={loadingExpired}
+                  className="px-3 py-2 min-h-[40px] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  title="Refresh expired list"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingExpired ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadCSV}
+                  disabled={filteredExpiredUsers.length === 0}
+                  className="px-3.5 py-2 min-h-[40px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#131822] hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Export CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyAllEmails}
+                  disabled={filteredExpiredUsers.length === 0}
+                  className={`px-4 py-2 min-h-[40px] rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50 ${
+                    copiedAllEmails
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                >
+                  {copiedAllEmails ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Copied {filteredExpiredUsers.filter(u => u.email).length} Emails!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy All Emails</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Input */}
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  placeholder="Search expired traders by name, email, plan (e.g. trial), or UID..."
+                  className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#182030] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-gray-400 mt-2 px-1">
+                <span>
+                  Showing {filteredExpiredUsers.length} of {expiredUsers.length} expired traders
+                </span>
+                <span>
+                  {filteredExpiredUsers.filter((u) => u.email).length} email addresses available for outreach
+                </span>
+              </div>
+            </div>
           </div>
+
+          {/* Expired Users List */}
+          {loadingExpired ? (
+            <div className="py-16 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+              <span>Scanning expired Boss subscriptions...</span>
+            </div>
+          ) : filteredExpiredUsers.length === 0 ? (
+            <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl py-16 px-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center mx-auto mb-3">
+                <Mail className="w-6 h-6 text-purple-400" />
+              </div>
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
+                No Expired Boss Users Found
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {filterQuery.trim()
+                  ? `No expired users match your search "${filterQuery}".`
+                  : 'No users with expired Boss status found yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredExpiredUsers.map((u) => (
+                <div
+                  key={u.uid}
+                  className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:border-purple-400/50 transition-colors"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Left: User details */}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-sm text-gray-900 dark:text-white">
+                          {u.name}
+                        </span>
+
+                        {u.isTrial ? (
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
+                            {u.lastBossPlan}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/50 flex items-center gap-1">
+                            <Crown className="w-3 h-3 text-purple-600 shrink-0" />
+                            {u.lastBossPlan}
+                          </span>
+                        )}
+
+                        {u.daysExpiredAgo != null && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+                            Expired {u.daysExpiredAgo === 0 ? 'today' : `${u.daysExpiredAgo}d ago`}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Email + 1-Click Copy */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {u.email ? (
+                          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-200 font-mono">
+                            <span className="break-all">{u.email}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(u.email!, `email-${u.uid}`)}
+                              className="text-[11px] font-sans font-bold text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-0.5 ml-1 active:scale-95"
+                              title="Copy email address"
+                            >
+                              {copiedId === `email-${u.uid}` ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                  <span className="text-emerald-500">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">No email on file</span>
+                        )}
+
+                        <span className="text-gray-400 text-[11px] font-mono">
+                          UID: {u.uid.slice(0, 10)}...
+                        </span>
+                      </div>
+
+                      {/* Dates & Promos */}
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                        {u.expiredAt && (
+                          <span>
+                            Ended: <span className="font-semibold text-gray-700 dark:text-gray-300">{new Date(u.expiredAt).toLocaleDateString()}</span>
+                          </span>
+                        )}
+                        {u.bossSince && (
+                          <span>
+                            Boss Since: <span className="font-semibold text-gray-700 dark:text-gray-300">{new Date(u.bossSince).toLocaleDateString()}</span>
+                          </span>
+                        )}
+                        {u.redeemedPromoCodes && u.redeemedPromoCodes.length > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            Used Promos:
+                            {u.redeemedPromoCodes.map((code) => (
+                              <span
+                                key={code}
+                                className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-mono text-[10px] font-bold border border-amber-200 dark:border-amber-800"
+                              >
+                                {code}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: 1-Click Action to Renew / Send Promo */}
+                    <div className="flex items-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800 w-full md:w-auto shrink-0">
+                      {u.email && (
+                        <a
+                          href={`mailto:${encodeURIComponent(u.email)}?subject=${encodeURIComponent('Special Boss Tier Renewal Offer | StockSimulatorBD')}`}
+                          className="flex-1 md:flex-none justify-center px-3.5 py-2.5 min-h-[44px] rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95"
+                          title="Open default email client"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Email Trader</span>
+                        </a>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectExpiredForRenewal(u)}
+                        className="flex-1 md:flex-none justify-center px-4 py-2.5 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                      >
+                        <Crown className="w-3.5 h-3.5 fill-current" />
+                        <span>Send Promo / Renew</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Requests List */}
-      {loading ? (
-        <div className="py-16 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-          <span>Syncing requests...</span>
-        </div>
-      ) : requests.length === 0 ? (
-        <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl py-16 px-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
-            <Crown className="w-6 h-6 text-gray-400" />
-          </div>
-          <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
-            No {activeTab} Boss requests
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {activeTab === 'pending'
-              ? 'All clear! No pending Boss subscription requests waiting for verification.'
-              : `No requests with status '${activeTab}' found.`}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {requests
-            .filter((req) => {
-              if (!filterQuery.trim()) return true;
-              const q = filterQuery.toLowerCase().trim();
-              return (
-                req.userName?.toLowerCase().includes(q) ||
-                req.userEmail?.toLowerCase().includes(q) ||
-                req.transactionId?.toLowerCase().includes(q) ||
-                req.userId?.toLowerCase().includes(q) ||
-                req.planName?.toLowerCase().includes(q)
-              );
-            })
-            .map((req) => (
-            <div
-              key={req.id}
-              className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:border-amber-400/50 transition-colors"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                {/* Left: User & Plan Details */}
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    <span className="font-bold text-sm text-gray-900 dark:text-white">
-                      {req.userName}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 break-all">
-                      ({req.userEmail})
-                    </span>
-                    <span
-                      className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                        req.status === 'pending'
-                          ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                          : req.status === 'approved'
-                          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
-                      }`}
-                    >
-                      {req.status}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
-                    <span className="font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                      <Crown className="w-3.5 h-3.5" />
-                      {req.planName} ({req.durationDays} Days)
-                    </span>
-                    <span className="font-black text-gray-900 dark:text-white">
-                      ৳{req.amount}
-                    </span>
-                    <span className="text-gray-400">
-                      Submitted: {new Date(req.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-mono">
-                    <span className="text-gray-500">bKash TrxID:</span>
-                    <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold break-all">
-                      {req.transactionId}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(req.transactionId, req.id)}
-                      className="text-[11px] font-sans font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 active:scale-95"
-                    >
-                      {copiedId === req.id ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-500" />
-                          <span className="text-emerald-500">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copy TrxID</span>
-                        </>
-                      )}
-                    </button>
-                    <span className="text-gray-400 font-sans text-[10px] break-all">
-                      UID: <code>{req.userId}</code>
-                    </span>
-                  </div>
-
-                  {req.rejectionReason && (
-                    <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
-                      Rejection Reason: {req.rejectionReason}
-                    </p>
-                  )}
-                </div>
-
-                {/* Right: Actions */}
-                {req.status === 'pending' && (
-                  <div className="flex flex-row items-center gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800 w-full md:w-auto shrink-0">
-                    <button
-                      type="button"
-                      disabled={actionInProgress === req.id}
-                      onClick={() => handleAction('approve', req)}
-                      className="flex-1 md:flex-none justify-center px-4 py-2.5 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
-                    >
-                      {actionInProgress === req.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Check className="w-3.5 h-3.5" />
-                      )}
-                      <span>Approve Boss</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={actionInProgress === req.id}
-                      onClick={() => {
-                        const reason = window.prompt('Enter rejection reason (optional):', 'Transaction ID not found in bKash account');
-                        if (reason !== null) handleAction('reject', req, reason);
-                      }}
-                      className="flex-1 md:flex-none justify-center px-3.5 py-2.5 min-h-[44px] rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      <span>Reject</span>
-                    </button>
-                  </div>
-                )}
+      {/* Requests List for Pending / Approved / Rejected */}
+      {activeTab !== 'manual' && activeTab !== 'expired' && (
+        <>
+          {/* Search/Filter Bar for Requests */}
+          {requests.length > 0 && (
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  placeholder="Filter requests by trader name, email, plan, or bKash TrxID..."
+                  className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#131822] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                />
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Requests List */}
+          {loading ? (
+            <div className="py-16 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+              <span>Syncing requests...</span>
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl py-16 px-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                <Crown className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
+                No {activeTab} Boss requests
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {activeTab === 'pending'
+                  ? 'All clear! No pending Boss subscription requests waiting for verification.'
+                  : `No requests with status '${activeTab}' found.`}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {requests
+                .filter((req) => {
+                  if (!filterQuery.trim()) return true;
+                  const q = filterQuery.toLowerCase().trim();
+                  return (
+                    req.userName?.toLowerCase().includes(q) ||
+                    req.userEmail?.toLowerCase().includes(q) ||
+                    req.transactionId?.toLowerCase().includes(q) ||
+                    req.userId?.toLowerCase().includes(q) ||
+                    req.planName?.toLowerCase().includes(q)
+                  );
+                })
+                .map((req) => (
+                <div
+                  key={req.id}
+                  className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:border-amber-400/50 transition-colors"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Left: User & Plan Details */}
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        <span className="font-bold text-sm text-gray-900 dark:text-white">
+                          {req.userName}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 break-all">
+                          ({req.userEmail})
+                        </span>
+                        <span
+                          className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                            req.status === 'pending'
+                              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                              : req.status === 'approved'
+                              ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
+                        <span className="font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <Crown className="w-3.5 h-3.5" />
+                          {req.planName} ({req.durationDays} Days)
+                        </span>
+                        <span className="font-black text-gray-900 dark:text-white">
+                          ৳{req.amount}
+                        </span>
+                        <span className="text-gray-400">
+                          Submitted: {new Date(req.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-mono">
+                        <span className="text-gray-500">bKash TrxID:</span>
+                        <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold break-all">
+                          {req.transactionId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(req.transactionId, req.id)}
+                          className="text-[11px] font-sans font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 active:scale-95"
+                        >
+                          {copiedId === req.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-500" />
+                              <span className="text-emerald-500">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy TrxID</span>
+                            </>
+                          )}
+                        </button>
+                        <span className="text-gray-400 font-sans text-[10px] break-all">
+                          UID: <code>{req.userId}</code>
+                        </span>
+                      </div>
+
+                      {req.rejectionReason && (
+                        <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+                          Rejection Reason: {req.rejectionReason}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Right: Actions */}
+                    {req.status === 'pending' && (
+                      <div className="flex flex-row items-center gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800 w-full md:w-auto shrink-0">
+                        <button
+                          type="button"
+                          disabled={actionInProgress === req.id}
+                          onClick={() => handleAction('approve', req)}
+                          className="flex-1 md:flex-none justify-center px-4 py-2.5 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                        >
+                          {actionInProgress === req.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>Approve Boss</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={actionInProgress === req.id}
+                          onClick={() => {
+                            const reason = window.prompt('Enter rejection reason (optional):', 'Transaction ID not found in bKash account');
+                            if (reason !== null) handleAction('reject', req, reason);
+                          }}
+                          className="flex-1 md:flex-none justify-center px-3.5 py-2.5 min-h-[44px] rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

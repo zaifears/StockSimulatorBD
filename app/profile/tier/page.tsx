@@ -64,6 +64,11 @@ function ProfileTierScreen() {
       })
     : null;
 
+  const isTrial = Boolean(
+    userData?.lastBossPlan?.toLowerCase().includes('trial') ||
+    userData?.lastBossPlan?.toLowerCase().includes('7 day')
+  );
+
   return (
     <div className="max-w-3xl mx-auto px-4 pt-4 pb-12">
       {/* Breadcrumb / Back button */}
@@ -84,21 +89,22 @@ function ProfileTierScreen() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider mb-3">
-                <Crown className="w-3.5 h-3.5 fill-current" /> Active Boss Subscription
+                <Crown className="w-3.5 h-3.5 fill-current" />
+                {isTrial ? '👑 Active Boss Trial' : 'Active Boss Subscription'}
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                <span>Boss Tier</span>
+                <span>{isTrial ? 'Boss Tier Trial' : 'Boss Tier'}</span>
                 <BossBadge size="sm" interactive={false} />
               </h1>
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 max-w-md">
-                You have full access to institutional-grade Risk Radar analytics, +10% coin bonus, and lifetime history.
+                You have full access to Risk Radar analytics, PDF statements, +10% coin bonus, and lifetime history.
               </p>
             </div>
 
             {/* Expiry Pill */}
             <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl p-4 border border-amber-500/30 text-left sm:text-right shrink-0">
               <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Subscription Status
+                {userData?.lastBossPlan || (isTrial ? 'Trial Plan' : 'Subscription Status')}
               </div>
               <div className="text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5">
                 {daysRemaining > 0 ? `${daysRemaining} Days Left` : 'Active'}

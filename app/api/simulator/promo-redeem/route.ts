@@ -162,6 +162,9 @@ export async function POST(req: NextRequest) {
             : nowMs;
         const newBossUntil = currentUntil + bossDays * 86_400_000;
 
+        const isTrial = bossDays <= 7;
+        const planName = isTrial ? `Boss Tier Trial (${bossDays} Days)` : `Promo Code (${bossDays} Days)`;
+
         // Upgrade user to Boss tier authoritatively
         transaction.set(
           userRef,
@@ -169,7 +172,7 @@ export async function POST(req: NextRequest) {
             accountTier: 'Boss',
             bossUntil: newBossUntil,
             bossSince: userData?.bossSince || FieldValue.serverTimestamp(),
-            lastBossPlan: `Promo Code (${bossDays} Days)`,
+            lastBossPlan: planName,
             lastPromoRedeemedAt: nowIso,
             promoCodeRedeemedAt: nowIso,
             redeemedPromoCodes: FieldValue.arrayUnion(code),
@@ -240,13 +243,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (result.rewardType === 'boss') {
-      console.log(`[promo-redeem] 👑 ${uid} redeemed Boss promo ${code} for ${result.bossDays} days`);
+      const isTrial = result.bossDays <= 7;
+      console.log(`[promo-redeem] 👑 ${uid} redeemed Boss promo ${code} for ${result.bossDays} days (${isTrial ? 'Trial' : 'Full'})`);
       return NextResponse.json({
         success: true,
         rewardType: 'boss',
         bossDays: result.bossDays,
         bossUntil: result.bossUntil,
-        message: `👑 Boss Tier activated for ${result.bossDays} days! Enjoy full Risk Radar, PDF statements, and +10% coin bonuses.`,
+        isTrial,
+        message: isTrial
+          ? `👑 Boss Tier Trial activated for ${result.bossDays} days! Enjoy full Risk Radar, PDF statements, and +10% coin bonuses.`
+          : `👑 Boss Tier activated for ${result.bossDays} days! Enjoy full Risk Radar, PDF statements, and +10% coin bonuses.`,
       });
     }
 

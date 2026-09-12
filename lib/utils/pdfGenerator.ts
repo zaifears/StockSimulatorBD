@@ -1,6 +1,6 @@
 // lib/utils/pdfGenerator.ts
 // Production-Ready Client-Side DSE Portfolio Statement PDF Generator
-// Matches the official DSE XBroker / NBL Securities statement layout
+// Standard StockSimulatorBD paper-trading portfolio statement layout
 // 100% Client-Side generation — 0 server resources consumed
 
 import jsPDF from 'jspdf';
