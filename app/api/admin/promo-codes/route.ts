@@ -55,17 +55,32 @@ export async function POST(req: NextRequest) {
     const db = getFirestore();
 
     if (action === 'generate') {
-      const amount = Math.floor(Number(body.amount));
+      const rewardType = body.rewardType === 'boss' ? 'boss' : 'coins';
       const quantity = Number(body.quantity) || 1;
       const expiresInDays = body.expiresInDays != null ? Number(body.expiresInDays) : null;
       const customCode: string | undefined = body.customCode;
 
-      if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT_PER_CODE) {
-        return NextResponse.json(
-          { success: false, error: `Amount must be between 1 and ${MAX_AMOUNT_PER_CODE.toLocaleString()}` },
-          { status: 400 }
-        );
+      let amount = 0;
+      let bossDays: number | null = null;
+
+      if (rewardType === 'boss') {
+        bossDays = Math.floor(Number(body.bossDays || 31));
+        if (!Number.isFinite(bossDays) || bossDays <= 0 || bossDays > 365) {
+          return NextResponse.json(
+            { success: false, error: 'Boss duration must be between 1 and 365 days' },
+            { status: 400 }
+          );
+        }
+      } else {
+        amount = Math.floor(Number(body.amount));
+        if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT_PER_CODE) {
+          return NextResponse.json(
+            { success: false, error: `Amount must be between 1 and ${MAX_AMOUNT_PER_CODE.toLocaleString()}` },
+            { status: 400 }
+          );
+        }
       }
+
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY_PER_BATCH) {
         return NextResponse.json(
           { success: false, error: `Quantity must be between 1 and ${MAX_QUANTITY_PER_BATCH}` },
@@ -113,7 +128,9 @@ export async function POST(req: NextRequest) {
       for (const code of codes) {
         batch.set(db.doc(`promo_codes/${code}`), {
           code,
+          rewardType,
           amount,
+          bossDays,
           status: 'active',
           redeemed: false,
           redeemedBy: null,
@@ -125,9 +142,13 @@ export async function POST(req: NextRequest) {
       }
       await batch.commit();
 
-      console.log(`[admin/promo-codes] ✓ ${adminCheck.uid} generated ${codes.length} code(s) at ${amount} each`);
+      console.log(
+        `[admin/promo-codes] ✓ ${adminCheck.uid} generated ${codes.length} ${rewardType} code(s) (reward: ${
+          rewardType === 'boss' ? `${bossDays} days` : `৳${amount.toLocaleString()}`
+        })`
+      );
 
-      return NextResponse.json({ success: true, codes, amount });
+      return NextResponse.json({ success: true, codes, rewardType, amount, bossDays });
     }
 
     if (action === 'disable') {

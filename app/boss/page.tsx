@@ -37,7 +37,10 @@ import {
   Loader2,
   AlertCircle,
   LogIn,
+  Ticket,
+  XCircle,
 } from 'lucide-react';
+import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
 const BKASH_NUMBER = '01865333143';
 
@@ -253,6 +256,46 @@ export default function BossPage() {
   } | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [auditFilter, setAuditFilter] = useState<'all' | 'boss_only'>('all');
+
+  // Promo code states
+  const [promoCode, setPromoCode] = useState('');
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [promoSuccess, setPromoSuccess] = useState('');
+
+  const handleRedeemPromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      router.push('/auth?redirect=/boss#payment');
+      return;
+    }
+    const code = promoCode.trim();
+    if (!code) {
+      setPromoError('Please enter a promo code');
+      return;
+    }
+
+    setPromoSubmitting(true);
+    setPromoError('');
+    setPromoSuccess('');
+
+    try {
+      const res = await fetchWithFreshToken('/api/simulator/promo-redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to redeem promo code');
+
+      setPromoSuccess(data.message || 'Promo code redeemed successfully!');
+      setPromoCode('');
+    } catch (err: any) {
+      setPromoError(err.message || 'Failed to redeem promo code');
+    } finally {
+      setPromoSubmitting(false);
+    }
+  };
 
   const activePlan = PLANS.find((p) => p.id === selectedPlan) || PLANS[1];
 
@@ -952,6 +995,61 @@ export default function BossPage() {
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-lg mx-auto">
               Send the selected amount via bKash Personal and provide your Transaction ID below.
             </p>
+          </div>
+
+          {/* Promo Code Instant Activation Card */}
+          <div className="bg-white dark:bg-[#131822] border border-amber-300 dark:border-amber-500/30 rounded-3xl p-5 sm:p-6 mb-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>Have a Boss Promo Code?</span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
+                    Instant
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Got a promo code from an event or campaign? Enter it here to activate Boss tier immediately without payment.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRedeemPromo} className="flex flex-col sm:flex-row gap-2 mt-3">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => {
+                  setPromoCode(e.target.value.toUpperCase());
+                  if (promoError) setPromoError('');
+                }}
+                placeholder="Enter promo code (e.g. BOSS-PROMO)"
+                className="flex-1 h-11 px-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-sm font-mono uppercase font-bold tracking-wider text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <button
+                type="submit"
+                disabled={promoSubmitting || !promoCode.trim()}
+                className="h-11 px-5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-sm hover:brightness-105 active:scale-95 disabled:opacity-50 shrink-0"
+              >
+                {promoSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4 fill-current" />}
+                <span>Redeem Code</span>
+              </button>
+            </form>
+
+            {promoError && (
+              <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{promoError}</span>
+              </div>
+            )}
+
+            {promoSuccess && (
+              <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{promoSuccess}</span>
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-10 shadow-sm">

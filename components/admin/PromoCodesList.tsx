@@ -15,13 +15,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { Home, Loader2, Plus, Copy, Check, Ban, Search, Gift } from 'lucide-react';
+import { Home, Loader2, Plus, Copy, Check, Ban, Search, Gift, Crown, Sparkles, Coins } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
 interface PromoCode {
   id: string; // = code
   code: string;
+  rewardType?: 'coins' | 'boss';
   amount: number;
+  bossDays?: number | null;
   status: 'active' | 'used' | 'disabled';
   redeemed: boolean;
   redeemedBy: string | null;
@@ -191,10 +193,19 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
         </button>
         <div className="min-w-0">
           <div className="font-mono font-bold text-sm text-gray-900 dark:text-white tracking-wider">{code.code}</div>
-          <div className="text-[11px] text-gray-400 dark:text-gray-500">
-            ৳{code.amount.toLocaleString()}
-            {code.redeemedBy && <span className="ml-2 font-mono">→ {code.redeemedBy.slice(0, 10)}…</span>}
-            {code.expiresAt && !code.redeemed && <span className="ml-2">expires {new Date(code.expiresAt).toLocaleDateString()}</span>}
+          <div className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-2 flex-wrap">
+            {code.rewardType === 'boss' || (code.bossDays && code.bossDays > 0) ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-extrabold text-[10px] border border-amber-500/30">
+                <Crown className="w-3 h-3 fill-current" />
+                Boss Tier ({code.bossDays || 31} Days)
+              </span>
+            ) : (
+              <span className="font-bold text-gray-700 dark:text-gray-300">
+                ৳{code.amount.toLocaleString()} Coins
+              </span>
+            )}
+            {code.redeemedBy && <span className="font-mono">→ {code.redeemedBy.slice(0, 10)}…</span>}
+            {code.expiresAt && !code.redeemed && <span>expires {new Date(code.expiresAt).toLocaleDateString()}</span>}
           </div>
         </div>
       </div>
@@ -216,7 +227,9 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
 }
 
 function GenerateModal({ onClose }: { onClose: () => void }) {
+  const [rewardType, setRewardType] = useState<'coins' | 'boss'>('coins');
   const [amount, setAmount] = useState(5000);
+  const [bossDays, setBossDays] = useState(31);
   const [quantity, setQuantity] = useState(1);
   const [expiresInDays, setExpiresInDays] = useState<string>('');
   const [customCode, setCustomCode] = useState('');
@@ -234,7 +247,9 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           action: 'generate',
-          amount,
+          rewardType,
+          amount: rewardType === 'coins' ? amount : 0,
+          bossDays: rewardType === 'boss' ? bossDays : undefined,
           quantity: customCode.trim() ? 1 : quantity,
           expiresInDays: expiresInDays.trim() ? Number(expiresInDays) : undefined,
           customCode: customCode.trim() || undefined,
@@ -249,6 +264,9 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
       setSubmitting(false);
     }
   };
+
+  const isSubmitDisabled =
+    submitting || (rewardType === 'coins' && amount <= 0) || (rewardType === 'boss' && (!bossDays || bossDays <= 0));
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
@@ -289,15 +307,108 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Generate Promo Codes</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Gift className="w-5 h-5 text-blue-500" /> Generate Promo Codes
+            </h2>
 
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Amount per code</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full h-11 px-3 mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold"
-            />
+            {/* Reward Type Toggle */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                Reward Type
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setRewardType('coins')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    rewardType === 'coins'
+                      ? 'bg-white dark:bg-[#111418] text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                  }`}
+                >
+                  <Coins className="w-3.5 h-3.5 text-blue-500" />
+                  <span>💰 Trading Coins</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRewardType('boss')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    rewardType === 'boss'
+                      ? 'bg-amber-500 text-gray-950 shadow-sm font-black'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                  }`}
+                >
+                  <Crown className="w-3.5 h-3.5 fill-current" />
+                  <span>👑 Boss Tier</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Reward-specific fields */}
+            {rewardType === 'coins' ? (
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                  Coins Amount per code
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  className="w-full h-11 px-3 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {[1000, 5000, 10000, 20000, 50000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setAmount(amt)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-colors border ${
+                        amount === amt
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                      }`}
+                    >
+                      ৳{amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                  Boss Duration (Days)
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  {[
+                    { label: '7 Days (Trial)', days: 7 },
+                    { label: '31 Days (1 Month)', days: 31 },
+                    { label: '185 Days (6 Months)', days: 185 },
+                    { label: '365 Days (1 Year)', days: 365 },
+                  ].map((p) => (
+                    <button
+                      key={p.days}
+                      type="button"
+                      onClick={() => setBossDays(p.days)}
+                      className={`p-2 rounded-xl text-xs font-bold border transition-all text-left ${
+                        bossDays === p.days
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-900 dark:text-amber-200 ring-1 ring-amber-500'
+                          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                      }`}
+                    >
+                      <div className="text-[10px] text-gray-400">Duration</div>
+                      <div className="font-extrabold">{p.label}</div>
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  value={bossDays}
+                  onChange={(e) => setBossDays(Math.max(1, Number(e.target.value)))}
+                  placeholder="Custom days"
+                  className="w-full h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono text-sm"
+                />
+              </div>
+            )}
 
             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
               Quantity {customCode.trim() && <span className="normal-case font-normal text-gray-400">(fixed at 1 for a custom code)</span>}
@@ -336,7 +447,7 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
               </button>
               <button
                 onClick={submit}
-                disabled={submitting || amount <= 0}
+                disabled={isSubmitDisabled}
                 className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Generate

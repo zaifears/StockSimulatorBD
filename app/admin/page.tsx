@@ -667,6 +667,20 @@ export default function AdminDashboard() {
               </div>
             </a>
 
+            {/* Promo Codes */}
+            <Link
+              href="/admin/promo-codes"
+              className="flex items-center gap-4 bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 p-4 rounded-2xl hover:border-emerald-500 dark:hover:border-emerald-500 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 group-hover:text-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-white text-sm">Promo Codes</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Coins & Boss Tier Promos</div>
+              </div>
+            </Link>
+
             {/* Firebase Console */}
             {isAdminMode && (
               <a

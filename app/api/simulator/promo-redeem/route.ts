@@ -24,7 +24,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { moneyAdd, roundMoney } from '@/lib/utils/money';
 import { checkPersistentRateLimit } from '@/lib/utils/persistentRateLimit';
 
@@ -46,7 +46,6 @@ const REDEEM_WINDOW_MS = 60_000;
 const SANE_BALANCE_CAP = 100_000_000;
 
 type RedeemFailure =
-  | 'ALREADY_REDEEMED_BY_USER'
   | 'INVALID_CODE'
   | 'CODE_ALREADY_USED'
   | 'CODE_DISABLED'
@@ -54,10 +53,6 @@ type RedeemFailure =
   | 'BALANCE_CAP';
 
 const FAILURE_RESPONSES: Record<RedeemFailure, { status: number; error: string }> = {
-  ALREADY_REDEEMED_BY_USER: {
-    status: 409,
-    error: 'You have already redeemed a promo code — one redemption is allowed per account.',
-  },
   INVALID_CODE: { status: 404, error: 'That code is not valid.' },
   CODE_ALREADY_USED: { status: 409, error: 'That code has already been used.' },
   CODE_DISABLED: { status: 409, error: 'That code is no longer active.' },
@@ -126,69 +121,141 @@ export async function POST(req: NextRequest) {
     const promoRef = db.doc(`promo_codes/${code}`);
     const stateRef = db.doc(`artifacts/${appId}/users/${uid}/simulator/state`);
 
-    let creditedAmount = 0;
-
-    await db.runTransaction(async (transaction) => {
+    const result = await db.runTransaction(async (transaction) => {
       const [userSnap, promoSnap, stateSnap] = await Promise.all([
         transaction.get(userRef),
         transaction.get(promoRef),
         transaction.get(stateRef),
       ]);
 
-      if (userSnap.data()?.promoCodeRedeemedAt) {
-        throw new RedeemError('ALREADY_REDEEMED_BY_USER');
-      }
       if (!promoSnap.exists) {
         throw new RedeemError('INVALID_CODE');
       }
 
       const promo = promoSnap.data()!;
-      if (promo.status === 'used') throw new RedeemError('CODE_ALREADY_USED');
+      // Strict platform-wide single-use guarantee: check status, redeemed flag, and redeemedBy
+      if (promo.status === 'used' || promo.redeemed === true || Boolean(promo.redeemedBy)) {
+        throw new RedeemError('CODE_ALREADY_USED');
+      }
       if (promo.status === 'disabled') throw new RedeemError('CODE_DISABLED');
-      if (promo.status !== 'active') throw new RedeemError('INVALID_CODE'); // unrecognised status — treat as invalid, never credit
+      if (promo.status !== 'active') throw new RedeemError('INVALID_CODE');
       if (typeof promo.expiresAt === 'string' && new Date(promo.expiresAt).getTime() < Date.now()) {
         throw new RedeemError('CODE_EXPIRED');
       }
 
-      // Never trust anything about the amount except what's stored on the
-      // code doc itself — there is no client input for it at all here.
-      const amount = promo.amount;
-      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
-        throw new RedeemError('INVALID_CODE');
-      }
-
-      const currentBalance =
-        stateSnap.exists && typeof stateSnap.data()?.balance === 'number' ? stateSnap.data()!.balance : 0;
-      const newBalance = roundMoney(moneyAdd(currentBalance, amount));
-      if (newBalance > SANE_BALANCE_CAP) {
-        throw new RedeemError('BALANCE_CAP');
-      }
-
-      creditedAmount = amount;
       const nowIso = new Date().toISOString();
+      const isBossPromo = promo.rewardType === 'boss' || (typeof promo.bossDays === 'number' && promo.bossDays > 0);
 
-      if (stateSnap.exists) {
-        transaction.update(stateRef, { balance: newBalance });
+      if (isBossPromo) {
+        // ── Boss Tier Promo Redemption ──
+        const bossDays = Math.floor(Number(promo.bossDays || 31));
+        if (!Number.isFinite(bossDays) || bossDays <= 0 || bossDays > 365) {
+          throw new RedeemError('INVALID_CODE');
+        }
+
+        const userData = userSnap.exists ? userSnap.data() : null;
+        const nowMs = Date.now();
+        // If user is already active Boss, extend from current expiry; otherwise from now
+        const currentUntil =
+          userData?.bossUntil && typeof userData.bossUntil === 'number' && userData.bossUntil > nowMs
+            ? userData.bossUntil
+            : nowMs;
+        const newBossUntil = currentUntil + bossDays * 86_400_000;
+
+        // Upgrade user to Boss tier authoritatively
+        transaction.set(
+          userRef,
+          {
+            accountTier: 'Boss',
+            bossUntil: newBossUntil,
+            bossSince: userData?.bossSince || FieldValue.serverTimestamp(),
+            lastBossPlan: `Promo Code (${bossDays} Days)`,
+            lastPromoRedeemedAt: nowIso,
+            promoCodeRedeemedAt: nowIso,
+            redeemedPromoCodes: FieldValue.arrayUnion(code),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        // Burn code immediately inside atomic transaction
+        transaction.update(promoRef, {
+          status: 'used',
+          redeemed: true,
+          redeemedBy: uid,
+          redeemedAt: nowIso,
+        });
+
+        return {
+          rewardType: 'boss' as const,
+          bossDays,
+          bossUntil: newBossUntil,
+        };
       } else {
-        // Matches app/api/simulator/ensure-state/route.ts's zero-state shape.
-        transaction.set(stateRef, { balance: newBalance, portfolio: [], totalInvested: 0, realizedGainLoss: 0 });
+        // ── Trading Coins Promo Redemption ──
+        const amount = promo.amount;
+        if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+          throw new RedeemError('INVALID_CODE');
+        }
+
+        const currentBalance =
+          stateSnap.exists && typeof stateSnap.data()?.balance === 'number' ? stateSnap.data()!.balance : 0;
+        const newBalance = roundMoney(moneyAdd(currentBalance, amount));
+        if (newBalance > SANE_BALANCE_CAP) {
+          throw new RedeemError('BALANCE_CAP');
+        }
+
+        if (stateSnap.exists) {
+          transaction.update(stateRef, { balance: newBalance });
+        } else {
+          // Matches app/api/simulator/ensure-state/route.ts zero-state shape
+          transaction.set(stateRef, { balance: newBalance, portfolio: [], totalInvested: 0, realizedGainLoss: 0 });
+        }
+
+        // Burn code immediately inside atomic transaction
+        transaction.update(promoRef, {
+          status: 'used',
+          redeemed: true,
+          redeemedBy: uid,
+          redeemedAt: nowIso,
+        });
+
+        // Log redemption on user document
+        transaction.set(
+          userRef,
+          {
+            lastPromoRedeemedAt: nowIso,
+            promoCodeRedeemedAt: nowIso,
+            redeemedPromoCodes: FieldValue.arrayUnion(code),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        return {
+          rewardType: 'coins' as const,
+          amount,
+        };
       }
-
-      transaction.set(
-        promoRef,
-        { status: 'used', redeemed: true, redeemedBy: uid, redeemedAt: nowIso },
-        { merge: true }
-      );
-
-      transaction.set(userRef, { promoCodeRedeemedAt: nowIso }, { merge: true });
     });
 
-    console.log(`[promo-redeem] ✓ ${uid} redeemed ${code} for ${creditedAmount}`);
+    if (result.rewardType === 'boss') {
+      console.log(`[promo-redeem] 👑 ${uid} redeemed Boss promo ${code} for ${result.bossDays} days`);
+      return NextResponse.json({
+        success: true,
+        rewardType: 'boss',
+        bossDays: result.bossDays,
+        bossUntil: result.bossUntil,
+        message: `👑 Boss Tier activated for ${result.bossDays} days! Enjoy full Risk Radar, PDF statements, and +10% coin bonuses.`,
+      });
+    }
 
+    console.log(`[promo-redeem] ✓ ${uid} redeemed Coins promo ${code} for ${result.amount}`);
     return NextResponse.json({
       success: true,
-      amount: creditedAmount,
-      message: `৳${creditedAmount.toLocaleString()} added to your balance!`,
+      rewardType: 'coins',
+      amount: result.amount,
+      message: `৳${result.amount.toLocaleString()} added to your balance!`,
     });
   } catch (err: any) {
     if (err instanceof RedeemError) {
