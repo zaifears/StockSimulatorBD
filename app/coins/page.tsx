@@ -28,8 +28,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import BossBadge from '@/components/ui/BossBadge';
+import PaymentMethodTabs, { PaymentTabId, PAYMENT_DETAILS } from '@/components/shared/PaymentMethodTabs';
+import BankSelector from '@/components/shared/BankSelector';
 
-const BKASH_NUMBER = '01865333143';
+const BKASH_NUMBER = PAYMENT_DETAILS.bkashSendMoney.number;
 const PRICE_PER_10K_COINS = 20; // 20 BDT = 10,000 Coins (500 coins per taka)
 const MIN_RECHARGE_BDT = 20;
 const MAX_RECHARGE_BDT = 5000;
@@ -50,6 +52,9 @@ function FundsScreen() {
   const balance = Math.floor(simulatorState.balance);
 
   const [showRechargeForm, setShowRechargeForm] = useState(false);
+  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('bkash_send');
+  const [paymentMethodLabel, setPaymentMethodLabel] = useState('bKash Send Money');
+  const [selectedBank, setSelectedBank] = useState('');
   const [rechargeAmount, setRechargeAmount] = useState(20);
   const [trxId, setTrxId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,11 +132,15 @@ function FundsScreen() {
     const trimmedTrxId = trxId.trim();
 
     if (!user || !trimmedTrxId) {
-      setRechargeError('Please enter your bKash Transaction ID');
+      setRechargeError('Please enter your Transaction ID or Bank Reference Number');
       return;
     }
-    if (!/^[A-Za-z0-9]{5,20}$/.test(trimmedTrxId)) {
-      setRechargeError('Invalid Transaction ID format. It should be 5-20 alphanumeric characters.');
+    if (paymentMethodLabel.includes('Bank') && !selectedBank) {
+      setRechargeError('Please select your sending bank account from the dropdown list.');
+      return;
+    }
+    if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
+      setRechargeError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
       return;
     }
     if (rechargeAmount < MIN_RECHARGE_BDT || rechargeAmount > MAX_RECHARGE_BDT || rechargeAmount % PRICE_PER_10K_COINS !== 0 || baseCoins <= 0) {
@@ -144,6 +153,16 @@ function FundsScreen() {
     setRechargeSuccess('');
 
     try {
+      const destinationAccount = paymentMethodLabel.includes('Bank')
+        ? PAYMENT_DETAILS.bank.accountNumber
+        : activePaymentTab === 'bkash_pay'
+        ? PAYMENT_DETAILS.bkashPayment.number
+        : BKASH_NUMBER;
+
+      const finalPaymentMethod = paymentMethodLabel.includes('Bank') && selectedBank
+        ? `Bank Transfer (${selectedBank})`
+        : paymentMethodLabel;
+
       const db = getFirestore();
       const rechargeRef = await addDoc(collection(db, 'recharge_requests'), {
         userId: user.uid,
@@ -154,9 +173,12 @@ function FundsScreen() {
         bonusCoins: bonusCoins,
         totalCoins: coinsToReceive,
         isBoss: !!isBoss,
+        paymentMethod: finalPaymentMethod,
+        paymentTab: activePaymentTab,
+        bankName: paymentMethodLabel.includes('Bank') ? selectedBank : null,
         transactionId: trimmedTrxId,
         trxId: trimmedTrxId,
-        bkashNumber: BKASH_NUMBER,
+        bkashNumber: destinationAccount,
         status: 'pending',
         createdAt: new Date(),
         processedAt: null,
@@ -178,8 +200,11 @@ function FundsScreen() {
               totalCoins: coinsToReceive,
               isBoss: !!isBoss,
               accountTier: accountTier || 'Bro',
+              paymentMethod: finalPaymentMethod,
+              paymentTab: activePaymentTab,
+              bankName: paymentMethodLabel.includes('Bank') ? selectedBank : undefined,
               transactionId: trimmedTrxId,
-              bkashNumber: BKASH_NUMBER,
+              bkashNumber: destinationAccount,
               createdAt: new Date().toISOString(),
             },
           }),
@@ -188,6 +213,7 @@ function FundsScreen() {
 
       setRechargeSuccess('Recharge request submitted! Wait for admin approval.');
       setTrxId('');
+      setSelectedBank('');
       setRechargeAmount(20);
       setTimeout(() => {
         setShowRechargeForm(false);
@@ -333,7 +359,7 @@ function FundsScreen() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Recharge Coins</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Secure payment via bKash</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Secure payment via bKash, Nagad, Rocket, Cellfin & Bank Transfer</p>
                 </div>
               </div>
               <button
@@ -345,27 +371,16 @@ function FundsScreen() {
               </button>
             </div>
 
-            <div className="bg-pink-50 dark:bg-pink-900/10 rounded-xl p-4 mb-5 border border-pink-100 dark:border-pink-900/30">
-              <p className="text-xs font-bold text-pink-600 dark:text-pink-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Send className="w-3.5 h-3.5" /> Send Money To:
-              </p>
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xl font-bold text-pink-600 dark:text-pink-400 tracking-wider font-mono">
-                  {BKASH_NUMBER}
-                </div>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(BKASH_NUMBER);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  }}
-                  className="flex items-center gap-1.5 bg-pink-600 hover:bg-pink-700 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
+            <PaymentMethodTabs
+              amount={rechargeAmount}
+              referenceCode="RECHARGE"
+              activeTab={activePaymentTab}
+              onTabChange={(tab, label) => {
+                setActivePaymentTab(tab);
+                setPaymentMethodLabel(label);
+              }}
+              className="mb-5"
+            />
 
             <form onSubmit={handleRechargeSubmit} className="space-y-5">
               <div>
@@ -448,20 +463,43 @@ function FundsScreen() {
                 )}
               </div>
 
+              {/* Bank Selector Dropdown with Search */}
+              {paymentMethodLabel.includes('Bank') && (
+                <BankSelector
+                  selectedBank={selectedBank}
+                  onSelectBank={(bank) => {
+                    setSelectedBank(bank);
+                    if (rechargeError) setRechargeError('');
+                  }}
+                  required
+                />
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                  bKash Transaction ID
+                  {paymentMethodLabel.includes('Bank')
+                    ? 'Bank Transaction / Reference ID (TrxID)'
+                    : activePaymentTab === 'other'
+                    ? 'Transaction ID / Reference (TrxID)'
+                    : 'bKash Transaction ID (TrxID)'}
                 </label>
                 <input
                   type="text"
                   value={trxId}
-                  onChange={(e) => setTrxId(e.target.value)}
-                  placeholder="Example: 9C7B2A1D3E"
+                  onChange={(e) => setTrxId(e.target.value.toUpperCase())}
+                  placeholder={
+                    paymentMethodLabel.includes('Bank')
+                      ? 'e.g. FT24091234 or Ref#12345678'
+                      : activePaymentTab === 'other'
+                      ? 'e.g. Nagad/Rocket TrxID or Ref Code'
+                      : 'Example: 9C7B2A1D3E'
+                  }
+                  maxLength={60}
                   className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-sm font-mono uppercase"
                   required
                 />
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Found in your bKash SMS or app history
+                  <AlertCircle className="w-3 h-3" /> Found in your {paymentMethodLabel.includes('Bank') ? `${selectedBank || 'Bank'} transfer receipt / SMS` : activePaymentTab === 'other' ? 'MFS confirmation SMS' : 'bKash SMS or app history'}
                 </p>
               </div>
 
@@ -511,7 +549,14 @@ function FundsScreen() {
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-gray-500 font-mono truncate">TrxID: {req.trxId}</div>
+                    <div className="text-[11px] text-gray-500 font-mono truncate flex items-center gap-1.5 mt-0.5">
+                      <span>TrxID: {req.trxId}</span>
+                      {req.paymentMethod && (
+                        <span className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-sans font-medium">
+                          {req.paymentMethod}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span
                     className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-bold border ${

@@ -463,6 +463,15 @@ export default function AdminDashboard() {
                           <span className="font-bold text-amber-600 dark:text-amber-400">{req.planName}</span>
                           <span className="font-mono font-bold text-gray-900 dark:text-white">৳{req.amount}</span>
                           <span className="text-gray-400 hidden xs:inline">•</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                            {req.paymentMethod || 'bKash Send Money'}
+                          </span>
+                          {req.bankName && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                              🏦 {req.bankName}
+                            </span>
+                          )}
+                          <span className="text-gray-400 hidden xs:inline">•</span>
                           <span className="font-mono text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[10px] break-all">
                             Trx: {req.transactionId}
                           </span>

@@ -32,6 +32,9 @@ interface BossRequest {
   durationDays: number;
   transactionId: string;
   bkashNumber: string;
+  paymentMethod?: string;
+  paymentTab?: string;
+  bankName?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
   processedAt?: string;
@@ -973,7 +976,9 @@ export default function TierList() {
                     req.userEmail?.toLowerCase().includes(q) ||
                     req.transactionId?.toLowerCase().includes(q) ||
                     req.userId?.toLowerCase().includes(q) ||
-                    req.planName?.toLowerCase().includes(q)
+                    req.planName?.toLowerCase().includes(q) ||
+                    req.paymentMethod?.toLowerCase().includes(q) ||
+                    req.bankName?.toLowerCase().includes(q)
                   );
                 })
                 .map((req) => (
@@ -1012,13 +1017,21 @@ export default function TierList() {
                         <span className="font-black text-gray-900 dark:text-white">
                           ৳{req.amount}
                         </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                          {req.paymentMethod || 'bKash Send Money'}
+                        </span>
+                        {req.bankName && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                            🏦 {req.bankName}
+                          </span>
+                        )}
                         <span className="text-gray-400">
                           Submitted: {new Date(req.createdAt).toLocaleString()}
                         </span>
                       </div>
 
                       <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-mono">
-                        <span className="text-gray-500">bKash TrxID:</span>
+                        <span className="text-gray-500">TrxID:</span>
                         <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold break-all">
                           {req.transactionId}
                         </span>
@@ -1039,6 +1052,11 @@ export default function TierList() {
                             </>
                           )}
                         </button>
+                        {req.bkashNumber && (
+                          <span className="text-gray-500 font-sans text-[11px]">
+                            Sender: <code>{req.bkashNumber}</code>
+                          </span>
+                        )}
                         <span className="text-gray-400 font-sans text-[10px] break-all">
                           UID: <code>{req.userId}</code>
                         </span>

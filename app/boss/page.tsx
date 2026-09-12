@@ -41,8 +41,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
+import PaymentMethodTabs, { PaymentTabId, PAYMENT_DETAILS } from '@/components/shared/PaymentMethodTabs';
+import BankSelector from '@/components/shared/BankSelector';
 
-const BKASH_NUMBER = '01865333143';
+const BKASH_NUMBER = PAYMENT_DETAILS.bkashSendMoney.number;
 
 interface PlanDetails {
   id: 'monthly' | 'semester';
@@ -223,7 +225,7 @@ const FAQS = [
   },
   {
     q: 'Why ৳20 or ৳99 instead of a recurring monthly subscription?',
-    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via bKash, and it simply expires when the time is up.',
+    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via bKash (Send Money or Payment), Nagad, Rocket, Cellfin, or Bank Transfer (Standard Chartered Bank NPSB), and it simply expires when the time is up.',
   },
   {
     q: 'What happens when my Boss membership expires?',
@@ -232,6 +234,10 @@ const FAQS = [
   {
     q: 'How does the 10% extra coins bonus work?',
     a: 'Whenever you recharge virtual coins (for example, ৳100 recharge = 50,000 coins for Bro), as a Boss member you get 10% extra coins for free (55,000 coins) credited directly to your simulator balance automatically.',
+  },
+  {
+    q: 'Which payment methods are accepted for Boss Tier?',
+    a: 'We accept bKash Send Money (01865333143), bKash Make Payment (01581401895), Other MFS (Cellfin, Nagad, Rocket - 01865333143), and direct Bank Transfer to Standard Chartered Bank PLC via NPSB (instant confirmation) or BEFTN.',
   },
   {
     q: 'Can I export my portfolio PDF on my phone?',
@@ -243,6 +249,9 @@ export default function BossPage() {
   const { user, accountTier, isBoss } = useAuth();
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'semester'>('semester');
+  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('bkash_send');
+  const [paymentMethodLabel, setPaymentMethodLabel] = useState('bKash Send Money');
+  const [selectedBank, setSelectedBank] = useState('');
   const [copied, setCopied] = useState(false);
   const [trxId, setTrxId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -339,12 +348,17 @@ export default function BossPage() {
     }
 
     if (!trimmedTrxId) {
-      setSubmitError('Please enter your bKash Transaction ID');
+      setSubmitError('Please enter your Transaction ID or Bank Reference Number');
       return;
     }
 
-    if (!/^[A-Za-z0-9]{5,20}$/.test(trimmedTrxId)) {
-      setSubmitError('Invalid Transaction ID format. It should be 5-20 alphanumeric characters.');
+    if (paymentMethodLabel.includes('Bank') && !selectedBank) {
+      setSubmitError('Please select your sending bank account from the dropdown list.');
+      return;
+    }
+
+    if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
+      setSubmitError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
       return;
     }
 
@@ -352,6 +366,16 @@ export default function BossPage() {
     setSubmitError('');
 
     try {
+      const targetNumber = paymentMethodLabel.includes('Bank')
+        ? PAYMENT_DETAILS.bank.accountNumber
+        : activePaymentTab === 'bkash_pay'
+        ? PAYMENT_DETAILS.bkashPayment.number
+        : BKASH_NUMBER;
+
+      const finalPaymentMethod = paymentMethodLabel.includes('Bank') && selectedBank
+        ? `Bank Transfer (${selectedBank})`
+        : paymentMethodLabel;
+
       const db = getFirestore();
       const docRef = await addDoc(collection(db, 'boss_requests'), {
         userId: user.uid,
@@ -361,8 +385,11 @@ export default function BossPage() {
         planName: activePlan.name,
         amount: activePlan.priceBdt,
         durationDays: activePlan.durationDays,
+        paymentMethod: finalPaymentMethod,
+        paymentTab: activePaymentTab,
+        bankName: paymentMethodLabel.includes('Bank') ? selectedBank : null,
         transactionId: trimmedTrxId,
-        bkashNumber: BKASH_NUMBER,
+        bkashNumber: targetNumber,
         status: 'pending',
         createdAt: new Date(),
         processedAt: null,
@@ -383,8 +410,11 @@ export default function BossPage() {
               planName: activePlan.name,
               amount: activePlan.priceBdt,
               durationDays: activePlan.durationDays,
+              paymentMethod: finalPaymentMethod,
+              paymentTab: activePaymentTab,
+              bankName: paymentMethodLabel.includes('Bank') ? selectedBank : undefined,
               transactionId: trimmedTrxId,
-              bkashNumber: BKASH_NUMBER,
+              bkashNumber: targetNumber,
               createdAt: new Date().toISOString(),
             },
           }),
@@ -399,6 +429,7 @@ export default function BossPage() {
         trxId: trimmedTrxId,
       });
       setTrxId('');
+      setSelectedBank('');
     } catch (err: any) {
       console.error('Boss request submission failed:', err);
       setSubmitError(err.message || 'Failed to submit Boss request. Please check your connection and try again.');
@@ -423,7 +454,7 @@ export default function BossPage() {
               </span>
             </h1>
             <p className="text-[11px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-              Paper trading is 100% free forever. Upgrade to Boss for portfolio insights, official PDF statements, and 10% extra coins for free.
+              Paper trading is 100% free forever. Upgrade to Boss via bKash, Nagad, Rocket, Cellfin, or Bank Transfer for portfolio insights, official PDF statements, and 10% extra coins for free.
             </p>
           </div>
 
@@ -1108,54 +1139,27 @@ export default function BossPage() {
               </div>
             </div>
 
-            {/* Step 2: bKash Send Money */}
-            <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40">
+            {/* Step 2: Payment Method */}
+            <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-extrabold text-pink-700 dark:text-pink-300 uppercase tracking-wide flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-pink-500" />
-                  2. Send Money via bKash Personal
+                <span className="text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  2. Select Payment Method & Transfer Amount
                 </span>
-                <span className="px-2.5 py-1 rounded-full bg-pink-600 text-white text-xs font-black tracking-wide shadow-sm">
+                <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-xs font-black tracking-wide shadow-sm">
                   Amount: ৳{activePlan.priceBdt}
                 </span>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-[#1a2130] p-4 rounded-xl border border-pink-200 dark:border-pink-800/50 gap-3">
-                <div>
-                  <div className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase font-semibold">
-                    bKash Personal (Send Money)
-                  </div>
-                  <div className="font-mono font-black text-xl sm:text-2xl text-gray-900 dark:text-white tracking-widest mt-0.5">
-                    {BKASH_NUMBER}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopyBkash}
-                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm ${
-                    copied
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-pink-600 hover:bg-pink-700 text-white'
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Number Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      <span>Copy Number</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Mobile Quick Guide */}
-              <p className="text-[11px] text-pink-700/90 dark:text-pink-300/90 mt-2.5 leading-relaxed">
-                Open bKash App → Tap <strong>Send Money</strong> → Enter <strong>{BKASH_NUMBER}</strong> → Amount <strong>৳{activePlan.priceBdt}</strong> → Reference: <code>BOSS</code>.
-              </p>
+              <PaymentMethodTabs
+                amount={activePlan.priceBdt}
+                referenceCode="BOSS"
+                activeTab={activePaymentTab}
+                onTabChange={(tab, label) => {
+                  setActivePaymentTab(tab);
+                  setPaymentMethodLabel(label);
+                }}
+              />
             </div>
 
             {/* Step 3: Transaction ID Entry */}
@@ -1178,9 +1182,25 @@ export default function BossPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Bank Selector Dropdown with Search */}
+                {paymentMethodLabel.includes('Bank') && (
+                  <BankSelector
+                    selectedBank={selectedBank}
+                    onSelectBank={(bank) => {
+                      setSelectedBank(bank);
+                      if (submitError) setSubmitError('');
+                    }}
+                    required
+                  />
+                )}
+
                 <div>
                   <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
-                    3. Enter bKash Transaction ID (TrxID)
+                    {paymentMethodLabel.includes('Bank')
+                      ? '3. Enter Bank Transaction / Reference ID (TrxID)'
+                      : activePaymentTab === 'other'
+                      ? '3. Enter Transaction ID / Reference (TrxID)'
+                      : '3. Enter bKash Transaction ID (TrxID)'}
                   </label>
                   <div className="relative">
                     <input
@@ -1190,14 +1210,20 @@ export default function BossPage() {
                         setTrxId(e.target.value.toUpperCase());
                         if (submitError) setSubmitError('');
                       }}
-                      placeholder="e.g. BL95K87J9"
-                      maxLength={20}
+                      placeholder={
+                        paymentMethodLabel.includes('Bank')
+                          ? 'e.g. FT24091234 or Ref#12345678'
+                          : activePaymentTab === 'other'
+                          ? 'e.g. Nagad/Rocket TrxID or Ref Code'
+                          : 'e.g. BL95K87J9'
+                      }
+                      maxLength={60}
                       disabled={isSubmitting}
-                      className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base sm:text-lg font-mono tracking-widest uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                      className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base sm:text-lg font-mono tracking-wider uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
                     />
                   </div>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                    You will find this 10-character alphanumeric code in your bKash confirmation SMS or statement.
+                    You will find this code in your {paymentMethodLabel.includes('Bank') ? `${selectedBank || 'Bank'} transfer receipt / SMS` : activePaymentTab === 'other' ? 'MFS confirmation SMS or app statement' : 'bKash confirmation SMS or statement'}.
                   </p>
                 </div>
 

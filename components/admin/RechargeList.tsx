@@ -21,6 +21,9 @@ interface RechargeRequest {
   coins: number;
   trxId: string;
   bkashNumber: string;
+  paymentMethod?: string;
+  paymentTab?: string;
+  bankName?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: any;
   processedAt?: any;
@@ -206,7 +209,9 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
       !searchTerm ||
       req.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.trxId?.toLowerCase().includes(searchTerm.toLowerCase())
+      req.trxId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.paymentMethod?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.bankName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 });
@@ -433,7 +438,19 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                             {copiedTrxId === req.id ? '✓ Copied' : 'Copy Trx'}
                           </button>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">Method: bKash ({req.bkashNumber})</div>
+                        <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {req.paymentMethod || 'bKash Send Money'}
+                          </span>
+                          {req.bankName && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                              🏦 {req.bankName}
+                            </span>
+                          )}
+                          {req.bkashNumber && (
+                            <span className="text-gray-400 font-mono text-[11px]">({req.bkashNumber})</span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Amount</p>
