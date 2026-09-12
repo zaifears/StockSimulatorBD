@@ -52,13 +52,31 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
         ? 'All shares were bought today and are locked until tomorrow (T+1)'
         : undefined;
 
+  const handleStockClick = () => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem('ssbd_last_stock_source', '/portfolio');
+    sessionStorage.setItem(
+      'ssbd_portfolio_scroll_state',
+      JSON.stringify({
+        scrollY: window.scrollY,
+        symbol: symbol.toLowerCase(),
+        timestamp: Date.now(),
+      })
+    );
+  };
+
   return (
-    <article className="px-4 py-3 bg-white dark:bg-[#1A1F26]">
-      <div className="flex items-start justify-between gap-3 mb-2.5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
+    <article
+      id={`portfolio-holding-${symbol.toLowerCase()}`}
+      className="bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800/80 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:border-blue-400/40 dark:hover:border-blue-500/30 transition-all"
+    >
+      {/* Top Header: Symbol, Category, Chart icon, Price & Day Change Pill */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Link
               href={`/stocks/${symbol.toLowerCase()}`}
+              onClick={handleStockClick}
               className="font-bold text-base text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               {symbol}
@@ -67,14 +85,15 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
               <span
                 className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[category] || 'text-gray-600 dark:text-gray-400 bg-gray-500/10'}`}
               >
-                {category}
+                [{category}]
               </span>
             )}
             <Link
               href={`/stocks/${symbol.toLowerCase()}`}
+              onClick={handleStockClick}
               aria-label={`View ${symbol} chart`}
               title="View chart"
-              className="flex items-center justify-center w-5 h-5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors shrink-0"
+              className="flex items-center justify-center w-5 h-5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors shrink-0"
             >
               <LineChart className="w-3 h-3" />
             </Link>
@@ -88,10 +107,10 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
           )}
         </div>
 
-        <div className="text-right shrink-0">
+        <div className="text-right shrink-0 flex flex-col items-end">
           {traded ? (
-            <div className="font-mono font-bold text-base text-gray-900 dark:text-white tabular-nums">
-              {fmt(ltp)}
+            <div className="font-mono font-bold text-lg text-gray-900 dark:text-white tabular-nums">
+              ৳{fmt(ltp)}
             </div>
           ) : (
             <div className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 dark:text-gray-500">
@@ -100,37 +119,42 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
             </div>
           )}
           <div
-            className={`inline-flex items-center justify-center min-w-[62px] mt-1 px-1.5 py-0.5 rounded text-xs font-mono font-bold tabular-nums text-white ${
-              !traded ? 'bg-gray-400 dark:bg-gray-600' : dayUp ? 'bg-emerald-500' : 'bg-rose-500'
+            className={`min-w-[65px] text-center px-1.5 py-0.5 rounded text-white font-mono font-bold text-xs mt-1 tabular-nums ${
+              !traded
+                ? 'bg-gray-400 dark:bg-gray-600'
+                : dayUp
+                  ? 'bg-teal-600 dark:bg-teal-500'
+                  : 'bg-rose-600 dark:bg-rose-500'
             }`}
           >
-            {traded ? `${dayUp ? '+' : '−'}${Math.abs(dayChangePercent).toFixed(2)}%` : '—'}
+            {traded ? `${dayUp ? '+' : '−'}${Math.abs(dayChangePercent).toFixed(2)}%` : '0.00%'}
           </div>
         </div>
       </div>
 
       {/* The broker figure grid: cost basis, valuation, and settlement state */}
-      <dl className="grid grid-cols-3 gap-x-3 gap-y-1.5 text-xs mb-3">
+      <dl className="grid grid-cols-3 gap-x-2.5 gap-y-2 text-xs py-2.5 px-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800/80 mb-3">
         <Figure label="Qty" value={String(quantity)} />
-        <Figure label="Avg" value={fmt(avgCost)} />
-        <Figure label="Cost" value={fmt(cost)} />
+        <Figure label="Avg Cost" value={`৳${fmt(avgCost)}`} />
+        <Figure label="Cost Basis" value={`৳${fmt(cost)}`} />
         <Figure
           label="Saleable"
           value={String(saleable)}
           hint={locked > 0 ? `${locked} locked until tomorrow (T+1)` : undefined}
           warn={locked > 0}
         />
-        <Figure label="Mkt Val" value={fmt(marketValue)} />
+        <Figure label="Mkt Val" value={`৳${fmt(marketValue)}`} />
         <Figure
           label="Day P&L"
-          value={`${dayPnl >= 0 ? '+' : '−'}${fmt(Math.abs(dayPnl))}`}
+          value={`${dayPnl >= 0 ? '+' : '−'}৳${fmt(Math.abs(dayPnl))}`}
           tone={dayPnl > 0 ? 'up' : dayPnl < 0 ? 'down' : 'flat'}
         />
       </dl>
 
+      {/* P&L Bar + Buy/Sell Actions */}
       <div className="flex items-center gap-2">
         <div
-          className={`flex-1 flex items-baseline gap-1.5 px-2.5 py-1.5 rounded-lg ${
+          className={`flex-1 flex items-baseline gap-1.5 px-3 py-2 rounded-xl ${
             pnlUp ? 'bg-emerald-500/10' : 'bg-rose-500/10'
           }`}
         >
@@ -149,7 +173,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
               pnlUp ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-rose-600/80 dark:text-rose-400/80'
             }`}
           >
-            ({pnlUp ? '+' : '−'}{Math.abs(pnlPercent).toFixed(2)}%)
+            ({pnlUp ? '+' : '−'}{Math.abs(pnlPercent).toFixed(1)}%)
           </span>
         </div>
 
@@ -157,7 +181,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
           type="button"
           onClick={() => onTrade(symbol, 'buy')}
           disabled={!marketOpen || !traded}
-          className="px-4 py-1.5 rounded-lg text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs"
         >
           Buy
         </button>
@@ -166,7 +190,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
           onClick={() => onTrade(symbol, 'sell')}
           disabled={!canSell}
           title={sellBlockedReason}
-          className="px-4 py-1.5 rounded-lg text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs"
         >
           Sell
         </button>

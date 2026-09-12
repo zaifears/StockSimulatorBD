@@ -1,17 +1,15 @@
 'use client';
 
 // components/market/MarketRow.tsx
-// The mobile market-board row, patterned directly on the reference broker
-// app: symbol + category on top, a second line of H/L, then a third line of
-// turnover/volume/trade-count — all real fields api/market_sync.py already
-// scrapes (see hooks/useSimulator.ts's Stock interface) that the old
-// StockCardMobile never surfaced. Price and today's move sit on the right,
-// with the move rendered as a solid pill the way DSE terminals do it rather
-// than plain colored text, so a glance at the right edge of the list reads
-// the whole day's direction.
+// The mobile market-board card, patterned directly on the reference broker
+// app: standalone card with spacious padding and soft grey resting zones.
+// Left column has symbol + category, day high/low, turnover + volume, and trades.
+// Right column has large LTP, solid change % pill, and net change.
+// Bottom has comfortable Chart, Buy, and Sell action buttons.
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { LineChart } from 'lucide-react';
 import { getCompanyName } from '@/lib/dseCompanyNames';
 import type { Stock, PortfolioItem } from '@/hooks/useSimulator';
 import NotTradedInfo from '@/components/simulator/trade/NotTradedInfo';
@@ -42,16 +40,11 @@ interface Props {
 export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }: Props) {
   const router = useRouter();
   const isTraded = stock.traded !== false;
-  const isUp = stock.change >= 0;
+  const isUp = stock.change > 0;
+  const isDown = stock.change < 0;
   const companyName = getCompanyName(stock.symbol);
-  const hasQuoteDetail = isTraded && (stock.high || stock.low || stock.value || stock.volume || stock.trade);
   const symbolHref = `/stocks/${stock.symbol.toLowerCase()}`;
 
-  // Not a <Link> wrapping the whole row: it would nest <button> inside <a>,
-  // which is invalid HTML and makes browsers reparent/close the anchor,
-  // breaking both navigation and the Buy/Sell clicks. Instead the row
-  // navigates via a click handler, and each button stops propagation so a
-  // trade tap doesn't also open the chart.
   const handleNavigate = () => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('ssbd_last_stock_source', '/trade');
@@ -76,58 +69,69 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
           handleNavigate();
         }
       }}
-      className="px-4 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors"
+      className="bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800/80 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:border-blue-400/40 dark:hover:border-blue-500/30 transition-all cursor-pointer select-none"
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Top section: Left metrics & Right price/pill */}
+      <div className="flex items-start justify-between gap-2">
+        {/* Left Column: Symbol, Category, H/L, TK/V, TRD */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <Link
-              href={symbolHref}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNavigate();
-              }}
-              className="font-bold text-base text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
+          {/* Row 1: Symbol + Category + Held */}
+          <div className="flex items-center flex-wrap gap-1.5">
+            <span className="font-bold text-base text-gray-900 dark:text-white tracking-tight">
               {stock.symbol}
-            </Link>
+            </span>
             {stock.category && (
               <span
-                className={`text-[10px] font-bold px-1 py-px rounded ${CATEGORY_TONE[stock.category] || 'text-gray-600 dark:text-gray-400 bg-gray-500/10'}`}
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[stock.category] || 'text-gray-600 dark:text-gray-400 bg-gray-500/10'}`}
               >
-                {stock.category}
+                [{stock.category}]
               </span>
             )}
             {portfolioItem && (
-              <span className="text-[10px] font-bold px-1 py-px rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 {portfolioItem.quantity} held
               </span>
             )}
           </div>
 
-          {companyName && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{companyName}</p>
-          )}
+          {/* Row 2: High / Low */}
+          <div className="text-xs font-mono mt-1 flex items-center gap-2">
+            <span className="text-teal-600 dark:text-teal-400 font-semibold">
+              H:{stock.high ? fmtPrice(stock.high) : '—'}
+            </span>
+            <span className="text-rose-600 dark:text-rose-400 font-semibold">
+              L:{stock.low ? fmtPrice(stock.low) : '—'}
+            </span>
+          </div>
 
-          {hasQuoteDetail && (
-            <p className="text-[10px] font-mono text-gray-400 dark:text-gray-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              {(stock.high || stock.low) && (
-                <span>
-                  <span className="text-emerald-600/70 dark:text-emerald-400/60">H:{fmtPrice(stock.high || 0)}</span>
-                  {' '}
-                  <span className="text-rose-600/70 dark:text-rose-400/60">L:{fmtPrice(stock.low || 0)}</span>
-                </span>
-              )}
-              {typeof stock.value === 'number' && stock.value > 0 && <span>TK:{fmtCompact(stock.value)}</span>}
-              {typeof stock.volume === 'number' && stock.volume > 0 && <span>V:{fmtCompact(stock.volume)}</span>}
-              {typeof stock.trade === 'number' && stock.trade > 0 && <span>TRD:{stock.trade.toLocaleString()}</span>}
-            </p>
-          )}
+          {/* Row 3: Turnover & Volume */}
+          <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-2.5">
+            <span>
+              TK: {typeof stock.value === 'number' && stock.value > 0 ? fmtCompact(stock.value) : '—'}
+            </span>
+            <span>
+              V: {typeof stock.volume === 'number' && stock.volume > 0 ? fmtCompact(stock.volume) : '—'}
+            </span>
+          </div>
+
+          {/* Row 4: Trade count & optional company name preview */}
+          <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+            <span>
+              TRD: {typeof stock.trade === 'number' && stock.trade > 0 ? stock.trade.toLocaleString() : '—'}
+            </span>
+            {companyName && (
+              <span className="text-[10px] font-sans text-gray-400 dark:text-gray-500 truncate max-w-[140px] sm:max-w-[200px]" title={companyName}>
+                · {companyName}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="text-right shrink-0">
+        {/* Right Column: LTP, Pill Badge, Net Change */}
+        <div className="text-right shrink-0 flex flex-col items-end">
+          {/* Price (LTP) */}
           {isTraded ? (
-            <div className="font-mono font-bold text-base text-gray-900 dark:text-white tabular-nums">
+            <div className="font-mono font-bold text-lg text-gray-900 dark:text-white tabular-nums">
               {fmtPrice(stock.ltp)}
             </div>
           ) : (
@@ -136,24 +140,52 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
               <NotTradedInfo lastClose={stock.ycp} />
             </div>
           )}
+
+          {/* Change % Solid Pill Badge */}
           <div
-            className={`inline-flex flex-col items-end mt-1 px-1.5 py-0.5 rounded text-white ${
-              !isTraded ? 'bg-gray-400 dark:bg-gray-600' : isUp ? 'bg-emerald-500' : 'bg-rose-500'
+            className={`min-w-[70px] text-center px-2 py-0.5 rounded-md font-mono font-bold text-xs text-white mt-1 tabular-nums ${
+              !isTraded
+                ? 'bg-gray-400 dark:bg-gray-600'
+                : isUp
+                  ? 'bg-teal-600 dark:bg-teal-500'
+                  : isDown
+                    ? 'bg-rose-600 dark:bg-rose-500'
+                    : 'bg-gray-600 dark:bg-gray-600'
             }`}
           >
-            <span className="text-xs font-mono font-bold tabular-nums leading-none">
-              {isTraded ? `${isUp ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '—'}
-            </span>
-            {isTraded && (
-              <span className="text-[10px] font-mono opacity-90 leading-none mt-0.5">
-                {isUp ? '+' : ''}{stock.change.toFixed(2)}
-              </span>
-            )}
+            {isTraded ? `${isUp ? '+' : ''}${stock.changePercent.toFixed(2)}%` : '0.00%'}
           </div>
+
+          {/* Change Value in BDT */}
+          {isTraded && (
+            <div
+              className={`font-mono text-xs font-semibold tabular-nums mt-0.5 ${
+                isUp
+                  ? 'text-teal-600 dark:text-teal-400'
+                  : isDown
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              {isUp ? '+' : ''}{stock.change.toFixed(1)}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex gap-2 mt-2">
+      {/* Action Row: Chart, Buy, Sell */}
+      <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
+        <Link
+          href={symbolHref}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNavigate();
+          }}
+          className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 active:scale-95 transition-all shrink-0"
+        >
+          <LineChart className="w-3.5 h-3.5" />
+          <span>Chart</span>
+        </Link>
         <button
           type="button"
           onClick={(e) => {
@@ -161,7 +193,7 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
             onTrade(stock.symbol, 'buy');
           }}
           disabled={!marketOpen || !isTraded}
-          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all"
+          className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all shadow-xs"
         >
           Buy
         </button>
@@ -172,7 +204,7 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
             onTrade(stock.symbol, 'sell');
           }}
           disabled={!marketOpen || !isTraded}
-          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all"
+          className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all shadow-xs"
         >
           Sell
         </button>

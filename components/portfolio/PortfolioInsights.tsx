@@ -228,6 +228,11 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
             {bestMoverToday && (
               <Link
                 href={`/stocks/${bestMoverToday.symbol.toLowerCase()}`}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('ssbd_last_stock_source', '/portfolio');
+                  }
+                }}
                 className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/15 transition-colors"
               >
                 <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -242,6 +247,11 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
             {worstMoverToday && (
               <Link
                 href={`/stocks/${worstMoverToday.symbol.toLowerCase()}`}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('ssbd_last_stock_source', '/portfolio');
+                  }
+                }}
                 className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/15 transition-colors"
               >
                 <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />

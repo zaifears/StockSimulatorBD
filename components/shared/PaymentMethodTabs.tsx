@@ -85,7 +85,7 @@ export default function PaymentMethodTabs({
             <Send className="w-4 h-4 shrink-0" />
             <span className="font-extrabold text-xs sm:text-sm">bKash Send Money</span>
           </div>
-          <span className="text-[10px] font-bold mt-0.5 px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300">
+          <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold leading-none mt-1 bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300">
             Primary Method
           </span>
         </button>
@@ -104,7 +104,7 @@ export default function PaymentMethodTabs({
             <CreditCard className="w-4 h-4 shrink-0" />
             <span className="font-extrabold text-xs sm:text-sm">bKash Payment</span>
           </div>
-          <span className="text-[10px] font-bold mt-0.5 px-2 py-0.5 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+          <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold leading-none mt-1 bg-gray-200/80 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
             Secondary Method
           </span>
         </button>
@@ -123,7 +123,7 @@ export default function PaymentMethodTabs({
             <Building2 className="w-4 h-4 shrink-0" />
             <span className="font-extrabold text-xs sm:text-sm">Other Payment</span>
           </div>
-          <span className="text-[10px] font-bold mt-0.5 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+          <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold leading-none mt-1 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
             Bank & Other MFS
           </span>
         </button>
@@ -140,19 +140,19 @@ export default function PaymentMethodTabs({
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-black tracking-wider uppercase">bKash Send Money (Personal)</span>
             </div>
-            <span className="text-[11px] font-bold bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+            <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none bg-white/20 backdrop-blur-sm">
               Primary Method
             </span>
           </div>
 
           {/* Visual Step Illustration (Connected Directional Timeline - Non-selectable) */}
-          <div className="mx-4 sm:mx-5 my-3.5 p-3 sm:p-3.5 rounded-xl bg-black/25 border border-white/10">
-            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-white/80 mb-2.5">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                Transfer Roadmap (Follow in order)
+          <div className="mx-3.5 sm:mx-5 my-3.5 p-3 sm:p-3.5 rounded-xl bg-black/25 border border-white/10">
+            <div className="flex items-start sm:items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-white/80 mb-2.5">
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />
+                <span className="truncate sm:whitespace-normal">Transfer Roadmap (Follow in order)</span>
               </span>
-              <span className="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono">3 Steps</span>
+              <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-white/15 font-mono font-bold leading-none">3 Steps</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -293,19 +293,19 @@ export default function PaymentMethodTabs({
               <CreditCard className="w-4 h-4 text-white" />
               <span className="text-xs font-black tracking-wider uppercase">bKash Make Payment</span>
             </div>
-            <span className="text-[11px] font-bold bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+            <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none bg-white/20 backdrop-blur-sm">
               Secondary Method
             </span>
           </div>
 
           {/* Visual Step Illustration (Connected Directional Timeline - Non-selectable) */}
-          <div className="mx-4 sm:mx-5 my-3.5 p-3 sm:p-3.5 rounded-xl bg-black/25 border border-white/10">
-            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-white/80 mb-2.5">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                Transfer Roadmap (Follow in order)
+          <div className="mx-3.5 sm:mx-5 my-3.5 p-3 sm:p-3.5 rounded-xl bg-black/25 border border-white/10">
+            <div className="flex items-start sm:items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-white/80 mb-2.5">
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />
+                <span className="truncate sm:whitespace-normal">Transfer Roadmap (Follow in order)</span>
               </span>
-              <span className="text-[10px] bg-white/15 px-2 py-0.5 rounded-full font-mono">3 Steps</span>
+              <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-white/15 font-mono font-bold leading-none">3 Steps</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -489,7 +489,7 @@ export default function PaymentMethodTabs({
                       Cellfin, Nagad & Rocket (Personal Send Money)
                     </h3>
                   </div>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold leading-none bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">
                     Send Money / Transfer
                   </span>
                 </div>
@@ -498,12 +498,12 @@ export default function PaymentMethodTabs({
               <div className="p-4 sm:p-5 space-y-3.5 text-xs text-gray-700 dark:text-gray-300">
                 {/* Visual Step Illustration (Connected Directional Timeline - Non-selectable) */}
                 <div className="p-3 sm:p-3.5 rounded-xl bg-orange-500/10 dark:bg-orange-950/20 border border-orange-200/70 dark:border-orange-900/30">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-orange-900 dark:text-orange-300 mb-2.5">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                      Transfer Roadmap (Follow in order)
+                  <div className="flex items-start sm:items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-orange-900 dark:text-orange-300 mb-2.5">
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+                      <span className="truncate sm:whitespace-normal">Transfer Roadmap (Follow in order)</span>
                     </span>
-                    <span className="text-[10px] bg-orange-200/50 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full font-mono">
+                    <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-orange-200/50 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 font-mono font-bold leading-none">
                       Personal MFS
                     </span>
                   </div>
@@ -629,9 +629,9 @@ export default function PaymentMethodTabs({
           {mfsSubTab === 'bank' && (
             <div className="rounded-2xl overflow-hidden shadow-sm border border-blue-200 dark:border-blue-900/50 bg-white dark:bg-[#161c28]">
               <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-950/30 dark:via-[#161c28] border-b border-blue-100 dark:border-blue-900/30">
-                <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-start sm:items-center justify-between flex-wrap gap-2.5">
                   <div className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <div>
                       <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">
                         Standard Chartered Bank PLC
@@ -639,20 +639,20 @@ export default function PaymentMethodTabs({
                       <span className="text-[10px] text-gray-500 dark:text-gray-400">Direct Bank Transfer (NPSB / BEFTN)</span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold leading-none bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
                     Preferred Mode: NPSB (Instant)
                   </span>
                 </div>
               </div>
 
               {/* Visual NPSB Transfer Route (Connected Directional Timeline - Non-selectable) */}
-              <div className="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-100 dark:border-blue-900/30 mx-4 sm:mx-5 mt-4">
-                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300 mb-2.5">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    How to Transfer (Any Bank App ➔ Standard Chartered)
+              <div className="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-100 dark:border-blue-900/30 mx-3.5 sm:mx-5 mt-4">
+                <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300 mb-2.5">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                    <span className="truncate sm:whitespace-normal">How to Transfer (Bank App ➔ SCB)</span>
                   </span>
-                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold leading-none bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800">
                     NPSB 24/7 Real-Time
                   </span>
                 </div>
@@ -710,10 +710,11 @@ export default function PaymentMethodTabs({
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.title, 'bank_title')}
-                      className="shrink-0 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
                       title="Copy Account Title"
                     >
                       {copiedKey === 'bank_title' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span className="text-[11px]">{copiedKey === 'bank_title' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
 
@@ -751,10 +752,11 @@ export default function PaymentMethodTabs({
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.bankName, 'bank_name')}
-                      className="shrink-0 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
                       title="Copy Bank Name"
                     >
                       {copiedKey === 'bank_name' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span className="text-[11px]">{copiedKey === 'bank_name' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
 
@@ -771,10 +773,11 @@ export default function PaymentMethodTabs({
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.branch, 'bank_branch')}
-                      className="shrink-0 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
                       title="Copy Branch"
                     >
                       {copiedKey === 'bank_branch' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span className="text-[11px]">{copiedKey === 'bank_branch' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
                 </div>

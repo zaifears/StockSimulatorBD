@@ -26,10 +26,10 @@ export default function StockBackButton({ symbol, className = '' }: StockBackBut
     const storedSource = sessionStorage.getItem('ssbd_last_stock_source');
     const referrer = document.referrer || '';
 
-    if (storedSource === '/trade' || referrer.includes('/trade')) {
-      setBackDestination('trade');
-    } else if (storedSource === '/portfolio' || referrer.includes('/portfolio')) {
+    if (storedSource === '/portfolio' || referrer.includes('/portfolio')) {
       setBackDestination('portfolio');
+    } else if (storedSource === '/trade' || referrer.includes('/trade')) {
+      setBackDestination('trade');
     } else {
       setBackDestination('stocks');
     }
@@ -45,10 +45,10 @@ export default function StockBackButton({ symbol, className = '' }: StockBackBut
 
   const getLabel = () => {
     switch (backDestination) {
-      case 'trade':
-        return 'Back to Trading Floor';
       case 'portfolio':
         return 'Back to Portfolio';
+      case 'trade':
+        return 'Back to Trading Floor';
       case 'stocks':
       default:
         return 'Back to Stock List';
@@ -58,16 +58,20 @@ export default function StockBackButton({ symbol, className = '' }: StockBackBut
   const handleBack = () => {
     if (typeof window === 'undefined') return;
 
-    // If history is available from the same host, use native history back to preserve cache & position
-    if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
+    const storedSource = sessionStorage.getItem('ssbd_last_stock_source');
+
+    // If the user arrived from internal app navigation (storedSource is set) and history has entries,
+    // native history.back() reliably restores the exact previous page, scroll spot, and filters
+    if (storedSource && window.history.length > 1) {
       window.history.back();
       return;
     }
 
-    // Fallback: check stored source or default route
-    const storedSource = sessionStorage.getItem('ssbd_last_stock_source');
+    // Fallback: check stored source or destination route
     if (storedSource && storedSource !== window.location.pathname) {
       router.push(storedSource);
+    } else if (backDestination === 'portfolio') {
+      router.push('/portfolio');
     } else if (backDestination === 'trade') {
       router.push('/trade');
     } else {

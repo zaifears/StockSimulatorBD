@@ -169,10 +169,10 @@ function ProfileTierScreen() {
       )}
 
       {/* Feature Privileges Breakdown */}
-      <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 rounded-2xl p-4 sm:p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">
+            <h2 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white">
               Tier Privileges & Comparison
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -189,14 +189,14 @@ function ProfileTierScreen() {
 
         <div className="space-y-4 divide-y divide-gray-100 dark:divide-gray-800/80">
           {/* Feature 1: Core DSE Trading */}
-          <div className="pt-4 first:pt-0 flex items-start gap-4">
+          <div className="pt-4 first:pt-0 flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
               <Shield className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Core DSE Paper Trading</h3>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-0.5 rounded-full">
+              <div className="flex items-start sm:items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">Core DSE Paper Trading</h3>
+                <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20">
                   Included Free
                 </span>
               </div>
@@ -207,19 +207,19 @@ function ProfileTierScreen() {
           </div>
 
           {/* Feature 2: Portfolio Insights & Risk Radar */}
-          <div className="pt-4 flex items-start gap-4">
+          <div className="pt-4 flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
               <PieChart className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Portfolio Insights & Risk Radar</h3>
+              <div className="flex items-start sm:items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">Portfolio Insights & Risk Radar</h3>
                 {isCurrentlyBoss ? (
-                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Active
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                    <Check className="w-3 h-3 stroke-[2.5]" /> Active
                   </span>
                 ) : (
-                  <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/60">
                     Boss Only
                   </span>
                 )}
@@ -231,19 +231,19 @@ function ProfileTierScreen() {
           </div>
 
           {/* Feature 3: Recharge Coin Bonus */}
-          <div className="pt-4 flex items-start gap-4">
+          <div className="pt-4 flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
               <Coins className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">+10% Extra Free Coins</h3>
+              <div className="flex items-start sm:items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">+10% Extra Free Coins</h3>
                 {isCurrentlyBoss ? (
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Check className="w-3 h-3" /> +10% Active
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20">
+                    <Check className="w-3 h-3 stroke-[2.5]" /> +10% Active
                   </span>
                 ) : (
-                  <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/60">
                     Standard (No Bonus)
                   </span>
                 )}
@@ -255,16 +255,22 @@ function ProfileTierScreen() {
           </div>
 
           {/* Feature 4: Order History Depth */}
-          <div className="pt-4 flex items-start gap-4">
+          <div className="pt-4 flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5">
               <History className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Order History Depth</h3>
-                <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
-                  {isCurrentlyBoss ? 'Unlimited Lifetime' : 'Last 10 Trades'}
-                </span>
+              <div className="flex items-start sm:items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">Order History Depth</h3>
+                {isCurrentlyBoss ? (
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-purple-700 dark:text-purple-300 bg-purple-500/10 border border-purple-500/20">
+                    <Check className="w-3 h-3 stroke-[2.5]" /> Unlimited
+                  </span>
+                ) : (
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/60">
+                    Last 10 Trades
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Bro Tier displays the last 10 executed orders. Boss Tier preserves an everlasting order ledger with full price and commission audits.
@@ -273,19 +279,19 @@ function ProfileTierScreen() {
           </div>
 
           {/* Feature 5: Visual Gold Identity */}
-          <div className="pt-4 flex items-start gap-4">
+          <div className="pt-4 flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
               <Crown className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Gold Boss Badge & Identity</h3>
+              <div className="flex items-start sm:items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">Gold Boss Badge & Identity</h3>
                 {isCurrentlyBoss ? (
-                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Active
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                    <Check className="w-3 h-3 stroke-[2.5]" /> Active
                   </span>
                 ) : (
-                  <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
+                  <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold leading-none text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/60">
                     Boss Only
                   </span>
                 )}

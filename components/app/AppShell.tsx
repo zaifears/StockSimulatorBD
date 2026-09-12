@@ -115,7 +115,7 @@ function ShellChrome({ children }: { children: ReactNode }) {
 
   return (
     <SearchFocusContext.Provider value={{ register }}>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#090E17] text-gray-900 dark:text-gray-100">
+      <div className="min-h-screen bg-[#F0F2F5] dark:bg-[#090E17] text-gray-900 dark:text-gray-100">
         <MarketStrip onSearchClick={handleSearchClick} />
 
         {/* Desktop navigation rail — the tab bar's counterpart above lg */}

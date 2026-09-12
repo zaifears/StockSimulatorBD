@@ -94,12 +94,16 @@ export async function GET(req: NextRequest) {
       priceStatus = 'down';
     }
 
-    // 2. Categories Sync (Daily)
+    // 2. Categories Sync (Daily on trading days; DSE closed on Fri & Sat)
+    // In Bangladesh, the weekend is Friday and Saturday. Between Thursday's 10:15 AM
+    // run and Sunday's 10:15 AM run is 72 hours. With adjacent national holidays,
+    // the gap can legitimately reach 96 hours (4 days). We flag stale only if it
+    // exceeds 96 hours to prevent false alarms over weekends.
     let catStatus: 'healthy' | 'stale' | 'missing' = 'healthy';
     let catAgeHours: number | null = null;
     if (catData?.lastUpdated) {
       catAgeHours = Math.round((nowMs - new Date(catData.lastUpdated).getTime()) / 3600000);
-      if (catAgeHours > 48) catStatus = 'stale';
+      if (catAgeHours > 96) catStatus = 'stale';
     } else {
       catStatus = 'missing';
     }

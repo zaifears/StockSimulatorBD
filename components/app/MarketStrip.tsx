@@ -40,7 +40,7 @@ function LiveClock() {
   }, []);
 
   return (
-    <span className="font-mono opacity-70 tabular-nums" title="Current time, Asia/Dhaka">
+    <span className="font-mono tabular-nums font-semibold" title="Current time, Asia/Dhaka">
       {time}
     </span>
   );
@@ -78,20 +78,20 @@ export default function MarketStrip({ onSearchClick }: Props) {
 
           {/* Market state — the single most important thing on this bar */}
           <div
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tabular-nums shrink-0 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tabular-nums shrink-0 transition-colors ${
               marketOpen
                 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                : 'bg-gray-500/10 text-gray-600 dark:text-gray-400'
+                : 'bg-red-500/10 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-500/20'
             }`}
             title={marketOpen ? 'Market open — 10:00 to 14:15 Dhaka time' : 'Market closed'}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                marketOpen ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-gray-400'
+                marketOpen ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-red-500'
               }`}
               aria-hidden="true"
             />
-            {marketOpen ? 'OPEN' : 'CLOSED'}
+            <span>{marketOpen ? 'OPEN' : 'CLOSED'}</span>
             <LiveClock />
           </div>
 

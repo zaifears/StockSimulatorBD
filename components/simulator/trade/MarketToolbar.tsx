@@ -80,15 +80,15 @@ const MarketToolbar = forwardRef<HTMLDivElement, Props>(({
         <div className={`flex flex-col justify-center px-3 sm:px-6 h-12 sm:h-14 rounded-xl transition-all border shadow-sm flex-1 sm:flex-none sm:min-w-[160px] relative overflow-hidden ${
             marketOpen 
               ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white border-emerald-500/50 shadow-emerald-500/20' 
-              : 'bg-gradient-to-br from-gray-600 to-gray-700 text-white border-gray-500/50 shadow-gray-500/20 opacity-90'
+              : 'bg-gradient-to-br from-rose-600 to-red-700 text-white border-red-500/50 shadow-red-500/20'
           }`}
         >
           <div className="flex items-center gap-1.5 sm:gap-2.5 mb-0.5">
-            <div className={`w-2 h-2 rounded-full ring-2 ring-white/20 flex-shrink-0 ${marketOpen ? 'bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-white/60'}`}></div>
+            <div className={`w-2 h-2 rounded-full ring-2 ring-white/20 flex-shrink-0 ${marketOpen ? 'bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-white/80'}`}></div>
             <span className="text-xs sm:text-sm font-bold tracking-tight truncate">{marketOpen ? 'OPEN' : 'CLOSED'}</span>
           </div>
-          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-white/90">
-            <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/80 flex-shrink-0" />
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-white/95">
+            <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/90 flex-shrink-0" />
             <span className="truncate font-mono">{marketOpen ? `Next update in: ${formatTime(nextUpdateIn)}` : 'Updates paused'}</span>
           </div>
         </div>

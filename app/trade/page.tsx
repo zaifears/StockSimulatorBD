@@ -260,7 +260,7 @@ function MarketScreen() {
 
   return (
     <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
-      <div className="px-4 sm:px-0 pt-4 pb-3">
+      <div className="px-3.5 sm:px-0 pt-4 pb-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -270,7 +270,7 @@ function MarketScreen() {
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search symbol or company…"
             aria-label="Search DSE stocks"
-            className="w-full h-11 pl-9 pr-9 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="w-full h-11 pl-9 pr-9 bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 rounded-2xl text-sm font-medium placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
           />
           {searchInput && (
             <button
@@ -287,14 +287,14 @@ function MarketScreen() {
       </div>
 
       {sortedSectors.length > 0 && (
-        <div className="pb-3 -mt-1 flex items-center gap-1 px-4 sm:px-0">
+        <div className="pb-3 -mt-1 flex items-center gap-1 px-3.5 sm:px-0">
           {sectorScroll.hasOverflow && (
             <button
               type="button"
               onClick={() => scrollSectors(-1)}
               disabled={!sectorScroll.canLeft}
               aria-label="Scroll industries left"
-              className="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 shadow-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 shadow-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -314,7 +314,7 @@ function MarketScreen() {
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
                 selectedSector === 'All'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-2xs'
               }`}
             >
               All
@@ -329,7 +329,7 @@ function MarketScreen() {
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
                   selectedSector === sector
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-2xs'
                 }`}
               >
                 {sector} <span className="opacity-60">{sectorCounts.get(sector)}</span>
@@ -342,7 +342,7 @@ function MarketScreen() {
               onClick={() => scrollSectors(1)}
               disabled={!sectorScroll.canRight}
               aria-label="Scroll industries right"
-              className="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 shadow-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 shadow-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -350,21 +350,22 @@ function MarketScreen() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#1A1F26] border-y sm:border sm:rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        {simulatorLoading ? (
-          <StockSkeleton count={10} />
-        ) : visibleStocks.length === 0 ? (
-          <div className="py-16 px-6 flex flex-col items-center text-center gap-2">
-            <Search className="w-8 h-8 opacity-20" />
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              {searchQuery
-                ? <>No stocks found matching &ldquo;{searchQuery}&rdquo;{selectedSector !== 'All' && ` in ${selectedSector}`}</>
-                : `No stocks found in ${selectedSector}`}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="hidden md:block overflow-x-auto">
+      {simulatorLoading ? (
+        <StockSkeleton count={10} />
+      ) : visibleStocks.length === 0 ? (
+        <div className="mx-3.5 sm:mx-0 py-16 px-6 rounded-2xl bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col items-center text-center gap-2">
+          <Search className="w-8 h-8 opacity-20" />
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            {searchQuery
+              ? <>No stocks found matching &ldquo;{searchQuery}&rdquo;{selectedSector !== 'All' && ` in ${selectedSector}`}</>
+              : `No stocks found in ${selectedSector}`}
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white dark:bg-[#161B22] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -391,26 +392,33 @@ function MarketScreen() {
               </table>
             </div>
 
-            <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
-              {visibleStocks.map((stock) => (
-                <MarketRow
-                  key={stock.symbol}
-                  stock={stock}
-                  portfolioItem={portfolioBySymbol.get(stock.symbol)}
-                  marketOpen={marketOpen}
-                  onTrade={onTrade}
-                />
-              ))}
-            </div>
-
             {hasMore && (
-              <div ref={observerRef} className="h-10 w-full flex items-center justify-center p-4 text-xs text-gray-400 bg-gray-50 dark:bg-gray-900/20">
+              <div ref={observerRef} className="h-10 w-full flex items-center justify-center p-4 text-xs text-gray-400 bg-gray-50 dark:bg-gray-900/20 border-t border-gray-100 dark:border-gray-800">
                 Loading more…
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+
+          {/* Mobile Standalone Cards with Grey Resting Zones */}
+          <div className="md:hidden space-y-3 px-3.5 sm:px-0">
+            {visibleStocks.map((stock) => (
+              <MarketRow
+                key={stock.symbol}
+                stock={stock}
+                portfolioItem={portfolioBySymbol.get(stock.symbol)}
+                marketOpen={marketOpen}
+                onTrade={onTrade}
+              />
+            ))}
+
+            {hasMore && (
+              <div ref={observerRef} className="py-3 text-center text-xs font-semibold text-gray-400 dark:text-gray-500 bg-white/80 dark:bg-[#161B22]/80 border border-gray-200/60 dark:border-gray-800/60 rounded-xl shadow-xs">
+                Loading more…
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="px-4 sm:px-0 mt-6 mb-4">
         <MarketCalendar holidays={holidays} />

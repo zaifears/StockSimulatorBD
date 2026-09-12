@@ -351,7 +351,7 @@ function FundsScreen() {
 
       <div id="recharge-section" className="scroll-mt-24">
         {showRechargeForm && (
-          <div className="bg-white dark:bg-[#1A1F26] rounded-2xl p-5 border-2 border-blue-100 dark:border-blue-900/50 shadow-sm mb-4">
+          <div className="bg-white dark:bg-[#1A1F26] rounded-2xl p-4 sm:p-6 border-2 border-blue-100 dark:border-blue-900/50 shadow-sm mb-4">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center border border-blue-100 dark:border-blue-800/50">
