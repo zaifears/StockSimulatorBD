@@ -8,17 +8,25 @@ export default function StockSkeleton({ count = 10 }: { count?: number }) {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 h-10">
-              <th></th><th></th><th></th><th></th><th></th>
+              <th className="px-5 lg:px-6 py-3.5"></th>
+              <th className="px-5 lg:px-6 py-3.5"></th>
+              <th className="px-5 lg:px-6 py-3.5"></th>
+              <th className="hidden lg:table-cell px-5 lg:px-6 py-3.5"></th>
+              <th className="hidden xl:table-cell px-5 lg:px-6 py-3.5"></th>
+              <th className="px-5 lg:px-6 py-3.5"></th>
+              <th className="px-5 lg:px-6 py-3.5"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {Array.from({ length: count }).map((_, i) => (
               <tr key={i} className="animate-pulse">
-                <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-2"></div><div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-24"></div></td>
-                <td className="px-6 py-4 text-right"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto"></div></td>
-                <td className="px-6 py-4 text-right"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12 ml-auto"></div></td>
-                <td className="px-6 py-4 text-center"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-8 mx-auto"></div></td>
-                <td className="px-6 py-4 text-right"><div className="flex justify-end gap-2"><div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12"></div><div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12"></div></div></td>
+                <td className="px-5 lg:px-6 py-3.5"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-2"></div><div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-24"></div></td>
+                <td className="px-5 lg:px-6 py-3.5 text-right"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto"></div></td>
+                <td className="px-5 lg:px-6 py-3.5 text-right"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12 ml-auto"></div></td>
+                <td className="hidden lg:table-cell px-5 lg:px-6 py-3.5 text-right"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-14 ml-auto"></div></td>
+                <td className="hidden xl:table-cell px-5 lg:px-6 py-3.5 text-right"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-14 ml-auto"></div></td>
+                <td className="px-5 lg:px-6 py-3.5 text-center"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-8 mx-auto"></div></td>
+                <td className="px-5 lg:px-6 py-3.5 text-right"><div className="flex justify-end gap-2"><div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12"></div><div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12"></div><div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12"></div></div></td>
               </tr>
             ))}
           </tbody>

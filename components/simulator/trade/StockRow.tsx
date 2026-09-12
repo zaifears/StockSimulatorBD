@@ -80,11 +80,11 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
             <span className="text-[10px] font-mono opacity-80">{isPnlUp ? '+' : ''}{pnlPercent.toFixed(2)}%</span>
           </div>
         </td>
-        <td className="px-5 py-3 text-right">
-          <div className="flex justify-end gap-1.5">
-            <Link href={`/stocks/${stock.symbol}`} className="px-3 py-1.5 rounded text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white">Chart</Link>
-            <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
-            <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
+        <td className="px-5 py-3 text-right whitespace-nowrap">
+          <div className="flex justify-end items-center gap-1.5 whitespace-nowrap shrink-0">
+            <Link href={`/stocks/${stock.symbol.toLowerCase()}`} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white shrink-0 active:scale-95">Chart</Link>
+            <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
+            <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
           </div>
         </td>
       </tr>
@@ -93,15 +93,15 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
 
   return (
     <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-      <td className="px-6 py-4">
+      <td className="px-5 lg:px-6 py-3.5">
         <div className="flex flex-col">
           <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-500 transition-colors">{stock.symbol}</span>
-          {companyName && <span className="text-[10px] text-gray-400 truncate max-w-[200px]" title={companyName}>{companyName}</span>}
+          {companyName && <span className="text-[10px] text-gray-400 truncate max-w-[180px] lg:max-w-xs xl:max-w-sm" title={companyName}>{companyName}</span>}
         </div>
       </td>
-      <td className="px-6 py-4 text-right">
+      <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
         {isTraded ? (
-          <span className="font-mono font-medium text-gray-900 dark:text-gray-100">৳{stock.ltp.toFixed(2)}</span>
+          <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">৳{stock.ltp.toFixed(2)}</span>
         ) : (
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 dark:text-gray-500">
             Not traded
@@ -109,25 +109,44 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
           </span>
         )}
       </td>
-      <td className="px-6 py-4 text-right">
+      <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
         <div className={`inline-flex flex-col items-end ${isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
           <span className="font-mono font-bold text-xs flex items-center gap-1">
             {isUp ? '+' : ''}{stock.changePercent.toFixed(2)}%
             {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
           </span>
-          <span className="text-[10px] opacity-70">{isUp ? '+' : ''}৳{stock.change.toFixed(2)}</span>
+          <span className="text-[10px] opacity-70 font-mono">{isUp ? '+' : ''}৳{stock.change.toFixed(2)}</span>
         </div>
       </td>
-      <td className="px-6 py-4 text-center">
+      {/* Session High / Low (visible on lg+) */}
+      <td className="hidden lg:table-cell px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
+        {isTraded && (stock.high || stock.low) ? (
+          <div className="inline-flex flex-col items-end text-[11px] font-mono">
+            <span className="text-emerald-600/80 dark:text-emerald-400/80">H: ৳{(stock.high || 0).toFixed(2)}</span>
+            <span className="text-rose-600/80 dark:text-rose-400/80">L: ৳{(stock.low || 0).toFixed(2)}</span>
+          </div>
+        ) : (
+          <span className="text-gray-400 dark:text-gray-500 text-xs font-mono">—</span>
+        )}
+      </td>
+      {/* Volume (visible on xl+) */}
+      <td className="hidden xl:table-cell px-5 lg:px-6 py-3.5 text-right whitespace-nowrap font-mono text-xs text-gray-600 dark:text-gray-400">
+        {isTraded && stock.volume ? (
+          <span>{stock.volume.toLocaleString()}</span>
+        ) : (
+          <span className="text-gray-400 dark:text-gray-500">—</span>
+        )}
+      </td>
+      <td className="px-5 lg:px-6 py-3.5 text-center whitespace-nowrap">
         {stock.category ? (
-          <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${getCategoryColor(stock.category).badge}`}>{stock.category}</span>
+          <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${getCategoryColor(stock.category).badge}`}>{stock.category}</span>
         ) : <span className="text-gray-400 dark:text-gray-500 text-xs">-</span>}
       </td>
-      <td className="px-6 py-4 text-right">
-        <div className="flex justify-end gap-2">
-          <Link href={`/stocks/${stock.symbol}`} className="px-3 py-1.5 rounded text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white">Chart</Link>
-          <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
-          <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
+      <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
+        <div className="flex justify-end items-center gap-1.5 sm:gap-2">
+          <Link href={`/stocks/${stock.symbol.toLowerCase()}`} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white shrink-0 active:scale-95">Chart</Link>
+          <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
+          <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
         </div>
       </td>
     </tr>

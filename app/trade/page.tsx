@@ -206,7 +206,7 @@ function MarketScreen() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-0 sm:px-4">
+    <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
       <div className="px-4 sm:px-0 pt-4 pb-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -315,11 +315,13 @@ function MarketScreen() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    <th className="px-6 py-4 font-semibold">Symbol</th>
-                    <th className="px-6 py-4 font-semibold text-right">Price (LTP)</th>
-                    <th className="px-6 py-4 font-semibold text-right">Change</th>
-                    <th className="px-6 py-4 font-semibold text-center">Category</th>
-                    <th className="px-6 py-4 font-semibold text-right">Action</th>
+                    <th className="px-5 lg:px-6 py-3.5 font-semibold">Symbol</th>
+                    <th className="px-5 lg:px-6 py-3.5 font-semibold text-right">Price (LTP)</th>
+                    <th className="px-5 lg:px-6 py-3.5 font-semibold text-right">Change</th>
+                    <th className="hidden lg:table-cell px-5 lg:px-6 py-3.5 font-semibold text-right">Day Range (H/L)</th>
+                    <th className="hidden xl:table-cell px-5 lg:px-6 py-3.5 font-semibold text-right">Volume</th>
+                    <th className="px-5 lg:px-6 py-3.5 font-semibold text-center">Category</th>
+                    <th className="px-5 lg:px-6 py-3.5 font-semibold text-right whitespace-nowrap">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
