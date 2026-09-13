@@ -10,7 +10,7 @@
 // editable price like a real order ticket's would be.
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Minus, Plus, Search, X, ChevronDown, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Minus, Plus, Search, X, ChevronDown, ChevronLeft, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import AppShell from '@/components/app/AppShell';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import { searchByNameOrSymbol, getCompanyName } from '@/lib/dseCompanyNames';
@@ -133,8 +133,25 @@ function OrderScreen() {
   }, [transactionStatus]);
 
   return (
-    <div className="max-w-xl mx-auto px-4 pt-4 pb-6">
-      <h1 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Place Order</h1>
+    <div className="max-w-xl mx-auto px-4 pt-3 pb-6">
+      {/* Top Header with Back Button */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/trade');
+            }
+          }}
+          aria-label="Go back"
+          className="w-10 h-10 -ml-2 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-200/70 dark:hover:bg-[#1C293A] active:scale-90 transition-all shrink-0"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Place Order</h1>
+      </div>
 
       {/* BUY / SELL segmented toggle */}
       <div className="flex bg-gray-200/70 dark:bg-[#1C293A] p-1 rounded-xl mb-4">
@@ -159,21 +176,40 @@ function OrderScreen() {
         ))}
       </div>
 
-      {/* Symbol selector */}
+      {/* Symbol selector card */}
       <button
         type="button"
         onClick={() => setShowPicker(true)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-xl mb-3 text-left shadow-xs"
+        className="w-full flex items-center justify-between px-4 py-3.5 bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 hover:border-blue-500/50 dark:hover:border-blue-500/50 rounded-2xl mb-3 text-left shadow-xs active:scale-[0.99] transition-all group"
       >
         {symbol ? (
-          <div>
-            <div className="font-bold text-base text-gray-900 dark:text-white">{symbol}</div>
-            {companyName && <div className="text-xs text-gray-500 dark:text-gray-400">{companyName}</div>}
+          <div className="flex-1 min-w-0 pr-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Selected Stock</div>
+            <div className="font-black text-lg text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+              {symbol}
+              {stock?.category && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                  {stock.category}
+                </span>
+              )}
+            </div>
+            {companyName && <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{companyName}</div>}
           </div>
         ) : (
-          <span className="text-sm text-gray-400">Select a stock…</span>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Search className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-gray-900 dark:text-white">Choose a Stock to Trade</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">Tap to search 400+ DSE securities</div>
+            </div>
+          </div>
         )}
-        <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+        <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0">
+          <span>{symbol ? 'Change' : 'Search'}</span>
+          <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:translate-y-0.5 transition-transform" />
+        </div>
       </button>
 
       {/* Quote card */}
@@ -331,6 +367,7 @@ function OrderScreen() {
           matches={matches}
           onSelect={selectSymbol}
           onClose={() => setShowPicker(false)}
+          hasExistingSymbol={!!symbol}
         />
       )}
     </div>
@@ -365,13 +402,16 @@ function SymbolPicker({
   matches,
   onSelect,
   onClose,
+  hasExistingSymbol,
 }: {
   query: string;
   onQueryChange: (v: string) => void;
   matches: import('@/hooks/useSimulator').Stock[];
   onSelect: (symbol: string) => void;
   onClose: () => void;
+  hasExistingSymbol: boolean;
 }) {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Deferred rather than a plain `autoFocus`: this overlay opens immediately
@@ -387,52 +427,124 @@ function SymbolPicker({
     return () => cancelAnimationFrame(id);
   }, []);
 
+  const handleBack = () => {
+    if (hasExistingSymbol) {
+      onClose();
+    } else {
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/trade');
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-white dark:bg-[#0B0E11]">
-      <div className="flex items-center gap-2 p-3 border-b border-gray-100 dark:border-gray-800 pt-safe">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search symbol or company…"
-            className="w-full h-11 pl-9 pr-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl text-sm"
-          />
+      {/* Top Search Header Bar with iPhone-friendly Back Button on the left */}
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#0E1520]/95 backdrop-blur-xl border-b border-gray-200/80 dark:border-gray-800/80 px-3 sm:px-4 py-2.5 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <div className="flex items-center gap-2 max-w-xl mx-auto">
+          {/* Back button on the left of search box */}
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Back"
+            className="w-10 h-10 -ml-1 rounded-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all shrink-0"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          {/* Search bar container */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder="Search symbol or company…"
+              className="w-full h-11 pl-10 pr-9 bg-gray-100 dark:bg-[#16202D] border border-transparent focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-xl text-sm font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => onQueryChange('')}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:opacity-80 active:scale-90 transition-all"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Cancel button */}
+          <button
+            type="button"
+            onClick={hasExistingSymbol ? onClose : handleBack}
+            className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1.5 shrink-0 active:scale-95 transition-all"
+          >
+            Cancel
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          <X className="w-5 h-5" />
-        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+      {/* Stock list with rich metrics and category badges */}
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/80 bg-white dark:bg-[#0B0E11] max-w-xl mx-auto w-full pb-safe">
         {matches.length === 0 ? (
-          <p className="text-center text-sm text-gray-400 py-10">No matches</p>
+          <div className="text-center py-16 px-4">
+            <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-base font-bold text-gray-700 dark:text-gray-300">No stocks found</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try searching by DSE symbol or company name</p>
+          </div>
         ) : (
           matches.map((s) => {
             const name = getCompanyName(s.symbol);
+            const isTraded = s.traded !== false;
+            const changePositive = s.change >= 0;
             return (
               <button
                 key={s.symbol}
                 type="button"
                 onClick={() => onSelect(s.symbol)}
-                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-gray-50 dark:hover:bg-[#16202D] active:bg-gray-100 dark:active:bg-[#1A2634] transition-colors"
               >
-                <div>
-                  <div className="font-bold text-sm text-gray-900 dark:text-white">{s.symbol}</div>
-                  {name && <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[220px]">{name}</div>}
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white tracking-tight">
+                      {s.symbol}
+                    </span>
+                    {s.category && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                        {s.category}
+                      </span>
+                    )}
+                  </div>
+                  {name && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5 font-medium">
+                      {name}
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  {s.traded !== false ? (
-                    <div className="font-mono font-semibold text-sm text-gray-900 dark:text-white">{s.ltp.toFixed(2)}</div>
+
+                <div className="text-right shrink-0 flex flex-col items-end">
+                  {isTraded ? (
+                    <>
+                      <div className="font-mono font-bold text-sm sm:text-base text-gray-900 dark:text-white tabular-nums">
+                        ৳{s.ltp.toFixed(2)}
+                      </div>
+                      <span
+                        className={`inline-block font-mono text-[11px] font-bold px-1.5 py-0.5 rounded text-white tabular-nums mt-0.5 ${
+                          changePositive ? 'bg-[#0AA892]' : 'bg-[#E54D4C]'
+                        }`}
+                      >
+                        {changePositive ? '+' : ''}
+                        {(s.changePercent || 0).toFixed(2)}%
+                      </span>
+                    </>
                   ) : (
-                    <div className="text-[11px] text-gray-400">Not traded</div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                      Not traded
+                    </span>
                   )}
                 </div>
               </button>
