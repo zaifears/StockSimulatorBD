@@ -7,13 +7,23 @@ colors:
   practice-blue-pressed: "#1E40AF"
   indigo-anchor: "#4338CA"
   gain-emerald: "#10B981"
+  gain-teal: "#0AA892"
   gain-emerald-deep: "#059669"
   gain-emerald-light: "#34D399"
   loss-rose: "#F43F5E"
+  loss-coral: "#E54D4C"
   loss-rose-deep: "#E11D48"
   loss-rose-light: "#FB7185"
   coin-amber: "#F59E0B"
   coin-amber-deep: "#D97706"
+  canvas-light: "#EDEDED"
+  card-light: "#FFFFFF"
+  wash-buy-light: "#BDECE4"
+  wash-sell-light: "#F8CACA"
+  toggle-inactive-light: "#C4C4C4"
+  pill-neutral-light: "#616161"
+  donut-amber: "#F4A236"
+  donut-olive: "#85B84B"
   paper-white: "#FFFFFF"
   paper-band: "#F9FAFB"
   paper-inset: "#F3F4F6"
@@ -99,13 +109,18 @@ components:
     rounded: "{rounded.xl}"
     padding: "16px 32px"
   button-buy:
-    backgroundColor: "{colors.gain-emerald}"
+    backgroundColor: "{colors.gain-teal}"
     textColor: "{colors.paper-white}"
     rounded: "{rounded.lg}"
     padding: "8px 16px"
   button-sell:
-    backgroundColor: "{colors.loss-rose}"
+    backgroundColor: "{colors.loss-coral}"
     textColor: "{colors.paper-white}"
+    rounded: "{rounded.lg}"
+    padding: "8px 16px"
+  button-toggle-inactive:
+    backgroundColor: "{colors.toggle-inactive-light}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
     padding: "8px 16px"
   button-ghost:
@@ -176,32 +191,42 @@ A sober blue voice on bright paper, with the market's own green-and-red rationed
 
 ### Secondary
 
-- **Gain Emerald** (`#10B981`, deep `#059669`, light `#34D399`): price up, positive P&L, BUY, market-open. Nothing else.
-- **Loss Rose** (`#F43F5E`, deep `#E11D48`, light `#FB7185`): price down, negative P&L, SELL, market-closed. Nothing else.
+- **Gain Teal / Emerald** (`#0AA892`, brand `#10B981`, light `#34D399`): price up, positive P&L, BUY toggle/button, advance breadth bars. In light mode, `#0AA892` (Mint Teal) provides superior contrast (4.2:1 with white badge text) compared to yellow-green.
+- **Loss Coral / Rose** (`#E54D4C`, brand `#F43F5E`, deep `#E11D48`): price down, negative P&L, SELL toggle/button, decline breadth bars. Warm strawberry coral eliminates visual fatigue while maintaining urgency.
 
 ### Tertiary
 
 - **Coin Amber** (`#F59E0B`, deep `#D97706`): the virtual-currency and caution register. The coin balance pill in the navbar, the commission line in the trade sheet, T+1 lockout notices, and the "practice money has no real value" reminders. Amber is the color of *this is a simulation* — a warm caution, never an alarm.
+- **Multi-Asset Allocation (Donut)**: `#F4A236` (Dominant holding ochre amber), `#85B84B` (Secondary holding olive leaf), `#E54D4C` (Coral), `#0AA892` (Teal). Dominant allocation uses warm amber so it never triggers false buy/sell associations.
 
-### Neutral
+### Neutral & Operating Surfaces
 
-- **Paper White** (`#FFFFFF`): the default page ground and the surface of cards that sit on a tinted band.
-- **Paper Band** (`#F9FAFB`): alternating section bands on marketing pages, and the resting fill of cards that sit on white. The whole light-mode rhythm is these two trading places.
-- **Paper Inset** (`#F3F4F6`): recessed controls — segmented toggles, stepper buttons, search fields.
-- **Floor Ink** (`#090E17`): the dark-mode page ground. A near-black with a blue cast, not a true black.
+- **Canvas Ground (Light)** (`#EDEDED` – `#EFEFEF`): the resting page ground for dense operating surfaces (Trade, Portfolio, Watchlist, Market Overview). A soft cool neutral grey that prevents glare and physically frames white cards.
+- **Card Surface (Light)** (`#FFFFFF`): crisp pure white for cards, list rows, metric containers, search inputs, and modal sheets. Floating on `#EDEDED`, it establishes immediate tactile separation without heavy borders.
+- **Pastel Washes (Light)**:
+  - **Buy Pressure Wash** (`#BDECE4`): soft pastel cyan-mint wash for turnover / buy pressure, paired with dark pine text (`#004D40`).
+  - **Sell Pressure Wash** (`#F8CACA`): soft pastel strawberry wash for volume / sell pressure, paired with dark burgundy text (`#7F1D1D`).
+- **Inactive / Disabled Inset (Light)** (`#C4C4C4`): unselected BUY/SELL toggle side, read-only calculation fields (`Drib Qty`, `Total`).
+- **Neutral Unchanged Pill (Light)** (`#616161`): solid dark charcoal pill with white text for `0.00%` unchanged state.
+- **Paper White** (`#FFFFFF`): marketing page ground and cards on tinted sections.
+- **Paper Band** (`#F9FAFB`): alternating section bands on marketing pages.
+- **Paper Inset** (`#F3F4F6`): recessed controls — search fields and secondary buttons.
+- **Floor Ink** (`#090E17` / `#111823`): the dark-mode page ground. A deep slate midnight navy, never `#000000`.
 - **Floor Band** (`#111418`): the dark-mode counterpart to Paper Band; alternating sections.
-- **Floor Card** (`#1A1F26`): the dark-mode card surface — the third rung of the ladder, and by far the most-used dark value in the codebase.
-- **Floor Chrome** (`#0B0E11`): navigation chrome only (bottom tab bar, sticky toolbars), sitting a half-step darker than the page so chrome reads as chrome.
+- **Floor Card** (`#1A1F26` / `#16202D`): the dark-mode card surface.
+- **Floor Chrome** (`#0B0E11` / `#0D131D`): navigation chrome (bottom tab bar, sticky toolbars).
 - **Ink** (`#111827`) / **Ink Muted** (`#6B7280`) / **Ink Faint** (`#9CA3AF`): heading text, body and secondary text, and metadata/placeholder text respectively. Dark mode inverts to `#F9FAFB` / `#D1D5DB` / `#6B7280`.
-- **Hairline** (`#E5E7EB`, dark `#1F2937`): the 1px borders that do most of the separation work in this system.
+- **Hairline** (`#E5E7EB`, dark `#1F2937`): the 1px borders that do subtle separation work.
 
 ### Named Rules
 
-**The Market Truth Rule.** Emerald and rose are spent exclusively on market truth: price direction, profit and loss, BUY/SELL, and market-open state. They never appear as decoration, illustration, generic success/error styling, or brand accent. A generic "saved successfully" toast is blue or neutral, not green. The scarcity is the entire point — when a user's portfolio goes red, that red has to land.
+**The Market Truth Rule.** Emerald/teal and rose/coral are spent exclusively on market truth: price direction, profit and loss, BUY/SELL, and market-open state. They never appear as decoration, illustration, generic success/error styling, or brand accent. A generic "saved successfully" toast is blue or neutral, not green. The scarcity is the entire point — when a user's portfolio goes red, that red has to land.
 
 **The Blue-Is-Not-Money Rule.** Practice Blue marks affordance and identity, never value. If a number can go up or down, blue may not describe it.
 
-**The Three-Rung Ladder Rule.** Dark mode has exactly three content surfaces — page `#090E17`, band `#111418`, card `#1A1F26` — plus `#0B0E11` for navigation chrome. A fourth invented dark value is a bug, not a design decision.
+**The Tactile Card-on-Canvas Rule (Light Mode).** On dense app surfaces (trade terminal, portfolio, watchlist, market dashboard), the page ground is `#EDEDED`, never `#FFFFFF`. Pure white cards float on `#EDEDED` to create effortless physical separation and eliminate daytime glare.
+
+**The Three-Rung Ladder Rule (Dark Mode).** Dark mode content surfaces follow `#090E17` (page) → `#111418` (band) → `#1A1F26` (card), plus `#0B0E11` for navigation chrome. Pitch black (`#000000`) is strictly banned.
 
 ## Typography
 
@@ -306,20 +331,41 @@ Dividers are borders, not rules: `border-t`/`border-b` on the container, never a
 
 ### Buy / Sell Controls
 
-The system's most semantically loaded control, and the only place emerald and rose are allowed to fill a surface.
+The system's most semantically loaded control, and the only place emerald/teal and rose/coral are allowed to fill an interactive surface.
 
-- **Segmented toggle:** a 2-column grid inside a `rounded-lg` inset with a 1px border and `p-1` padding. The selected side takes the full semantic fill (emerald for BUY, rose for SELL), white bold text, and a matching colored shadow. The unselected side is text-only in muted ink.
+- **Segmented Toggle (Light Mode):**
+  - **Active BUY:** Solid Mint Teal (`#0AA892` / `#09A892`) fill with bold white text.
+  - **Active SELL:** Solid Coral Red (`#E54D4C`) fill with bold white text.
+  - **Inactive Side:** Flat neutral grey (`#C4C4C4`) with dark charcoal text (`#111827`).
+- **Primary Execution CTA:** A full-width bottom action button that strictly matches the active state: `#07AA8F` for BUY and `#E54D4C` for SELL, with bold white text.
 - **Table actions:** ghost-tinted at rest (`bg-emerald-500/10`, emerald text) and flooding to full fill with white text on hover — the color is always present, the commitment only arrives on approach.
 - **Market-closed state:** both actions collapse to neutral grey with `cursor-not-allowed`. Color returns only when the exchange is open.
 
 ### Cards / Containers
 
 - **Corner Style:** `rounded-3xl` (24px) for content and marketing cards; `rounded-xl`/`2xl` (12–16px) for app-surface cards.
-- **Background:** Paper Band (`#F9FAFB`) on white sections, Paper White on tinted sections; Floor Card (`#1A1F26`) in dark mode throughout.
-- **Border:** 1px hairline, always. The border does the separation work; the shadow does the state work.
+- **Background Architecture:**
+  - **Light Mode:** Crisp pure white (`#FFFFFF`) cards resting on the `#EDEDED` canvas ground.
+  - **Dark Mode:** Deep slate navy (`#16202D` / `#1A1F26`) cards resting on `#111823` canvas ground.
+- **Border:** 1px hairline (`#E0E0E0` in light mode, `#243345` in dark mode).
 - **Shadow Strategy:** rest at `shadow-sm`, hover to `shadow-md` with `translateY(-4px)`. See Elevation.
 - **Internal Padding:** 24–32px (`p-6 sm:p-8`) on content cards, 12–20px on dense app cards.
-- **Composition:** icon tile → title (700, 18px) → body (400, 14–16px, muted). This three-part stack is the most repeated unit in the product.
+- **The Change Pill Badge + Stacked Delta (Signature Pattern):**
+  - **Pill Badge:** Solid filled rounded rectangle (`rounded-lg`, 6–8px radius, `px-2 py-1`):
+    - Positive / Gain: `#15A292` fill + bold white text (e.g. `+0.42%`).
+    - Unchanged / NC: `#616161` fill + bold white text (e.g. `0.00%`).
+    - Negative / Loss: `#DC5051` fill + bold white text (e.g. `-0.38%`, `-7.26%`).
+  - **Stacked Delta:** Immediately beneath the pill, the absolute change is printed in unbadged text (`+0.1`, `-3.2`, `0.0`) in the corresponding semantic color.
+- **Donut Asset Allocation Card:**
+  - Cutout diameter: ~68% of donut diameter.
+  - Center hole displays active holding stats: Symbol (18px bold `#111827`), Total Qty, Total Cost, Invest Percent (11px muted `#6B7280`).
+  - Allocation hues: Dominant holding in Ochre Amber (`#F4A236`), secondary in Olive Leaf (`#85B84B`), minor holdings in Coral (`#E54D4C`) and Teal (`#0AA892`).
+- **Advance/Decline Histogram & Breadth Bar:**
+  - Rounded capsule bars (`rounded-full`) in red, grey, and teal with count labels above (`189`, `88`, `43`...).
+  - Horizontal composite bar showing immediate market ratio: `■ NEG: 336` (Red), `■ NC: 20` (Grey), `■ POS: 27` (Teal).
+- **Gainer / Loser Portfolio Ratio Bar:**
+  - Thin 4px horizontal track split into green gainer segment (`#0AA892`) and red loser segment (`#DC5051`).
+  - Flanked by `1 Gainers` and `3 Loser` count text.
 
 ### Inputs / Fields
 
