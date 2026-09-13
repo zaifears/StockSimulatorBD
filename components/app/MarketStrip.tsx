@@ -68,7 +68,7 @@ export default function MarketStrip({ onSearchClick }: Props) {
   const dayPnl = totals.dayPnl;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 pt-safe bg-white/95 dark:bg-[#0B0E11]/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800">
+    <header className="fixed top-0 left-0 right-0 z-40 pt-safe bg-white/95 dark:bg-[#0D131D]/95 backdrop-blur-xl border-b border-gray-200/80 dark:border-gray-800">
       {/* Row 1 — identity, market state, utilities */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 h-12">
@@ -154,7 +154,7 @@ export default function MarketStrip({ onSearchClick }: Props) {
       {/* Row 2 — live account figures. Scrolls horizontally on narrow phones
           rather than truncating any number, since a half-shown balance is
           worse than one the user has to nudge into view. */}
-      <div className="border-t border-gray-100 dark:border-gray-800/60 bg-gray-50/80 dark:bg-black/20">
+      <div className="border-t border-gray-200/60 dark:border-gray-800/60 bg-gray-50/90 dark:bg-black/25">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <dl className="flex items-center gap-4 sm:gap-6 h-9 overflow-x-auto scrollbar-none">
             <Figure label="Cash" value={`৳${fmtMoney(simulatorState.balance, 0)}`} />
@@ -191,9 +191,9 @@ function Figure({
 }) {
   const toneClass =
     tone === 'up'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-[#0AA892] dark:text-[#2DD4BF]'
       : tone === 'down'
-        ? 'text-rose-600 dark:text-rose-400'
+        ? 'text-[#E54D4C] dark:text-[#F87171]'
         : 'text-gray-900 dark:text-gray-100';
 
   return (

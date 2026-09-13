@@ -43,7 +43,7 @@ export default function AppTabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0B0E11]/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 pb-safe"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0D131D]/95 backdrop-blur-xl border-t border-gray-200/80 dark:border-gray-800 pb-safe"
     >
       <div className="flex items-stretch h-[60px]">
         {APP_TABS.slice(0, 2).map((tab) => (

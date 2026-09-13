@@ -137,7 +137,7 @@ function OrderScreen() {
       <h1 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Place Order</h1>
 
       {/* BUY / SELL segmented toggle */}
-      <div className="flex bg-gray-100 dark:bg-gray-900/50 p-1 rounded-xl mb-4">
+      <div className="flex bg-gray-200/70 dark:bg-[#1C293A] p-1 rounded-xl mb-4">
         {(['BUY', 'SELL'] as const).map((t) => (
           <button
             key={t}
@@ -149,9 +149,9 @@ function OrderScreen() {
             className={`flex-1 py-2.5 rounded-lg text-sm font-extrabold tracking-wide transition-all ${
               orderType === t
                 ? t === 'BUY'
-                  ? 'bg-emerald-500 text-white shadow-sm'
-                  : 'bg-rose-500 text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400'
+                  ? 'bg-[#0AA892] text-white shadow-sm'
+                  : 'bg-[#E54D4C] text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
             {t}
@@ -163,7 +163,7 @@ function OrderScreen() {
       <button
         type="button"
         onClick={() => setShowPicker(true)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-xl mb-3 text-left"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-xl mb-3 text-left shadow-xs"
       >
         {symbol ? (
           <div>
@@ -178,7 +178,7 @@ function OrderScreen() {
 
       {/* Quote card */}
       {symbol && stock && (
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-3">
+        <div className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-xl p-4 mb-3 shadow-xs">
           <div className="flex items-baseline justify-between mb-3">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
@@ -197,10 +197,10 @@ function OrderScreen() {
             </div>
             {isTraded && (
               <span
-                className={`font-mono text-sm font-bold px-2 py-1 rounded ${
+                className={`font-mono text-xs sm:text-sm font-bold px-2 py-1 rounded-lg text-white tabular-nums ${
                   stock.change >= 0
-                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
-                    : 'text-rose-700 dark:text-rose-400 bg-rose-500/10'
+                    ? 'bg-[#0AA892]'
+                    : 'bg-[#E54D4C]'
                 }`}
               >
                 {stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
@@ -231,7 +231,7 @@ function OrderScreen() {
       )}
 
       {/* Quantity */}
-      <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-3">
+      <div className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-xl p-4 mb-3 shadow-xs">
         <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
           Order Quantity
         </div>
@@ -240,7 +240,7 @@ function OrderScreen() {
             type="button"
             onClick={() => adjustQuantity(-1)}
             aria-label="Decrease quantity"
-            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 active:scale-95 transition-all"
+            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#1C293A] dark:hover:bg-[#24354A] text-gray-700 dark:text-gray-200 active:scale-95 transition-all"
           >
             <Minus className="w-4 h-4" />
           </button>
@@ -250,14 +250,14 @@ function OrderScreen() {
             min={0}
             value={quantityInput}
             onChange={(e) => setQuantityInput(e.target.value.replace(/[^0-9]/g, ''))}
-            className="flex-1 h-11 text-center font-mono font-bold text-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg tabular-nums"
+            className="flex-1 h-11 text-center font-mono font-bold text-lg bg-gray-50/80 dark:bg-[#111823] border border-gray-200/80 dark:border-gray-800 rounded-xl tabular-nums focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             aria-label="Order quantity"
           />
           <button
             type="button"
             onClick={() => adjustQuantity(1)}
             aria-label="Increase quantity"
-            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 active:scale-95 transition-all"
+            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#1C293A] dark:hover:bg-[#24354A] text-gray-700 dark:text-gray-200 active:scale-95 transition-all"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -266,7 +266,7 @@ function OrderScreen() {
           <button
             type="button"
             onClick={() => setQuantityInput(String(saleable))}
-            className="mt-2 text-[11px] font-bold text-blue-600 dark:text-blue-400"
+            className="mt-2 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
           >
             Sell all {saleable}
           </button>
@@ -275,7 +275,7 @@ function OrderScreen() {
 
       {/* Order summary */}
       {symbol && quantity > 0 && (
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-3 space-y-2">
+        <div className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-xl p-4 mb-3 space-y-2 shadow-xs">
           <SummaryLine label="Gross value" value={`৳${estimate.gross.toFixed(2)}`} />
           <SummaryLine label="Commission (0.4%)" value={`৳${estimate.commission.toFixed(2)}`} />
           <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
@@ -294,13 +294,13 @@ function OrderScreen() {
 
       {/* Status */}
       {transactionStatus === 'success' && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm font-semibold mb-3">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#0AA892]/10 text-[#0AA892] dark:text-[#2DD4BF] text-sm font-semibold mb-3">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           {transactionMessage}
         </div>
       )}
       {transactionStatus === 'error' && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-400 text-sm font-semibold mb-3">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#E54D4C]/10 text-[#E54D4C] dark:text-[#F87171] text-sm font-semibold mb-3">
           <AlertCircle className="w-4 h-4 shrink-0" />
           {transactionMessage}
         </div>
@@ -311,10 +311,10 @@ function OrderScreen() {
         onClick={handleSubmit}
         disabled={!canSubmit}
         title={blockReason}
-        className={`w-full py-3.5 rounded-xl text-white font-extrabold text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+        className={`w-full py-3.5 rounded-xl text-white font-extrabold text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm ${
           orderType === 'BUY'
-            ? 'bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-200 dark:disabled:bg-gray-800'
-            : 'bg-rose-500 hover:bg-rose-600 disabled:bg-gray-200 dark:disabled:bg-gray-800'
+            ? 'bg-[#0AA892] hover:bg-[#088A78] disabled:bg-gray-200 dark:disabled:bg-gray-800'
+            : 'bg-[#E54D4C] hover:bg-[#D43D3C] disabled:bg-gray-200 dark:disabled:bg-gray-800'
         } disabled:text-gray-400 dark:disabled:text-gray-500`}
       >
         {transactionStatus === 'processing' && <Loader2 className="w-4 h-4 animate-spin" />}

@@ -193,7 +193,7 @@ function TabButton({
       className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
         active
           ? 'bg-blue-600 text-white shadow-xs'
-          : 'bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-2xs'
+          : 'bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-2xs'
       }`}
     >
       <Icon className="w-4 h-4" />

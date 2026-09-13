@@ -115,13 +115,13 @@ function ShellChrome({ children }: { children: ReactNode }) {
 
   return (
     <SearchFocusContext.Provider value={{ register }}>
-      <div className="min-h-screen bg-[#F0F2F5] dark:bg-[#090E17] text-gray-900 dark:text-gray-100">
+      <div className="min-h-screen bg-[#EDEDED] dark:bg-[#111823] text-gray-900 dark:text-gray-100">
         <MarketStrip onSearchClick={handleSearchClick} />
 
         {/* Desktop navigation rail — the tab bar's counterpart above lg */}
         <nav
           aria-label="Primary"
-          className="hidden lg:block fixed top-[calc(84px+env(safe-area-inset-top))] left-0 right-0 z-40 bg-white/95 dark:bg-[#0B0E11]/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800"
+          className="hidden lg:block fixed top-[calc(84px+env(safe-area-inset-top))] left-0 right-0 z-40 bg-white/95 dark:bg-[#0D131D]/95 backdrop-blur-xl border-b border-gray-200/80 dark:border-gray-800"
         >
           <div className="max-w-7xl mx-auto px-8">
             <div className="flex items-center gap-1 h-11">

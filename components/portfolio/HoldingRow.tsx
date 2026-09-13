@@ -68,7 +68,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
   return (
     <article
       id={`portfolio-holding-${symbol.toLowerCase()}`}
-      className="bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800/80 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:border-blue-400/40 dark:hover:border-blue-500/30 transition-all"
+      className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800/80 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:border-blue-400/40 dark:hover:border-blue-500/30 transition-all"
     >
       {/* Top Header: Symbol, Category, Chart icon, Price & Day Change Pill */}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -119,21 +119,36 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
             </div>
           )}
           <div
-            className={`min-w-[65px] text-center px-1.5 py-0.5 rounded text-white font-mono font-bold text-xs mt-1 tabular-nums ${
+            className={`min-w-[65px] text-center px-2 py-0.5 rounded-lg text-white font-mono font-bold text-xs mt-1 tabular-nums ${
               !traded
-                ? 'bg-gray-400 dark:bg-gray-600'
+                ? 'bg-[#616161]'
                 : dayUp
-                  ? 'bg-teal-600 dark:bg-teal-500'
-                  : 'bg-rose-600 dark:bg-rose-500'
+                  ? 'bg-[#0AA892]'
+                  : 'bg-[#E54D4C]'
             }`}
           >
             {traded ? `${dayUp ? '+' : '−'}${Math.abs(dayChangePercent).toFixed(2)}%` : '0.00%'}
           </div>
+          {traded ? (
+            <span
+              className={`font-mono text-[11px] font-semibold tabular-nums mt-0.5 ${
+                dayPnl > 0
+                  ? 'text-[#0AA892] dark:text-[#2DD4BF]'
+                  : dayPnl < 0
+                    ? 'text-[#E54D4C] dark:text-[#F87171]'
+                    : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              {dayPnl >= 0 ? '+' : '−'}৳{fmt(Math.abs(dayPnl))}
+            </span>
+          ) : (
+            <span className="text-[11px] font-mono font-semibold text-gray-400 dark:text-gray-500 mt-0.5">৳0.00</span>
+          )}
         </div>
       </div>
 
       {/* The broker figure grid: cost basis, valuation, and settlement state */}
-      <dl className="grid grid-cols-3 gap-x-2.5 gap-y-2 text-xs py-2.5 px-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800/80 mb-3">
+      <dl className="grid grid-cols-3 gap-x-2.5 gap-y-2 text-xs py-2.5 px-3 rounded-xl bg-gray-50/90 dark:bg-[#1C293A]/40 border border-gray-100 dark:border-gray-800/80 mb-3">
         <Figure label="Qty" value={String(quantity)} />
         <Figure label="Avg Cost" value={`৳${fmt(avgCost)}`} />
         <Figure label="Cost Basis" value={`৳${fmt(cost)}`} />
@@ -155,7 +170,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
       <div className="flex items-center gap-2">
         <div
           className={`flex-1 flex items-baseline gap-1.5 px-3 py-2 rounded-xl ${
-            pnlUp ? 'bg-emerald-500/10' : 'bg-rose-500/10'
+            pnlUp ? 'bg-[#0AA892]/10 dark:bg-[#0AA892]/15' : 'bg-[#E54D4C]/10 dark:bg-[#E54D4C]/15'
           }`}
         >
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -163,14 +178,14 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
           </span>
           <span
             className={`font-mono font-bold text-sm tabular-nums ${
-              pnlUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+              pnlUp ? 'text-[#0AA892] dark:text-[#2DD4BF]' : 'text-[#E54D4C] dark:text-[#F87171]'
             }`}
           >
             {pnlUp ? '+' : '−'}৳{fmt(Math.abs(pnl))}
           </span>
           <span
             className={`font-mono text-xs font-semibold ${
-              pnlUp ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-rose-600/80 dark:text-rose-400/80'
+              pnlUp ? 'text-[#0AA892]/80 dark:text-[#2DD4BF]/80' : 'text-[#E54D4C]/80 dark:text-[#F87171]/80'
             }`}
           >
             ({pnlUp ? '+' : '−'}{Math.abs(pnlPercent).toFixed(1)}%)
@@ -181,7 +196,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
           type="button"
           onClick={() => onTrade(symbol, 'buy')}
           disabled={!marketOpen || !traded}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0AA892] hover:bg-[#088A78] disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs"
         >
           Buy
         </button>
@@ -190,7 +205,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
           onClick={() => onTrade(symbol, 'sell')}
           disabled={!canSell}
           title={sellBlockedReason}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#E54D4C] hover:bg-[#D43D3C] disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs"
         >
           Sell
         </button>
@@ -214,9 +229,9 @@ function Figure({
 }) {
   const toneClass =
     tone === 'up'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-[#0AA892] dark:text-[#2DD4BF]'
       : tone === 'down'
-        ? 'text-rose-600 dark:text-rose-400'
+        ? 'text-[#E54D4C] dark:text-[#F87171]'
         : 'text-gray-800 dark:text-gray-200';
 
   return (

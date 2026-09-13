@@ -20,7 +20,7 @@ export default function PortfolioSummary({ totals }: { totals: PortfolioTotals }
   const hasPositions = positions > 0;
 
   return (
-    <section className="bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 rounded-2xl shadow-xs overflow-hidden">
+    <section className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-2xl shadow-xs overflow-hidden">
       <div className="grid grid-cols-2 divide-x divide-y divide-gray-100 dark:divide-gray-800/80">
         <Cell label="Current Value" value={`৳${fmt(currentValue)}`} big />
         <Cell label="Total Investment" value={`৳${fmt(investment)}`} big align="right" />
@@ -38,21 +38,21 @@ export default function PortfolioSummary({ totals }: { totals: PortfolioTotals }
         />
       </div>
 
-      <div className="px-4 py-3.5 bg-white dark:bg-[#161B22] border-t border-gray-100 dark:border-gray-800/80">
-        <div className="flex items-center justify-between mb-2 text-xs font-bold">
-          <span className="text-emerald-600 dark:text-emerald-400">{gainers} Gainer{gainers === 1 ? '' : 's'}</span>
-          <span className="text-rose-600 dark:text-rose-400">{losers} Loser{losers === 1 ? '' : 's'}</span>
+      <div className="px-4 py-3 bg-white dark:bg-[#16202D] border-t border-gray-100 dark:border-gray-800/80">
+        <div className="flex items-center justify-between mb-1.5 text-xs font-bold">
+          <span className="text-[#0AA892] dark:text-[#2DD4BF]">{gainers} Gainer{gainers === 1 ? '' : 's'}</span>
+          <span className="text-[#E54D4C] dark:text-[#F87171]">{losers} Loser{losers === 1 ? '' : 's'}</span>
         </div>
         <div
-          className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800"
+          className="flex h-1.5 sm:h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800"
           role="img"
           aria-label={`${gainers} positions up, ${losers} down, ${totals.unchanged} unchanged`}
         >
           {hasPositions && (
             <>
-              <span className="bg-emerald-500" style={{ flexGrow: gainers }} />
+              <span className="bg-[#0AA892]" style={{ flexGrow: gainers }} />
               <span className="bg-gray-300 dark:bg-gray-700" style={{ flexGrow: totals.unchanged }} />
-              <span className="bg-rose-500" style={{ flexGrow: losers }} />
+              <span className="bg-[#E54D4C]" style={{ flexGrow: losers }} />
             </>
           )}
         </div>
@@ -78,13 +78,13 @@ function Cell({
 }) {
   const toneClass =
     tone === 'up'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-[#0AA892] dark:text-[#2DD4BF]'
       : tone === 'down'
-        ? 'text-rose-600 dark:text-rose-400'
+        ? 'text-[#E54D4C] dark:text-[#F87171]'
         : 'text-gray-900 dark:text-gray-100';
 
   return (
-    <div className={`bg-white dark:bg-[#161B22] p-3.5 sm:p-4 ${align === 'right' ? 'text-right' : ''}`}>
+    <div className={`bg-white dark:bg-[#16202D] p-3.5 sm:p-4 ${align === 'right' ? 'text-right' : ''}`}>
       <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
         {label}
       </div>
