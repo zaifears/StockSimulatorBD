@@ -2,8 +2,9 @@
 
 import { useMemo, useState, type ReactNode, type MouseEvent, type TouchEvent } from 'react';
 import Link from 'next/link';
-import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart } from 'lucide-react';
+import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { BD_GEO_BUCKETS, type GeoBucketKey } from '@/lib/utils/geoBucket';
+import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -684,7 +685,16 @@ function BalanceIntegrityCard({ data }: { data: SiteAnalyticsData['balanceIntegr
 // behind, and some accounts never get a doc written, so a raw doc count
 // overstates how many real users exist. Duplicate emails (two UIDs, one
 // address) indicate a signup that fired twice concurrently.
-function AccountIntegrityCard({ data }: { data: SiteAnalyticsData['accountIntegrity'] }) {
+function AccountIntegrityCard({
+  data,
+  onRefresh,
+}: {
+  data: SiteAnalyticsData['accountIntegrity'];
+  onRefresh?: () => void;
+}) {
+  const [syncingAction, setSyncingAction] = useState<'backfill' | 'clean' | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
   if (!data || 'error' in data) {
     return (
       <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800">
@@ -698,6 +708,33 @@ function AccountIntegrityCard({ data }: { data: SiteAnalyticsData['accountIntegr
 
   const isClean = data.orphanedDocCount === 0 && data.missingDocCount === 0 && data.duplicateEmailCount === 0;
 
+  const handleAction = async (action: 'backfill-missing-user-docs' | 'delete-orphaned-user-docs') => {
+    setSyncingAction(action === 'backfill-missing-user-docs' ? 'backfill' : 'clean');
+    setFeedback(null);
+    try {
+      const res = await fetchWithFreshToken('/api/admin/site-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Action failed');
+
+      setFeedback({
+        message:
+          action === 'backfill-missing-user-docs'
+            ? `Successfully created ${json.backfilledCount} missing user doc(s).`
+            : `Successfully deleted ${json.deletedCount} orphaned user doc(s).`,
+        type: 'success',
+      });
+      onRefresh?.();
+    } catch (err: any) {
+      setFeedback({ message: err.message || 'Operation failed', type: 'error' });
+    } finally {
+      setSyncingAction(null);
+    }
+  };
+
   return (
     <div
       className={`rounded-2xl sm:rounded-3xl p-4 sm:p-5 border ${
@@ -706,15 +743,28 @@ function AccountIntegrityCard({ data }: { data: SiteAnalyticsData['accountIntegr
           : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30'
       }`}
     >
-      <div className="flex items-center gap-2 mb-4">
-        <div
-          className={`w-7 h-7 rounded-full flex items-center justify-center ${
-            isClean ? ACCENT_CLASSES.green : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" />
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+              isClean ? ACCENT_CLASSES.green : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'
+            }`}
+          >
+            {isClean ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+          </div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Account Integrity</h3>
         </div>
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Account Integrity</h3>
+
+        {isClean && onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            title="Refresh integrity stats"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -729,37 +779,78 @@ function AccountIntegrityCard({ data }: { data: SiteAnalyticsData['accountIntegr
       </div>
 
       {isClean ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Auth and Firestore are in sync — no orphaned docs, missing docs, or duplicate emails.
-        </p>
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>Auth and Firestore are in sync — no orphaned docs, missing docs, or duplicate emails.</span>
+        </div>
       ) : (
-        <ul className="space-y-1.5 text-sm">
-          {data.orphanedDocCount > 0 && (
-            <li className="text-amber-800 dark:text-amber-300">
-              <strong>{data.orphanedDocCount}</strong> user doc{data.orphanedDocCount === 1 ? '' : 's'} with no Auth
-              account — leftovers from deleted accounts, counted as users by older stats.
-            </li>
+        <div className="space-y-3">
+          <ul className="space-y-2 text-sm">
+            {data.orphanedDocCount > 0 && (
+              <li className="text-amber-800 dark:text-amber-300">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <strong>{data.orphanedDocCount}</strong> user doc{data.orphanedDocCount === 1 ? '' : 's'} with no Auth account — leftovers from deleted accounts.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAction('delete-orphaned-user-docs')}
+                    disabled={syncingAction !== null}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 shrink-0 transition-colors"
+                  >
+                    {syncingAction === 'clean' ? 'Cleaning...' : 'Clean Orphaned Docs'}
+                  </button>
+                </div>
+              </li>
+            )}
+            {data.missingDocCount > 0 && (
+              <li className="text-amber-800 dark:text-amber-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <strong>{data.missingDocCount}</strong> Auth account{data.missingDocCount === 1 ? '' : 's'} with no user doc — invisible to admin lists.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAction('backfill-missing-user-docs')}
+                    disabled={syncingAction !== null}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 shrink-0 transition-colors shadow-xs"
+                  >
+                    {syncingAction === 'backfill' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{syncingAction === 'backfill' ? 'Syncing...' : 'Sync Missing Docs'}</span>
+                  </button>
+                </div>
+                {data.missingDocs && data.missingDocs.length > 0 && (
+                  <ul className="mt-2 space-y-1 pl-2 border-l-2 border-amber-300 dark:border-amber-700 text-[11px] text-gray-700 dark:text-gray-300">
+                    {data.missingDocs.map((m) => (
+                      <li key={m.uid} className="truncate">
+                        <span className="font-semibold">{m.email || 'No email'}</span> ({m.providers.join(', ') || 'unknown'}) • UID: <code className="font-mono text-[10px]">{m.uid.slice(0, 10)}...</code>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )}
+            {data.duplicateEmailCount > 0 && (
+              <li className="text-amber-800 dark:text-amber-300">
+                <strong>{data.duplicateEmailCount}</strong> email
+                {data.duplicateEmailCount === 1 ? '' : 's'} with more than one account:
+                <ul className="mt-1 space-y-1">
+                  {data.duplicateEmails.map((d) => (
+                    <li key={d.email} className="text-[11px] text-gray-600 dark:text-gray-400 break-all">
+                      {d.email} — {d.count} accounts ({d.accounts.map((a) => a.providers.join('/') || 'unknown').join(', ')})
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            )}
+          </ul>
+
+          {feedback && (
+            <p className={`text-xs font-semibold ${feedback.type === 'success' ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+              {feedback.message}
+            </p>
           )}
-          {data.missingDocCount > 0 && (
-            <li className="text-amber-800 dark:text-amber-300">
-              <strong>{data.missingDocCount}</strong> Auth account{data.missingDocCount === 1 ? '' : 's'} with no user
-              doc — invisible to every admin list below.
-            </li>
-          )}
-          {data.duplicateEmailCount > 0 && (
-            <li className="text-amber-800 dark:text-amber-300">
-              <strong>{data.duplicateEmailCount}</strong> email
-              {data.duplicateEmailCount === 1 ? '' : 's'} with more than one account:
-              <ul className="mt-1 space-y-1">
-                {data.duplicateEmails.map((d) => (
-                  <li key={d.email} className="text-[11px] text-gray-600 dark:text-gray-400 break-all">
-                    {d.email} — {d.count} accounts ({d.accounts.map((a) => a.providers.join('/') || 'unknown').join(', ')})
-                  </li>
-                ))}
-              </ul>
-            </li>
-          )}
-        </ul>
+        </div>
       )}
     </div>
   );
@@ -1028,10 +1119,12 @@ export default function SiteAnalyticsSection({
   data,
   loading,
   error,
+  onRefresh,
 }: {
   data: SiteAnalyticsData | null;
   loading: boolean;
   error?: string | null;
+  onRefresh?: () => void;
 }) {
   if (loading) {
     return (
@@ -1251,7 +1344,7 @@ export default function SiteAnalyticsSection({
 
       {/* Integrity checks — balances, then Auth/Firestore account drift */}
       <BalanceIntegrityCard data={data.balanceIntegrity} />
-      <AccountIntegrityCard data={data.accountIntegrity} />
+      <AccountIntegrityCard data={data.accountIntegrity} onRefresh={onRefresh} />
 
       {/* Revenue & recharges */}
       <div>

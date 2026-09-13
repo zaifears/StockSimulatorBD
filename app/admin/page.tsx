@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -243,31 +243,31 @@ export default function AdminDashboard() {
     fetchStats();
   }, [user, authLoading]);
 
-  useEffect(() => {
-    const fetchSiteAnalytics = async () => {
-      if (!user || authLoading) return;
+  const fetchSiteAnalytics = useCallback(async () => {
+    if (!user || authLoading) return;
 
-      setSiteAnalyticsLoading(true);
-      setSiteAnalyticsError(null);
-      try {
-        const response = await fetchWithToken('/api/admin/site-analytics', { method: 'GET' });
-        const json = await response.json();
+    setSiteAnalyticsLoading(true);
+    setSiteAnalyticsError(null);
+    try {
+      const response = await fetchWithToken('/api/admin/site-analytics', { method: 'GET' });
+      const json = await response.json();
 
-        if (!response.ok || !json.success) {
-          throw new Error(json.error || `Request failed (${response.status})`);
-        }
-
-        setSiteAnalytics(json);
-      } catch (error: any) {
-        console.error('Error fetching site analytics:', error);
-        setSiteAnalyticsError(error.message || 'Failed to load site analytics');
-      } finally {
-        setSiteAnalyticsLoading(false);
+      if (!response.ok || !json.success) {
+        throw new Error(json.error || `Request failed (${response.status})`);
       }
-    };
 
-    fetchSiteAnalytics();
+      setSiteAnalytics(json);
+    } catch (error: any) {
+      console.error('Error fetching site analytics:', error);
+      setSiteAnalyticsError(error.message || 'Failed to load site analytics');
+    } finally {
+      setSiteAnalyticsLoading(false);
+    }
   }, [user, authLoading]);
+
+  useEffect(() => {
+    fetchSiteAnalytics();
+  }, [fetchSiteAnalytics]);
 
   if (loading) {
     return (
@@ -593,7 +593,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* Site Analytics — visits, engagement, registrations, coin leaderboard */}
-        <SiteAnalyticsSection data={siteAnalytics} loading={siteAnalyticsLoading} error={siteAnalyticsError} />
+        <SiteAnalyticsSection
+          data={siteAnalytics}
+          loading={siteAnalyticsLoading}
+          error={siteAnalyticsError}
+          onRefresh={fetchSiteAnalytics}
+        />
 
         {/* Requests Breakdown */}
         <div>

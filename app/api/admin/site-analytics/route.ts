@@ -687,3 +687,112 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    const adminCheck = await verifyAdminAccess(req);
+    if (!adminCheck.isAdmin) {
+      return NextResponse.json({ success: false, error: adminCheck.error }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const action = body.action;
+
+    if (action === 'backfill-missing-user-docs') {
+      const db = getFirestore();
+      const auth = getAuth();
+
+      // List all auth accounts
+      const authUsers: Array<{
+        uid: string;
+        email: string | null;
+        displayName: string | null;
+        photoURL: string | null;
+        providers: string[];
+        createdAt: string;
+      }> = [];
+      let pageToken: string | undefined;
+      do {
+        const res = await auth.listUsers(1000, pageToken);
+        for (const u of res.users) {
+          authUsers.push({
+            uid: u.uid,
+            email: u.email ?? null,
+            displayName: u.displayName ?? null,
+            photoURL: u.photoURL ?? null,
+            providers: u.providerData.map((p) => p.providerId),
+            createdAt: u.metadata.creationTime,
+          });
+        }
+        pageToken = res.pageToken;
+      } while (pageToken);
+
+      // Check existing user docs
+      const usersSnap = await db.collection('users').select().get();
+      const existingDocIds = new Set(usersSnap.docs.map((d) => d.id));
+
+      const missing = authUsers.filter((u) => !existingDocIds.has(u.uid));
+      const createdUids: string[] = [];
+
+      for (const u of missing) {
+        const userDocRef = db.collection('users').doc(u.uid);
+        await userDocRef.set(
+          {
+            name: u.displayName || (u.email ? u.email.split('@')[0] : 'User'),
+            email: u.email,
+            displayName: u.displayName || null,
+            photoURL: u.photoURL || null,
+            age: null,
+            status: 'Other',
+            phone: '',
+            provider: u.providers[0] || 'unknown',
+            accountTier: 'Bro',
+            createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        createdUids.push(u.uid);
+      }
+
+      return NextResponse.json({
+        success: true,
+        backfilledCount: createdUids.length,
+        uids: createdUids,
+      });
+    }
+
+    if (action === 'delete-orphaned-user-docs') {
+      const db = getFirestore();
+      const auth = getAuth();
+
+      const authUids = new Set<string>();
+      let pageToken: string | undefined;
+      do {
+        const res = await auth.listUsers(1000, pageToken);
+        for (const u of res.users) {
+          authUids.add(u.uid);
+        }
+        pageToken = res.pageToken;
+      } while (pageToken);
+
+      const usersSnap = await db.collection('users').select().get();
+      const orphaned = usersSnap.docs.filter((d) => !authUids.has(d.id));
+
+      const batch = db.batch();
+      for (const doc of orphaned.slice(0, 500)) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+
+      return NextResponse.json({
+        success: true,
+        deletedCount: orphaned.length,
+      });
+    }
+
+    return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
+  } catch (error: any) {
+    console.error('❌ Site analytics POST error:', error);
+    return NextResponse.json({ success: false, error: error.message || 'Action failed' }, { status: 500 });
+  }
+}
