@@ -32,7 +32,17 @@ const VALID_ACTIONS = new Set(['start', 'heartbeat', 'end']);
 const VALID_DEVICE_TYPES = new Set(['mobile', 'tablet', 'desktop', 'unknown']);
 const MAX_DELTA_SECONDS = 60; // clamp per-beacon active-time delta (heartbeat interval is ~25-30s)
 const MAX_PAGE_COUNT = 2000;
-const SESSION_TTL_DAYS = 90; // for an optional Firestore TTL policy on `expiresAt`, if configured later
+
+// ── Tiered Retention Policy (Dividing the Data) ──────────────────────────
+// Tier 1: Aggregated metrics (analytics_daily, users) are permanent (kept forever).
+// Tier 2: Logged-in user sessions (uid present) are kept for 90 days for audit trails.
+// Tier 3: Anonymous guest sessions:
+//         - initial bounce / single-page: 7 days
+//         - multi-page / active guest: 14 days
+const TTL_USER_DAYS = 90;
+const TTL_GUEST_ACTIVE_DAYS = 14;
+const TTL_GUEST_BOUNCE_DAYS = 7;
+
 const BOUNCE_MAX_PAGE_COUNT = 1;
 const BOUNCE_MAX_ACTIVE_SECONDS = 10;
 
@@ -193,12 +203,15 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86400000);
+        const retentionTier: 'user' | 'ephemeral' = uid ? 'user' : 'ephemeral';
+        const ttlDays = uid ? TTL_USER_DAYS : TTL_GUEST_BOUNCE_DAYS;
+        const expiresAt = new Date(Date.now() + ttlDays * 86400000);
 
         tx.set(sessionRef, {
           sessionId,
           uid: uid || null,
           isAnonymous: !uid,
+          retentionTier,
           guestId: guestId || null,
           startedAt: FieldValue.serverTimestamp(),
           lastPingAt: FieldValue.serverTimestamp(),
@@ -283,6 +296,26 @@ export async function POST(req: NextRequest) {
       activeSeconds: FieldValue.increment(delta),
     };
     if (lastPath) sessionUpdate.lastPath = lastPath;
+
+    const incomingUid = await tryVerifyUid(body?.idToken);
+
+    // Promotion logic: if an ephemeral bounce becomes an active guest or a user logs in,
+    // upgrade the retention tier and extend the TTL appropriately.
+    if (!session.uid) {
+      if (incomingUid) {
+        sessionUpdate.uid = incomingUid;
+        sessionUpdate.isAnonymous = false;
+        sessionUpdate.retentionTier = 'user';
+        sessionUpdate.expiresAt = new Date(Date.now() + TTL_USER_DAYS * 86400000);
+      } else {
+        const currentPages = incomingPageCount || session.pageCount || 1;
+        const currentSeconds = (session.activeSeconds || 0) + delta;
+        if ((currentPages > 1 || currentSeconds >= 15) && session.retentionTier !== 'guest') {
+          sessionUpdate.retentionTier = 'guest';
+          sessionUpdate.expiresAt = new Date(Date.now() + TTL_GUEST_ACTIVE_DAYS * 86400000);
+        }
+      }
+    }
 
     // analytics_pages used to increment ONLY on the session's entry path, so
     // it measured landing pages while the dashboard presented slices of it as

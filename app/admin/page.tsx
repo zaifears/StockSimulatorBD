@@ -12,7 +12,7 @@ import SiteAnalyticsSection, { SiteAnalyticsData } from '@/components/admin/Site
 import {
   Users, Receipt, Banknote, Clock, CheckCircle2, XCircle, Zap,
   Home, Database, Link2, ShieldAlert, ArrowRight, Gift, Vote, Crown,
-  Check, X, Loader2, Copy, Search,
+  Check, X, Loader2, Copy, Search, LineChart, RefreshCw,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -31,8 +31,10 @@ export default function AdminDashboard() {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [siteAnalytics, setSiteAnalytics] = useState<SiteAnalyticsData | null>(null);
-  const [siteAnalyticsLoading, setSiteAnalyticsLoading] = useState(true);
+  const [siteAnalyticsLoading, setSiteAnalyticsLoading] = useState(false);
   const [siteAnalyticsError, setSiteAnalyticsError] = useState<string | null>(null);
+  const [analyticsActive, setAnalyticsActive] = useState(false);
+  const [lastAnalyticsFetchedAt, setLastAnalyticsFetchedAt] = useState<string | null>(null);
 
   // Boss direct action states
   const [pendingBossRequests, setPendingBossRequests] = useState<any[]>([]);
@@ -243,31 +245,61 @@ export default function AdminDashboard() {
     fetchStats();
   }, [user, authLoading]);
 
-  const fetchSiteAnalytics = useCallback(async () => {
-    if (!user || authLoading) return;
-
-    setSiteAnalyticsLoading(true);
-    setSiteAnalyticsError(null);
+  useEffect(() => {
     try {
-      const response = await fetchWithToken('/api/admin/site-analytics', { method: 'GET' });
-      const json = await response.json();
-
-      if (!response.ok || !json.success) {
-        throw new Error(json.error || `Request failed (${response.status})`);
+      const saved = localStorage.getItem('admin_analytics_active');
+      if (saved === 'true') {
+        setAnalyticsActive(true);
       }
+    } catch {}
+  }, []);
 
-      setSiteAnalytics(json);
-    } catch (error: any) {
-      console.error('Error fetching site analytics:', error);
-      setSiteAnalyticsError(error.message || 'Failed to load site analytics');
-    } finally {
-      setSiteAnalyticsLoading(false);
-    }
-  }, [user, authLoading]);
+  const fetchSiteAnalytics = useCallback(
+    async (forceFresh: boolean = false) => {
+      if (!user || authLoading) return;
+
+      setSiteAnalyticsLoading(true);
+      setSiteAnalyticsError(null);
+      try {
+        const url = forceFresh ? '/api/admin/site-analytics?fresh=true' : '/api/admin/site-analytics';
+        const response = await fetchWithToken(url, { method: 'GET' });
+        const json = await response.json();
+
+        if (!response.ok || !json.success) {
+          throw new Error(json.error || `Request failed (${response.status})`);
+        }
+
+        setSiteAnalytics(json);
+        setLastAnalyticsFetchedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      } catch (error: any) {
+        console.error('Error fetching site analytics:', error);
+        setSiteAnalyticsError(error.message || 'Failed to load site analytics');
+      } finally {
+        setSiteAnalyticsLoading(false);
+      }
+    },
+    [user, authLoading]
+  );
 
   useEffect(() => {
-    fetchSiteAnalytics();
-  }, [fetchSiteAnalytics]);
+    if (analyticsActive) {
+      fetchSiteAnalytics();
+    }
+  }, [analyticsActive, fetchSiteAnalytics]);
+
+  const handleEnableAnalytics = () => {
+    setAnalyticsActive(true);
+    try {
+      localStorage.setItem('admin_analytics_active', 'true');
+    } catch {}
+  };
+
+  const handleDisableAnalytics = () => {
+    setAnalyticsActive(false);
+    try {
+      localStorage.setItem('admin_analytics_active', 'false');
+    } catch {}
+  };
 
   if (loading) {
     return (
@@ -592,13 +624,72 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        {/* Site Analytics — visits, engagement, registrations, coin leaderboard */}
-        <SiteAnalyticsSection
-          data={siteAnalytics}
-          loading={siteAnalyticsLoading}
-          error={siteAnalyticsError}
-          onRefresh={fetchSiteAnalytics}
-        />
+        {/* Site Analytics — On-Demand Mode to conserve Firestore reads */}
+        {!analyticsActive ? (
+          <div className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                  <LineChart className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Site &amp; Trading Analytics</h2>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-500/20">
+                      On-Demand
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xl leading-relaxed">
+                    Analytics is paused on visit so reviewing bKash recharges and Boss subscriptions consumes zero Firestore reads. Turn on anytime to view live visitor rollups, traffic sources, and trading metrics.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleEnableAnalytics}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all shadow-sm shrink-0"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                Turn On Analytics
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Active Control Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Analytics Live {lastAnalyticsFetchedAt ? `• Updated ${lastAnalyticsFetchedAt}` : ''}</span>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => fetchSiteAnalytics(true)}
+                  disabled={siteAnalyticsLoading}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${siteAnalyticsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisableAnalytics}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
+                >
+                  Pause / Turn Off
+                </button>
+              </div>
+            </div>
+
+            <SiteAnalyticsSection
+              data={siteAnalytics}
+              loading={siteAnalyticsLoading}
+              error={siteAnalyticsError}
+              onRefresh={() => fetchSiteAnalytics(true)}
+            />
+          </div>
+        )}
 
         {/* Requests Breakdown */}
         <div>

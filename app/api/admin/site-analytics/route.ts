@@ -59,6 +59,16 @@ const DAY_MS = 86400000;
 const AUTH_LIST_MAX_PAGES = 20;
 const ACCOUNT_INTEGRITY_LIST_LIMIT = 25;
 
+// ── Server-side in-memory cache (5-minute TTL) ───────────────────────────
+// Protects the admin's daily Firestore read quota when refreshing the dashboard.
+// Bypassed when the client explicitly passes ?fresh=true (e.g. manual refresh button).
+interface CachedAnalytics {
+  timestamp: number;
+  data: any;
+}
+let memoryCache: CachedAnalytics | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 const SOURCE_BUCKETS = ['direct', 'internal', 'search_google', 'search_other', 'social', 'other'] as const;
 
 function toMillis(value: any): number {
@@ -87,6 +97,23 @@ export async function GET(req: NextRequest) {
     const adminCheck = await verifyAdminAccess(req);
     if (!adminCheck.isAdmin) {
       return NextResponse.json({ success: false, error: adminCheck.error }, { status: 401 });
+    }
+
+    const fresh = req.nextUrl.searchParams.get('fresh') === 'true';
+    if (!fresh && memoryCache && Date.now() - memoryCache.timestamp < CACHE_TTL_MS) {
+      return NextResponse.json(
+        {
+          success: true,
+          cached: true,
+          cachedAt: new Date(memoryCache.timestamp).toISOString(),
+          ...memoryCache.data,
+        },
+        {
+          headers: {
+            'Cache-Control': 'private, max-age=60',
+          },
+        }
+      );
     }
 
     const db = getFirestore();
@@ -483,6 +510,32 @@ export async function GET(req: NextRequest) {
       accountIntegrity = { error: 'Account integrity check unavailable right now.' };
     }
 
+    // ── Session retention & storage hygiene (Tiered retention overview) ──
+    const cutoffAnon14Days = new Date(nowMs - 14 * DAY_MS);
+    let sessionRetention: any = null;
+    try {
+      const [totalSessionsSnap, anonSessionsSnap, oldSessionsSnap] = await Promise.all([
+        db.collection('analytics_sessions').count().get(),
+        db.collection('analytics_sessions').where('isAnonymous', '==', true).count().get(),
+        db.collection('analytics_sessions').where('startedAt', '<=', cutoffAnon14Days).count().get(),
+      ]);
+
+      const totalSessions = totalSessionsSnap.data().count;
+      const anonSessions = anonSessionsSnap.data().count;
+      const userSessions = Math.max(0, totalSessions - anonSessions);
+      const prunableCandidates = oldSessionsSnap.data().count;
+
+      sessionRetention = {
+        totalCount: totalSessions,
+        anonymousCount: anonSessions,
+        userCount: userSessions,
+        prunableCandidatesCount: prunableCandidates,
+      };
+    } catch (e: any) {
+      console.warn('Session retention stats unavailable:', e);
+      sessionRetention = { totalCount: 0, anonymousCount: 0, userCount: 0, prunableCandidatesCount: 0 };
+    }
+
     // ── Revenue / recharge analytics — recharge_requests is written by the
     // client (app/coins/page.tsx) and approved/rejected by
     // app/api/admin/recharge/route.ts, which recomputes creditedCoins itself
@@ -622,10 +675,8 @@ export async function GET(req: NextRequest) {
       { stage: 'Rechargers', value: rechargerUids30.size },
     ];
 
-    return NextResponse.json(
-      {
-        success: true,
-        activeRightNow,
+    const payload = {
+      activeRightNow,
         visitors: { today: visitorsToday, last7Days: visitorsLast7, last30Days: visitorsLast30 },
         disclaimerAgreements: {
           today: disclaimerAgreedToday,
@@ -648,6 +699,7 @@ export async function GET(req: NextRequest) {
           sourceWarning: authListError,
         },
         accountIntegrity,
+        sessionRetention,
         deviceBreakdown,
         geoBreakdown,
         dailyTrend,
@@ -672,10 +724,15 @@ export async function GET(req: NextRequest) {
         methodologyNote:
           'Visit tracking started when this dashboard shipped — there is no historical data from before that. "Least active" is ranked among the oldest-registered accounts. Retention approximates "returned N+ days after signup" from last-visit data, not a full daily visit history.' +
           (balancesTruncated ? ' Coin circulation was computed from a capped sample of balances and may undercount.' : ''),
-      },
+      };
+
+    memoryCache = { timestamp: Date.now(), data: payload };
+
+    return NextResponse.json(
+      { success: true, cached: false, ...payload },
       {
         headers: {
-          'Cache-Control': 'private, max-age=30',
+          'Cache-Control': 'private, max-age=60',
         },
       }
     );
@@ -754,6 +811,8 @@ export async function POST(req: NextRequest) {
         createdUids.push(u.uid);
       }
 
+      memoryCache = null;
+
       return NextResponse.json({
         success: true,
         backfilledCount: createdUids.length,
@@ -784,9 +843,70 @@ export async function POST(req: NextRequest) {
       }
       await batch.commit();
 
+      memoryCache = null;
+
       return NextResponse.json({
         success: true,
         deletedCount: orphaned.length,
+      });
+    }
+
+    if (action === 'prune-expired-sessions') {
+      const db = getFirestore();
+      const now = Date.now();
+      const cutoffAnon14Days = new Date(now - 14 * 86400000);
+      const cutoffUser90Days = new Date(now - 90 * 86400000);
+
+      // Fetch candidates using single-field index on startedAt (no composite index needed)
+      // Bounded to 500 per batch to strictly protect Spark delete limits
+      const snap = await db
+        .collection('analytics_sessions')
+        .where('startedAt', '<=', cutoffAnon14Days)
+        .limit(500)
+        .get();
+
+      const toDelete: FirebaseFirestore.DocumentReference[] = [];
+
+      for (const doc of snap.docs) {
+        const data = doc.data();
+        const isAnon = data.isAnonymous || !data.uid;
+        const startedMs = data.startedAt?.toMillis ? data.startedAt.toMillis() : Date.parse(data.startedAt) || 0;
+
+        // Condition 1: Anonymous session older than 14 days
+        if (isAnon && startedMs <= cutoffAnon14Days.getTime()) {
+          toDelete.push(doc.ref);
+          continue;
+        }
+
+        // Condition 2: Registered user session older than 90 days
+        if (!isAnon && startedMs <= cutoffUser90Days.getTime()) {
+          toDelete.push(doc.ref);
+          continue;
+        }
+
+        // Condition 3: Explicit expiresAt in the past
+        if (data.expiresAt) {
+          const expiresMs = data.expiresAt.toMillis ? data.expiresAt.toMillis() : Date.parse(data.expiresAt) || 0;
+          if (expiresMs > 0 && expiresMs <= now) {
+            toDelete.push(doc.ref);
+          }
+        }
+      }
+
+      if (toDelete.length > 0) {
+        const batch = db.batch();
+        for (const ref of toDelete) {
+          batch.delete(ref);
+        }
+        await batch.commit();
+      }
+
+      memoryCache = null;
+
+      return NextResponse.json({
+        success: true,
+        prunedCount: toDelete.length,
+        hasMore: snap.size === 500,
       });
     }
 

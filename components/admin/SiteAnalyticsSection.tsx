@@ -118,6 +118,12 @@ export interface SiteAnalyticsData {
       }
     | { error: string }
     | null;
+  sessionRetention?: {
+    totalCount: number;
+    anonymousCount: number;
+    userCount: number;
+    prunableCandidatesCount: number;
+  } | null;
   revenue: RevenueData;
   growthFunnel: { stage: string; value: number }[];
   mostActiveUsers: UserRow[];
@@ -856,6 +862,110 @@ function AccountIntegrityCard({
   );
 }
 
+function SessionRetentionCard({
+  data,
+  onRefresh,
+}: {
+  data: SiteAnalyticsData['sessionRetention'];
+  onRefresh?: () => void;
+}) {
+  const [isPruning, setIsPruning] = useState(false);
+  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  if (!data) return null;
+
+  const handlePrune = async () => {
+    setIsPruning(true);
+    setFeedback(null);
+    try {
+      const res = await fetchWithFreshToken('/api/admin/site-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'prune-expired-sessions' }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Pruning failed');
+
+      setFeedback({
+        message: `Successfully pruned ${json.prunedCount} stale anonymous session(s).`,
+        type: 'success',
+      });
+      onRefresh?.();
+    } catch (err: any) {
+      setFeedback({ message: err.message || 'Pruning failed', type: 'error' });
+    } finally {
+      setIsPruning(false);
+    }
+  };
+
+  const hasPrunable = data.prunableCandidatesCount > 0;
+
+  return (
+    <div
+      className={`rounded-2xl sm:rounded-3xl p-4 sm:p-5 border ${
+        hasPrunable
+          ? 'bg-amber-50/60 dark:bg-amber-500/5 border-amber-200/80 dark:border-amber-500/20'
+          : 'bg-white dark:bg-[#1A1F26] border-gray-100 dark:border-gray-800'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+              hasPrunable ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400' : ACCENT_CLASSES.green
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Session Storage &amp; Retention</h3>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">Tiered lifecycle: 7d anonymous bounces vs 90d registered users</p>
+          </div>
+        </div>
+
+        {hasPrunable && (
+          <button
+            type="button"
+            onClick={handlePrune}
+            disabled={isPruning}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 transition-colors shadow-xs shrink-0"
+          >
+            {isPruning && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>{isPruning ? 'Pruning...' : `Prune ${formatCompact(data.prunableCandidatesCount)} Stale`}</span>
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Total Sessions</p>
+          <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{formatCompact(data.totalCount)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">User Sessions (90d)</p>
+          <p className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400">{formatCompact(data.userCount)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">Guest Sessions (14d)</p>
+          <p className="text-base sm:text-lg font-bold text-gray-700 dark:text-gray-300">{formatCompact(data.anonymousCount)}</p>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+        {hasPrunable
+          ? `${formatCompact(data.prunableCandidatesCount)} anonymous guest sessions older than 14 days can be pruned safely. Their metrics are already permanently archived in daily rollups.`
+          : 'Session storage is lean and optimized. Daily traffic aggregates are archived permanently in daily rollups.'}
+      </p>
+
+      {feedback && (
+        <p className={`mt-2 text-xs font-semibold ${feedback.type === 'success' ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+          {feedback.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function NewVsReturningBar({ data }: { data: SiteAnalyticsData['newVsReturning'] }) {
   return (
     <SegmentBar
@@ -1342,9 +1452,10 @@ export default function SiteAnalyticsSection({
         </div>
       </div>
 
-      {/* Integrity checks — balances, then Auth/Firestore account drift */}
+      {/* Integrity checks — balances, Auth/Firestore drift, and session retention */}
       <BalanceIntegrityCard data={data.balanceIntegrity} />
       <AccountIntegrityCard data={data.accountIntegrity} onRefresh={onRefresh} />
+      <SessionRetentionCard data={data.sessionRetention} onRefresh={onRefresh} />
 
       {/* Revenue & recharges */}
       <div>
