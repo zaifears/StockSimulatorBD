@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut, updateProfile as updateAuthProfile } from 'firebase/auth';
 import { auth, getUserProfile, updateUserProfile, changePassword, UserProfile } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
@@ -85,6 +85,29 @@ export const useProfile = () => {
     await changePassword(currentPassword, newPassword);
   }, []);
 
+  const handleUpdateAvatar = useCallback(async (photoURL: string | null) => {
+    if (!user) return;
+    // 1. Update Firestore user document
+    await updateUserProfile(user.uid, { photoURL: photoURL || null });
+    
+    // 2. Update Firebase Auth user profile
+    try {
+      if (auth.currentUser) {
+        await updateAuthProfile(auth.currentUser, { photoURL: photoURL || '' });
+      }
+    } catch (authErr) {
+      console.warn('⚠️ Could not sync photoURL to Firebase Auth user:', authErr);
+    }
+
+    // 3. Update local states
+    setProfile(prev => prev ? { ...prev, photoURL: photoURL || null } : null);
+    setFormData(prev => ({ ...prev, photoURL: photoURL || null }));
+  }, [user]);
+
+  const handleRemoveAvatar = useCallback(async () => {
+    await handleUpdateAvatar(null);
+  }, [handleUpdateAvatar]);
+
   return {
     user,
     profile,
@@ -97,6 +120,8 @@ export const useProfile = () => {
     handleEdit,
     handleCancel,
     handleChangePassword,
-    hasPassword  // ✅ NEW: Indicates if user can change password
+    hasPassword,  // ✅ NEW: Indicates if user can change password
+    handleUpdateAvatar,
+    handleRemoveAvatar,
   };
 };

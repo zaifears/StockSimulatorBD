@@ -17,6 +17,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.ctfassets.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'i.ibb.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ibb.co.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ibb.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
     ],
   },
   

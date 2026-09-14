@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 export default function AuthStatus() {
     const { user, loading: authLoading } = useAuth();
     const [userName, setUserName] = useState<string | null>(null);
+    const [userPhoto, setUserPhoto] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
@@ -17,11 +18,14 @@ export default function AuthStatus() {
                 try {
                     const profile = await getUserProfile(user.uid);
                     setUserName(profile?.name || user.email?.split('@')[0] || 'User');
+                    setUserPhoto(profile?.photoURL || user.photoURL || null);
                 } catch {
                     setUserName(user.email?.split('@')[0] || 'User');
+                    setUserPhoto(user.photoURL || null);
                 }
             } else {
                 setUserName(null);
+                setUserPhoto(null);
             }
             setIsLoading(false);
         };
@@ -59,16 +63,29 @@ export default function AuthStatus() {
         <div className="flex items-center">
             <button
                 onClick={handleAuthAction}
-                className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 rounded-md hover:shadow-lg transition-all whitespace-nowrap"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 rounded-md hover:shadow-lg transition-all whitespace-nowrap flex items-center gap-2"
             >
                 {user && userName ? (
-                    <div className="flex items-baseline gap-1 sm:gap-1.5">
-                        <span>Hi,</span>
-                        {/* ✅ Show first name only on mobile, full name on desktop */}
-                        <span className="font-bold">
-                            <span className="sm:hidden">{getFirstName(userName)}</span>
-                            <span className="hidden sm:inline">{userName}</span>
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full overflow-hidden bg-white/20 shrink-0 flex items-center justify-center border border-white/30">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={userPhoto || '/favicon.svg'}
+                                alt="User Avatar"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).src = '/favicon.svg';
+                                }}
+                            />
+                        </div>
+                        <div className="flex items-baseline gap-1 sm:gap-1.5">
+                            <span>Hi,</span>
+                            {/* ✅ Show first name only on mobile, full name on desktop */}
+                            <span className="font-bold">
+                                <span className="sm:hidden">{getFirstName(userName)}</span>
+                                <span className="hidden sm:inline">{userName}</span>
+                            </span>
+                        </div>
                     </div>
                 ) : (
                     <span>Join</span>

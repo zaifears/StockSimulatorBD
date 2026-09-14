@@ -60,6 +60,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    {
+      url: withBaseUrl('/boss'),
+      lastModified: MARKETING_UPDATED,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: withBaseUrl('/policy'),
+      lastModified: MARKETING_UPDATED,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
   ];
 
   const stockRoutes: MetadataRoute.Sitemap = stocks.map((stock) => ({

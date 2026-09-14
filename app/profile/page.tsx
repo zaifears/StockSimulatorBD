@@ -15,10 +15,11 @@ import ProfileActions from '../../components/profile/ProfileActions';
 import ChangePasswordForm from '../../components/profile/ChangePasswordForm';
 import AppShell from '@/components/app/AppShell';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
-import { Wallet, ChevronRight, Crown, Shield } from 'lucide-react';
+import { Wallet, ChevronRight, Crown, Shield, Camera } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import BossBadge from '@/components/ui/BossBadge';
+import AvatarUploadModal from '@/components/profile/AvatarUploadModal';
 
 export default function ProfilePage() {
   return (
@@ -33,12 +34,14 @@ function ProfileScreen() {
     user, profile, loading, isEditing, formData,
     handleLogout, handleSave, handleInputChange, handleEdit, handleCancel,
     handleChangePassword, hasPassword,
+    handleUpdateAvatar,
   } = useProfile();
   const { simulatorState } = useSharedSimulator();
   const { isBoss } = useAuth();
 
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
 
   if (loading) return <LoadingSpinner />;
   if (!user) return null;
@@ -109,17 +112,68 @@ function ProfileScreen() {
         </Link>
 
         {/* Avatar */}
-        <div className="p-6 text-center border-b border-gray-100 dark:border-gray-800">
-          <div className="relative inline-block">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full p-1.5 border border-blue-100 dark:border-blue-800/50">
-              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
+        <div className="p-6 text-center border-b border-gray-100 dark:border-gray-800 flex flex-col items-center">
+          <div className="relative group inline-block">
+            <button
+              type="button"
+              onClick={() => setShowAvatarModal(true)}
+              className="relative block rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-[#1A1F26] transition-transform active:scale-95"
+              title="Click to change profile picture"
+            >
+              <div className={`w-24 h-24 rounded-full p-1 border shadow-md transition-all ${
+                isBoss
+                  ? 'bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-600 border-amber-400/50'
+                  : 'bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-200 dark:border-blue-800/50'
+              }`}>
+                <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center relative">
+                  {profile?.photoURL || user.photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile?.photoURL || user.photoURL || '/favicon.svg'}
+                      alt={profile?.name || user.email || 'Avatar'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = '/favicon.svg';
+                      }}
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="/favicon.svg"
+                      alt="StockSimulatorBD Logo"
+                      className="w-14 h-14 object-contain p-1"
+                    />
+                  )}
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                    <Camera className="w-5 h-5 mb-0.5" />
+                    <span className="text-[10px] font-bold">Edit</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 rounded-full border-[3px] border-white dark:border-[#1A1F26]" />
+
+              {/* Edit Camera Badge Button */}
+              <div className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 hover:bg-blue-700 text-white rounded-full border-2 border-white dark:border-[#1A1F26] flex items-center justify-center shadow-md transition-transform group-hover:scale-110">
+                <Camera className="w-3.5 h-3.5" />
+              </div>
+
+              {/* Boss Crown tag if Boss user */}
+              {isBoss && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-amber-400 to-yellow-500 text-gray-950 rounded-full border-2 border-white dark:border-[#1A1F26] flex items-center justify-center shadow-md">
+                  <Crown className="w-3 h-3 fill-current" />
+                </div>
+              )}
+            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAvatarModal(true)}
+            className="mt-2.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
+          >
+            Change Photo
+          </button>
         </div>
 
         {/* Details / edit form */}
@@ -159,6 +213,14 @@ function ProfileScreen() {
           isLoading={isChangingPassword}
         />
       )}
+
+      {/* Avatar Upload Modal */}
+      <AvatarUploadModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        currentPhotoURL={profile?.photoURL || user.photoURL}
+        onSave={handleUpdateAvatar}
+      />
     </div>
   );
 }

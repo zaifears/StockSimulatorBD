@@ -29,6 +29,7 @@ export interface UserProfile {
     status?: 'School' | 'College' | 'University' | 'Job' | 'Other';
     email?: string;
     phone?: string;
+    photoURL?: string | null;
     coins?: number;
     accountTier?: 'Bro' | 'Boss';
     bossUntil?: number;
