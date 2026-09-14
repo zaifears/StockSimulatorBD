@@ -95,8 +95,8 @@ function PortfolioScreen() {
   const { isBoss } = useAuth();
   const { trades, loading: tradesLoading, error: tradesError } = useTradeHistory();
   const insights = useMemo(
-    () => (isBoss ? getPortfolioInsights(totals, simulatorState.realizedGainLoss || 0, trades) : null),
-    [isBoss, totals, simulatorState.realizedGainLoss, trades]
+    () => (isBoss ? getPortfolioInsights(totals, simulatorState.realizedGainLoss || 0, trades, simulatorState.balance) : null),
+    [isBoss, totals, simulatorState.realizedGainLoss, trades, simulatorState.balance]
   );
 
   return (

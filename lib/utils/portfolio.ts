@@ -202,28 +202,86 @@ export interface PortfolioInsights {
   lifetimeCommission: number;
   bestMoverToday: { symbol: string; dayPnl: number } | null;
   worstMoverToday: { symbol: string; dayPnl: number } | null;
+
+  // ===== INSTITUTIONAL BROKER-GRADE ANALYTICS =====
+  /** Cash vs equity allocation (Dry Powder) */
+  allocation: {
+    cash: number;
+    equity: number;
+    totalNetWorth: number;
+    cashPercent: number;
+    equityPercent: number;
+  };
+  /** DSE governance & Z-Category junk stock exposure radar */
+  categoryRisk: {
+    zExposurePercent: number;
+    zExposureValue: number;
+    aExposurePercent: number;
+    bExposurePercent: number;
+    nExposurePercent: number;
+    riskLevel: 'Prime' | 'Moderate' | 'High';
+  };
+  /** Trading discipline, win rate and fee drag */
+  tradingDiscipline: {
+    totalTrades: number;
+    buyCount: number;
+    sellCount: number;
+    profitableSells: number;
+    lossSells: number;
+    winRate: number | null; // null if no closed positions yet
+    feeDragPercent: number; // percentage of gross profits eaten by 0.4% brokerage
+  };
+  /** T+1 overnight clearing vs instant saleable capital */
+  liquidityRadar: {
+    saleableValue: number;
+    lockedValue: number;
+    saleablePercent: number;
+    lockedPercent: number;
+  };
+  /** Concentration radar & Top 3 holdings exposure */
+  concentration: {
+    top3Holdings: { symbol: string; percent: number; value: number }[];
+    top3TotalPercent: number;
+    riskAlert: string | null;
+  };
 }
 
 /**
- * Second-order figures for the Portfolio screen, computed from data already
- * on hand: `getPortfolioTotals`' holdings, the account's persisted
- * `realizedGainLoss` (app/api/simulator/trade/route.ts is the only writer),
- * and trade history for lifetime commission. None of this requires new
- * backend work — it was sitting unused in fields the UI already fetches.
+ * Institutional second-order figures for the Portfolio screen, computed from data
+ * already on hand: `getPortfolioTotals` holdings, account's persisted `realizedGainLoss`,
+ * trade history, and active cash balance.
  */
 export function getPortfolioInsights(
   totals: PortfolioTotals,
   realizedGainLoss: number,
-  trades: { commission: number }[]
+  trades: { type?: 'BUY' | 'SELL'; commission: number; symbol?: string; price?: number; quantity?: number }[],
+  cashBalance: number = 0
 ): PortfolioInsights {
   const { holdings, currentValue } = totals;
 
+  // 1. Top Holding & Concentration
+  const sortedHoldings = [...holdings].sort((a, b) => b.marketValue - a.marketValue);
   let topHolding: PortfolioInsights['topHolding'] = null;
-  if (holdings.length > 0 && currentValue > 0) {
-    const top = holdings.reduce((max, h) => (h.marketValue > max.marketValue ? h : max), holdings[0]);
+  if (sortedHoldings.length > 0 && currentValue > 0) {
+    const top = sortedHoldings[0];
     topHolding = { symbol: top.symbol, percent: roundMoney((top.marketValue / currentValue) * 100) };
   }
 
+  const top3Holdings = sortedHoldings.slice(0, 3).map((h) => ({
+    symbol: h.symbol,
+    percent: currentValue > 0 ? roundMoney((h.marketValue / currentValue) * 100) : 0,
+    value: h.marketValue,
+  }));
+  const top3TotalPercent = roundMoney(top3Holdings.reduce((sum, h) => sum + h.percent, 0));
+
+  let riskAlert: string | null = null;
+  if (topHolding && topHolding.percent >= 40) {
+    riskAlert = `Single-Stock Risk: ${topHolding.symbol} alone represents ${topHolding.percent.toFixed(0)}% of your equity.`;
+  } else if (top3TotalPercent >= 70 && holdings.length > 3) {
+    riskAlert = `High Concentration: Top 3 holdings account for ${top3TotalPercent.toFixed(0)}% of your portfolio.`;
+  }
+
+  // 2. Category Breakdown & Z-Risk Radar
   const byCategory = new Map<string, number>();
   for (const h of holdings) {
     const key = h.category || 'Other';
@@ -237,6 +295,21 @@ export function getPortfolioInsights(
     }))
     .sort((a, b) => b.value - a.value);
 
+  const zCat = categoryBreakdown.find((c) => c.category === 'Z');
+  const aCat = categoryBreakdown.find((c) => c.category === 'A');
+  const bCat = categoryBreakdown.find((c) => c.category === 'B');
+  const nCat = categoryBreakdown.find((c) => c.category === 'N');
+
+  const zExposurePercent = zCat?.percent || 0;
+  const zExposureValue = zCat?.value || 0;
+  const aExposurePercent = aCat?.percent || 0;
+  const bExposurePercent = bCat?.percent || 0;
+  const nExposurePercent = nCat?.percent || 0;
+
+  const riskLevel: 'Prime' | 'Moderate' | 'High' =
+    zExposurePercent >= 15 ? 'High' : zExposurePercent > 0 ? 'Moderate' : 'Prime';
+
+  // 3. Sector Breakdown
   const bySector = new Map<string, number>();
   for (const h of holdings) {
     const key = h.sector || 'Other';
@@ -250,8 +323,65 @@ export function getPortfolioInsights(
     }))
     .sort((a, b) => b.value - a.value);
 
+  // 4. Commission & Fee Drag
   const lifetimeCommission = roundMoney(trades.reduce((sum, t) => moneyAdd(sum, t.commission || 0), 0));
+  const totalPnl = roundMoney(totals.unrealisedPnl + realizedGainLoss);
 
+  const grossGain = Math.max(0, totals.unrealisedPnl) + Math.max(0, realizedGainLoss) + lifetimeCommission;
+  const feeDragPercent = grossGain > 0 ? roundMoney((lifetimeCommission / grossGain) * 100) : 0;
+
+  // 5. Trading Discipline (Win Rate)
+  let buyCount = 0;
+  let sellCount = 0;
+  let profitableSells = 0;
+  let lossSells = 0;
+
+  const buyCostBySymbol = new Map<string, { totalCost: number; quantity: number }>();
+  const chronoTrades = [...trades].reverse();
+  for (const t of chronoTrades) {
+    const sym = t.symbol || '';
+    if (t.type === 'BUY' && sym && t.price && t.quantity) {
+      buyCount++;
+      const cur = buyCostBySymbol.get(sym) || { totalCost: 0, quantity: 0 };
+      buyCostBySymbol.set(sym, {
+        totalCost: cur.totalCost + t.price * t.quantity,
+        quantity: cur.quantity + t.quantity,
+      });
+    } else if (t.type === 'SELL' && sym && t.price) {
+      sellCount++;
+      const cur = buyCostBySymbol.get(sym);
+      const avgBuy = cur && cur.quantity > 0 ? cur.totalCost / cur.quantity : 0;
+      if (avgBuy > 0) {
+        if (t.price >= avgBuy) profitableSells++;
+        else lossSells++;
+      } else {
+        if (realizedGainLoss > 0) profitableSells++;
+        else lossSells++;
+      }
+    }
+  }
+
+  const winRate = sellCount > 0 ? roundMoney((profitableSells / sellCount) * 100) : null;
+
+  // 6. Cash vs Equity Allocation (Dry Powder)
+  const safeCash = Math.max(0, cashBalance);
+  const totalNetWorth = roundMoney(safeCash + currentValue);
+  const cashPercent = totalNetWorth > 0 ? roundMoney((safeCash / totalNetWorth) * 100) : 0;
+  const equityPercent = totalNetWorth > 0 ? roundMoney((currentValue / totalNetWorth) * 100) : 0;
+
+  // 7. T+1 Liquidity Radar
+  let saleableValue = 0;
+  let lockedValue = 0;
+  for (const h of holdings) {
+    saleableValue = moneyAdd(saleableValue, h.saleable * h.valuationPrice);
+    lockedValue = moneyAdd(lockedValue, h.locked * h.valuationPrice);
+  }
+  saleableValue = roundMoney(saleableValue);
+  lockedValue = roundMoney(lockedValue);
+  const saleablePercent = currentValue > 0 ? roundMoney((saleableValue / currentValue) * 100) : 0;
+  const lockedPercent = currentValue > 0 ? roundMoney((lockedValue / currentValue) * 100) : 0;
+
+  // 8. Best / Worst Movers Today
   let bestMoverToday: PortfolioInsights['bestMoverToday'] = null;
   let worstMoverToday: PortfolioInsights['worstMoverToday'] = null;
   for (const h of holdings) {
@@ -259,13 +389,12 @@ export function getPortfolioInsights(
     if (!bestMoverToday || h.dayPnl > bestMoverToday.dayPnl) bestMoverToday = { symbol: h.symbol, dayPnl: h.dayPnl };
     if (!worstMoverToday || h.dayPnl < worstMoverToday.dayPnl) worstMoverToday = { symbol: h.symbol, dayPnl: h.dayPnl };
   }
-  // A single mover shouldn't be reported as both best and worst.
   if (bestMoverToday && worstMoverToday && bestMoverToday.symbol === worstMoverToday.symbol) {
     worstMoverToday = null;
   }
 
   return {
-    totalPnl: roundMoney(totals.unrealisedPnl + realizedGainLoss),
+    totalPnl,
     realizedGainLoss: roundMoney(realizedGainLoss),
     topHolding,
     categoryBreakdown,
@@ -273,6 +402,41 @@ export function getPortfolioInsights(
     lifetimeCommission,
     bestMoverToday,
     worstMoverToday,
+    allocation: {
+      cash: safeCash,
+      equity: currentValue,
+      totalNetWorth,
+      cashPercent,
+      equityPercent,
+    },
+    categoryRisk: {
+      zExposurePercent,
+      zExposureValue,
+      aExposurePercent,
+      bExposurePercent,
+      nExposurePercent,
+      riskLevel,
+    },
+    tradingDiscipline: {
+      totalTrades: trades.length,
+      buyCount,
+      sellCount,
+      profitableSells,
+      lossSells,
+      winRate,
+      feeDragPercent,
+    },
+    liquidityRadar: {
+      saleableValue,
+      lockedValue,
+      saleablePercent,
+      lockedPercent,
+    },
+    concentration: {
+      top3Holdings,
+      top3TotalPercent,
+      riskAlert,
+    },
   };
 }
 
