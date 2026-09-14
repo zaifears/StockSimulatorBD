@@ -233,7 +233,7 @@ export default function TradeModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200 overflow-x-hidden"
       onClick={handleBackdropClick}
     >
       {/* WebMCP Schema Injection */}
@@ -241,7 +241,7 @@ export default function TradeModal({
 
       <div
         onClick={stopPropagation}
-        className="w-full max-w-lg bg-white dark:bg-[#16202D] rounded-t-[28px] sm:rounded-3xl shadow-2xl shadow-black/60 border-t sm:border border-gray-200/80 dark:border-gray-800/80 overflow-hidden flex flex-col mt-auto sm:mt-0 max-h-[92vh] sm:max-h-none transition-all"
+        className="w-full max-w-full sm:max-w-lg bg-white dark:bg-[#16202D] rounded-t-[28px] sm:rounded-3xl shadow-2xl shadow-black/60 border-t sm:border border-gray-200/80 dark:border-gray-800/80 overflow-hidden flex flex-col mt-auto sm:mt-0 max-h-[92vh] sm:max-h-none transition-all"
       >
         {/* Sleek Top Indicator Strip */}
         <div
@@ -384,12 +384,12 @@ export default function TradeModal({
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto">
+            <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto overflow-x-hidden max-w-full">
               {/* Hidden semantic input for AI tools */}
               <input type="hidden" name="trade_action" value={tradeType} />
 
               {/* BUY / SELL Segmented Pill Switch */}
-              <div className="grid grid-cols-2 p-1 bg-gray-100 dark:bg-[#0E1520] rounded-2xl border border-gray-200/60 dark:border-gray-800/80">
+              <div className="grid grid-cols-2 p-1 bg-gray-100 dark:bg-[#0E1520] rounded-2xl border border-gray-200/60 dark:border-gray-800/80 w-full max-w-full">
                 <button
                   type="button"
                   onClick={() => setTradeType('buy')}
@@ -415,8 +415,8 @@ export default function TradeModal({
               </div>
 
               {/* Context Bar: Cash Available or Holdings */}
-              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#0E1520]/60 border border-gray-200/50 dark:border-gray-800/50 text-xs">
-                <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-medium">
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#0E1520]/60 border border-gray-200/50 dark:border-gray-800/50 text-xs w-full max-w-full min-w-0">
+                <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-medium shrink-0">
                   {tradeType === 'buy' ? (
                     <>
                       <Wallet className="w-3.5 h-3.5 text-[#0AA892]" />
@@ -429,7 +429,7 @@ export default function TradeModal({
                     </>
                   )}
                 </span>
-                <span className="font-mono font-bold text-gray-900 dark:text-white tabular-nums">
+                <span className="font-mono font-bold text-gray-900 dark:text-white tabular-nums truncate text-right">
                   {tradeType === 'buy'
                     ? `৳${tradeSummary.availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : `${tradeSummary.holdingQty.toLocaleString()} shares (${tradeSummary.sellableQty} saleable)`}
@@ -438,7 +438,7 @@ export default function TradeModal({
 
               {/* Market Warning Banners */}
               {!tradeSummary.isTraded && (
-                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl flex items-center gap-2 text-xs">
+                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl flex items-center gap-2 text-xs w-full max-w-full">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <p className="text-amber-700 dark:text-amber-300 flex-1 font-medium">
                     This stock has not traded today. Trading is unavailable.
@@ -448,7 +448,7 @@ export default function TradeModal({
               )}
 
               {tradeType === 'sell' && tradeSummary.hasT1Restriction && (
-                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl flex items-center gap-2 text-xs">
+                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl flex items-center gap-2 text-xs w-full max-w-full">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <p className="text-amber-700 dark:text-amber-300 font-medium">
                     {tradeSummary.sellableQty > 0
@@ -459,46 +459,48 @@ export default function TradeModal({
               )}
 
               {/* Tactile Quantity Card with Stepper and Quick Presets */}
-              <div className="bg-gray-50/80 dark:bg-[#0E1520]/80 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-800/80 space-y-3">
+              <div className="bg-gray-50/80 dark:bg-[#0E1520]/80 rounded-2xl p-3.5 sm:p-4 border border-gray-200/80 dark:border-gray-800/80 space-y-3 w-full max-w-full overflow-hidden">
                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   <span>Order Quantity</span>
                   <span className="font-mono lowercase text-gray-400 dark:text-gray-500">lots of 1</span>
                 </div>
 
-                {/* 44px+ Stepper */}
-                <div className="flex items-center gap-3">
+                {/* High-Contrast Zero-Overflow Stepper */}
+                <div className="flex items-stretch justify-between bg-white dark:bg-[#151D28] border border-gray-300 dark:border-gray-700/80 rounded-2xl p-1.5 shadow-sm w-full max-w-full">
                   <button
                     type="button"
                     onClick={() => adjustQuantity(-1)}
                     disabled={tradeQuantity !== '' && tradeQuantity <= 1}
                     aria-label="Decrease quantity"
-                    className="w-12 h-12 rounded-xl bg-white dark:bg-[#1A2634] border border-gray-200/80 dark:border-gray-700/60 shadow-xs flex items-center justify-center text-gray-800 dark:text-gray-100 disabled:opacity-40 active:scale-90 transition-all hover:bg-gray-100 dark:hover:bg-[#24354A] shrink-0"
+                    className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#223042] dark:hover:bg-[#2D3F56] border border-gray-300/80 dark:border-gray-600/70 shadow-xs flex items-center justify-center text-gray-900 dark:text-white disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all shrink-0"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-5 h-5 stroke-[2.5]" />
                   </button>
-                  <input
-                    id="trade-quantity"
-                    name="quantity"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={tradeQuantityInput}
-                    onChange={handleQuantityChange}
-                    onBlur={handleQuantityBlur}
-                    className="flex-1 h-12 bg-transparent text-center font-mono font-black text-2xl text-gray-900 dark:text-white tabular-nums focus:outline-none"
-                  />
+                  <div className="flex-1 min-w-0 px-2 flex items-center justify-center">
+                    <input
+                      id="trade-quantity"
+                      name="quantity"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={tradeQuantityInput}
+                      onChange={handleQuantityChange}
+                      onBlur={handleQuantityBlur}
+                      className="w-full min-w-0 bg-transparent text-center font-mono font-black text-2xl sm:text-3xl text-gray-900 dark:text-white tabular-nums outline-none border-0 focus:ring-0 p-0 shadow-none"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => adjustQuantity(1)}
                     aria-label="Increase quantity"
-                    className="w-12 h-12 rounded-xl bg-white dark:bg-[#1A2634] border border-gray-200/80 dark:border-gray-700/60 shadow-xs flex items-center justify-center text-gray-800 dark:text-gray-100 active:scale-90 transition-all hover:bg-gray-100 dark:hover:bg-[#24354A] shrink-0"
+                    className="w-12 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-[#223042] dark:hover:bg-[#2D3F56] border border-gray-300/80 dark:border-gray-600/70 shadow-xs flex items-center justify-center text-gray-900 dark:text-white active:scale-90 transition-all shrink-0"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-5 h-5 stroke-[2.5]" />
                   </button>
                 </div>
 
-                {/* Quick Preset Buttons */}
-                <div className="flex items-center gap-1.5 pt-1">
+                {/* Quick Preset Buttons (4-column grid never wraps or overflows) */}
+                <div className="grid grid-cols-4 gap-1.5 pt-1 w-full max-w-full">
                   {tradeType === 'buy' ? (
                     <>
                       {[10, 50, 100].map((step) => (
@@ -506,7 +508,7 @@ export default function TradeModal({
                           key={step}
                           type="button"
                           onClick={() => adjustQuantity(step)}
-                          className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-700/80 text-gray-700 dark:text-gray-300 hover:border-blue-500/50 active:scale-95 transition-all shadow-2xs"
+                          className="w-full min-w-0 py-2 rounded-lg text-xs font-bold bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-700/80 text-gray-700 dark:text-gray-300 hover:border-blue-500/50 active:scale-95 transition-all shadow-2xs truncate"
                         >
                           +{step}
                         </button>
@@ -515,7 +517,7 @@ export default function TradeModal({
                         type="button"
                         onClick={handleMaxAffordable}
                         disabled={maxAffordableShares <= 0}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-black bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+                        className="w-full min-w-0 py-2 rounded-lg text-xs font-black bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 active:scale-95 transition-all disabled:opacity-40 shadow-2xs truncate"
                       >
                         Max
                       </button>
@@ -533,7 +535,7 @@ export default function TradeModal({
                           type="button"
                           disabled={tradeSummary.sellableQty <= 0}
                           onClick={() => handleSellFraction(preset.frac)}
-                          className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-700/80 text-gray-700 dark:text-gray-300 hover:border-blue-500/50 active:scale-95 transition-all disabled:opacity-40 shadow-2xs"
+                          className="w-full min-w-0 py-2 rounded-lg text-xs font-bold bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-700/80 text-gray-700 dark:text-gray-300 hover:border-blue-500/50 active:scale-95 transition-all disabled:opacity-40 shadow-2xs truncate"
                         >
                           {preset.label}
                         </button>
