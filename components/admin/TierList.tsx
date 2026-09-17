@@ -14,12 +14,29 @@ import {
 import {
   Crown, Shield, Check, X, Clock, CheckCircle2, XCircle,
   Copy, Search, ArrowLeft, Loader2, UserCheck, UserX, AlertTriangle,
-  Flame, RefreshCw, Mail, Download, Sparkles, Send,
+  Flame, RefreshCw, Mail, Download, Sparkles, Send, Plus,
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import BossBadge from '@/components/ui/BossBadge';
 
-type TierTab = 'pending' | 'approved' | 'rejected' | 'expired' | 'manual';
+type TierTab = 'pending' | 'active' | 'approved' | 'rejected' | 'expired' | 'manual';
+
+export interface ActiveBossUser {
+  uid: string;
+  name: string;
+  email: string | null;
+  photoURL?: string | null;
+  accountTier: string;
+  lastBossPlan: string;
+  bossUntil: number | null;
+  bossSince: string | null;
+  expiresAt: string | null;
+  daysRemaining: number | null;
+  isLifetimeOrUnlimited: boolean;
+  isTrial: boolean;
+  redeemedPromoCodes: string[];
+  createdAt: string | null;
+}
 
 interface BossRequest {
   id: string;
@@ -64,6 +81,13 @@ export default function TierList() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+  // Active Boss Directory state
+  const [activeUsers, setActiveUsers] = useState<ActiveBossUser[]>([]);
+  const [loadingActive, setLoadingActive] = useState(false);
+  const [copiedAllActiveEmails, setCopiedAllActiveEmails] = useState(false);
+  const [activeActionUid, setActiveActionUid] = useState<string | null>(null);
+  const [activeExtendDays, setActiveExtendDays] = useState<{ [uid: string]: number }>({});
+
   // Expired Boss CRM state
   const [expiredUsers, setExpiredUsers] = useState<ExpiredBossUser[]>([]);
   const [loadingExpired, setLoadingExpired] = useState(false);
@@ -98,6 +122,22 @@ export default function TierList() {
     }
   }, []);
 
+  const fetchActiveUsers = useCallback(async () => {
+    setLoadingActive(true);
+    try {
+      const res = await fetchWithFreshToken('/api/admin/tier?view=active', { method: 'GET' });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.activeUsers)) {
+        setActiveUsers(json.activeUsers);
+        setStats((prev) => ({ ...prev, activeBossCount: json.activeUsers.length }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch active boss users:', err);
+    } finally {
+      setLoadingActive(false);
+    }
+  }, []);
+
   const fetchExpiredUsers = useCallback(async () => {
     setLoadingExpired(true);
     try {
@@ -114,19 +154,25 @@ export default function TierList() {
   }, []);
 
   useEffect(() => {
-    if (user) fetchStats();
-  }, [user, fetchStats]);
+    if (user) {
+      fetchStats();
+      fetchActiveUsers();
+    }
+  }, [user, fetchStats, fetchActiveUsers]);
 
   useEffect(() => {
     if (!user) return;
+    if (activeTab === 'active' && activeUsers.length === 0) {
+      fetchActiveUsers();
+    }
     if (activeTab === 'expired' && expiredUsers.length === 0) {
       fetchExpiredUsers();
     }
-  }, [user, activeTab, expiredUsers.length, fetchExpiredUsers]);
+  }, [user, activeTab, activeUsers.length, expiredUsers.length, fetchActiveUsers, fetchExpiredUsers]);
 
   // Fast initial fetch + Real-time listener for requests
   useEffect(() => {
-    if (!user || activeTab === 'expired') return;
+    if (!user || activeTab === 'expired' || activeTab === 'active') return;
     setLoading(true);
 
     let isSubscribed = true;
@@ -295,6 +341,130 @@ export default function TierList() {
     searchUserDirect(target);
   };
 
+  const handleSelectActiveForManual = (u: ActiveBossUser) => {
+    const target = u.email || u.uid;
+    setManualQuery(target);
+    setActiveTab('manual');
+    searchUserDirect(target);
+  };
+
+  const handleRevokeActiveUser = async (u: ActiveBossUser) => {
+    const confirmRevoke = window.confirm(
+      `Are you sure you want to revoke Boss tier from ${u.name || u.email || u.uid}? They will revert to Bro tier immediately.`
+    );
+    if (!confirmRevoke) return;
+
+    setActiveActionUid(u.uid);
+    setMessage(null);
+
+    const previousActive = [...activeUsers];
+    setActiveUsers((prev) => prev.filter((item) => item.uid !== u.uid));
+    setStats((prev) => ({ ...prev, activeBossCount: Math.max(0, prev.activeBossCount - 1) }));
+
+    try {
+      const res = await fetchWithFreshToken('/api/admin/tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'revoke',
+          userId: u.uid,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to revoke Boss tier');
+
+      setMessage({
+        text: `Revoked Boss status from ${u.name || u.email || u.uid}. Reverted to Bro tier.`,
+        type: 'success',
+      });
+      fetchStats();
+    } catch (err: any) {
+      setActiveUsers(previousActive);
+      setStats((prev) => ({ ...prev, activeBossCount: previousActive.length }));
+      setMessage({ text: err.message || 'Revocation failed', type: 'error' });
+    } finally {
+      setActiveActionUid(null);
+    }
+  };
+
+  const handleExtendActiveUser = async (u: ActiveBossUser) => {
+    const days = activeExtendDays[u.uid] || 31;
+    setActiveActionUid(u.uid);
+    setMessage(null);
+
+    try {
+      const res = await fetchWithFreshToken('/api/admin/tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'manual_grant',
+          userId: u.uid,
+          durationDays: days,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to extend Boss tier');
+
+      setMessage({
+        text: `Success! Added +${days} days to ${u.name || u.email || u.uid}'s Boss tier.`,
+        type: 'success',
+      });
+      await fetchActiveUsers();
+      fetchStats();
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Extension failed', type: 'error' });
+    } finally {
+      setActiveActionUid(null);
+    }
+  };
+
+  const filteredActiveUsers = activeUsers.filter((u) => {
+    if (!filterQuery.trim()) return true;
+    const q = filterQuery.toLowerCase().trim();
+    return (
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.uid?.toLowerCase().includes(q) ||
+      u.lastBossPlan?.toLowerCase().includes(q) ||
+      u.redeemedPromoCodes?.some((code) => code.toLowerCase().includes(q))
+    );
+  });
+
+  const handleDownloadActiveCSV = () => {
+    if (filteredActiveUsers.length === 0) return;
+    const headers = ['Name', 'Email', 'Plan', 'Days Left', 'Boss Since', 'Expires At', 'Is Trial', 'Promo Codes', 'UID'];
+    const rows = filteredActiveUsers.map((u) => [
+      `"${(u.name || '').replace(/"/g, '""')}"`,
+      `"${(u.email || '').replace(/"/g, '""')}"`,
+      `"${(u.lastBossPlan || '').replace(/"/g, '""')}"`,
+      u.daysRemaining != null ? u.daysRemaining : 'Unlimited',
+      `"${u.bossSince || ''}"`,
+      `"${u.expiresAt || ''}"`,
+      u.isTrial ? 'Yes' : 'No',
+      `"${(u.redeemedPromoCodes || []).join('; ')}"`,
+      `"${u.uid}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `active_boss_users_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyAllActiveEmails = () => {
+    const validEmails = filteredActiveUsers
+      .map((u) => u.email?.trim())
+      .filter((e): e is string => Boolean(e && e.includes('@')));
+    const unique = Array.from(new Set(validEmails));
+    if (unique.length === 0) return;
+    navigator.clipboard.writeText(unique.join(', '));
+    setCopiedAllActiveEmails(true);
+    setTimeout(() => setCopiedAllActiveEmails(false), 2500);
+  };
+
   const filteredExpiredUsers = expiredUsers.filter((u) => {
     if (!filterQuery.trim()) return true;
     const q = filterQuery.toLowerCase().trim();
@@ -458,13 +628,23 @@ export default function TierList() {
           </div>
         </div>
 
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div
+          onClick={() => setActiveTab('active')}
+          className={`p-3.5 sm:p-4 rounded-2xl border shadow-sm cursor-pointer transition-colors ${
+            activeTab === 'active'
+              ? 'bg-amber-500/10 border-amber-500/60 dark:bg-amber-950/20'
+              : 'bg-white dark:bg-[#131822] border-gray-200 dark:border-gray-800 hover:border-amber-400/50'
+          }`}
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span className="truncate">Active Boss</span>
+            <span className="truncate font-semibold">Active Boss</span>
             <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
           </div>
-          <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
-            {stats.activeBossCount}
+          <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono flex items-baseline gap-1.5">
+            <span>{activeUsers.length > 0 ? activeUsers.length : (stats.activeBossCount || 0)}</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase font-sans">
+              Live
+            </span>
           </div>
         </div>
 
@@ -527,6 +707,28 @@ export default function TierList() {
           {counts.pending > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[10px] font-black">
               {counts.pending}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('active')}
+          className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+            activeTab === 'active'
+              ? 'bg-amber-500 text-gray-950 shadow-sm'
+              : 'bg-white dark:bg-[#131822] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
+          }`}
+        >
+          <Crown className="w-3.5 h-3.5 fill-current text-amber-500 group-hover:text-amber-400" />
+          <span>Active Boss</span>
+          {(stats.activeBossCount > 0 || activeUsers.length > 0) && (
+            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+              activeTab === 'active'
+                ? 'bg-gray-950/20 text-gray-950'
+                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+            }`}>
+              {activeUsers.length > 0 ? activeUsers.length : stats.activeBossCount}
             </span>
           )}
         </button>
@@ -926,8 +1128,311 @@ export default function TierList() {
         </div>
       )}
 
+      {/* Tab: Active Boss Users (Live Directory) */}
+      {activeTab === 'active' && (
+        <div className="space-y-4 mb-8">
+          {/* Header Card with Controls */}
+          <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-amber-500 shrink-0 fill-current" />
+                  <span>Active Boss Traders — Live Directory</span>
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-2xl leading-relaxed">
+                  Traders with currently active Boss Tier privileges. Inspect remaining duration, copy emails for outreach, grant extensions, or revoke privileges.
+                </p>
+              </div>
+
+              {/* Action Buttons: Copy All Emails & Download CSV & Refresh */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={fetchActiveUsers}
+                  disabled={loadingActive}
+                  className="px-3 py-2 min-h-[40px] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  title="Refresh active Boss list"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingActive ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadActiveCSV}
+                  disabled={filteredActiveUsers.length === 0}
+                  className="px-3.5 py-2 min-h-[40px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#131822] hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Export CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyAllActiveEmails}
+                  disabled={filteredActiveUsers.length === 0}
+                  className={`px-4 py-2 min-h-[40px] rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50 ${
+                    copiedAllActiveEmails
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-amber-500 hover:bg-amber-600 text-gray-950'
+                  }`}
+                >
+                  {copiedAllActiveEmails ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Copied {filteredActiveUsers.filter((u) => u.email).length} Emails!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy All Emails</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Input */}
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  placeholder="Search active Boss traders by name, email, plan, promo code, or UID..."
+                  className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#182030] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-gray-400 mt-2 px-1">
+                <span>
+                  Showing {filteredActiveUsers.length} of {activeUsers.length} active Boss traders
+                </span>
+                <span>
+                  {filteredActiveUsers.filter((u) => u.email).length} active emails reachable
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Users List */}
+          {loadingActive ? (
+            <div className="py-16 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+              <span>Syncing active Boss directory...</span>
+            </div>
+          ) : filteredActiveUsers.length === 0 ? (
+            <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl py-16 px-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center mx-auto mb-3">
+                <Crown className="w-6 h-6 text-amber-500 fill-current" />
+              </div>
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
+                No Active Boss Traders Found
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {filterQuery.trim()
+                  ? `No active traders match your search "${filterQuery}".`
+                  : 'No traders currently hold active Boss status.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredActiveUsers.map((u) => {
+                const isWorking = activeActionUid === u.uid;
+                const durationSelection = activeExtendDays[u.uid] || 31;
+
+                return (
+                  <div
+                    key={u.uid}
+                    className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:border-amber-400/50 transition-colors"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      {/* Left: Trader Details */}
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                            {u.name}
+                          </span>
+
+                          <BossBadge size="xs" interactive={false} />
+
+                          {u.isTrial ? (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/50 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-purple-600 shrink-0" />
+                              {u.lastBossPlan}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 flex items-center gap-1">
+                              <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0 fill-current" />
+                              {u.lastBossPlan}
+                            </span>
+                          )}
+
+                          {/* Expiry / Remaining Indicator */}
+                          {u.daysRemaining != null ? (
+                            u.daysRemaining > 7 ? (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                🟢 {u.daysRemaining} days left
+                              </span>
+                            ) : u.daysRemaining > 1 ? (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
+                                ⚠️ {u.daysRemaining}d left
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-700 animate-pulse">
+                                🚨 Expiring {u.daysRemaining === 0 ? 'today' : 'tomorrow'}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                              ♾️ Permanent / Lifetime
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Email + UID with 1-Click Copy */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          {u.email ? (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-200 font-mono">
+                              <span className="break-all font-semibold">{u.email}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(u.email!, `email-${u.uid}`)}
+                                className="text-[11px] font-sans font-bold text-amber-600 dark:text-amber-400 hover:underline inline-flex items-center gap-0.5 ml-1 active:scale-95"
+                                title="Copy email address"
+                              >
+                                {copiedId === `email-${u.uid}` ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-500" />
+                                    <span className="text-emerald-500">Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">No email on file</span>
+                          )}
+
+                          <div className="inline-flex items-center gap-1 text-gray-400 text-[11px] font-mono">
+                            <span>UID: {u.uid.slice(0, 10)}...</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(u.uid, `uid-${u.uid}`)}
+                              className="text-[10px] font-sans text-gray-500 hover:text-gray-300 ml-0.5"
+                              title="Copy full UID"
+                            >
+                              {copiedId === `uid-${u.uid}` ? 'Copied' : 'copy'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Dates & Details */}
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                          {u.expiresAt && (
+                            <span>
+                              Active Until:{' '}
+                              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                {new Date(u.expiresAt).toLocaleDateString()} ({new Date(u.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                              </span>
+                            </span>
+                          )}
+                          {u.bossSince && (
+                            <span>
+                              Boss Since:{' '}
+                              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                {new Date(u.bossSince).toLocaleDateString()}
+                              </span>
+                            </span>
+                          )}
+                          {u.redeemedPromoCodes && u.redeemedPromoCodes.length > 0 && (
+                            <span className="inline-flex items-center gap-1">
+                              Promos:
+                              {u.redeemedPromoCodes.map((code) => (
+                                <span
+                                  key={code}
+                                  className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-mono text-[10px] font-bold border border-amber-200 dark:border-amber-800"
+                                >
+                                  {code}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Quick Extend & Revoke Actions */}
+                      <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-gray-100 dark:border-gray-800 w-full lg:w-auto shrink-0">
+                        {u.email && (
+                          <a
+                            href={`mailto:${encodeURIComponent(u.email)}?subject=${encodeURIComponent('StockSimulatorBD Boss Tier Update')}`}
+                            className="flex-1 sm:flex-none justify-center px-3 py-2 min-h-[40px] rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95"
+                            title="Email this trader"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Email</span>
+                          </a>
+                        )}
+
+                        {/* Duration Selector for Quick Extension */}
+                        <select
+                          value={durationSelection}
+                          onChange={(e) =>
+                            setActiveExtendDays((prev) => ({
+                              ...prev,
+                              [u.uid]: Number(e.target.value),
+                            }))
+                          }
+                          disabled={isWorking}
+                          className="px-2.5 py-2 min-h-[40px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#131822] text-xs font-bold text-gray-900 dark:text-white focus:outline-none"
+                        >
+                          <option value={31}>+31 Days (1 Mo)</option>
+                          <option value={185}>+185 Days (6 Mo)</option>
+                          <option value={365}>+365 Days (1 Yr)</option>
+                          <option value={7}>+7 Days (Trial)</option>
+                        </select>
+
+                        <button
+                          type="button"
+                          disabled={isWorking}
+                          onClick={() => handleExtendActiveUser(u)}
+                          className="flex-1 sm:flex-none justify-center px-3.5 py-2 min-h-[40px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                          title="Add more days to this user's Boss tier"
+                        >
+                          {isWorking ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                          )}
+                          <span>Extend</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isWorking}
+                          onClick={() => handleRevokeActiveUser(u)}
+                          className="flex-1 sm:flex-none justify-center px-3.5 py-2 min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50 border border-rose-200 dark:border-rose-900/40"
+                          title="Revoke Boss status and revert user to Bro tier"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                          <span>Revoke</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Requests List for Pending / Approved / Rejected */}
-      {activeTab !== 'manual' && activeTab !== 'expired' && (
+      {activeTab !== 'manual' && activeTab !== 'expired' && activeTab !== 'active' && (
         <>
           {/* Search/Filter Bar for Requests */}
           {requests.length > 0 && (

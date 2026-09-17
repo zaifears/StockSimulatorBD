@@ -82,9 +82,80 @@ export async function GET(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────
-    // 2. FETCH EXPIRED BOSS USERS (FOR RE-ENGAGEMENT / PROMO CAMPAIGNS)
+    // 2. FETCH ACTIVE BOSS USERS (LIVE BOSS DIRECTORY)
     // ─────────────────────────────────────────────
     const view = searchParams.get('view')?.trim();
+    if (view === 'active' || searchParams.get('status') === 'active') {
+      const nowMs = Date.now();
+      const bossTierSnap = await db.collection('users').where('accountTier', '==', 'Boss').get();
+
+      const userMap = new Map<string, any>();
+      for (const docSnap of bossTierSnap.docs) {
+        userMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+      }
+
+      // Check users where bossUntil > nowMs as a safeguard
+      try {
+        const bossUntilSnap = await db.collection('users').where('bossUntil', '>', nowMs).limit(500).get();
+        for (const docSnap of bossUntilSnap.docs) {
+          if (!userMap.has(docSnap.id)) {
+            userMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+          }
+        }
+      } catch {
+        // Fallback if composite index on bossUntil is building
+      }
+
+      const activeUsers: any[] = [];
+      for (const [uid, u] of userMap.entries()) {
+        const bossUntilMs = u.bossUntil
+          ? typeof u.bossUntil === 'number'
+            ? u.bossUntil
+            : typeof u.bossUntil.toMillis === 'function'
+            ? u.bossUntil.toMillis()
+            : Date.parse(u.bossUntil) || 0
+          : 0;
+
+        const daysRemaining = bossUntilMs > nowMs ? Math.max(1, Math.ceil((bossUntilMs - nowMs) / 86400000)) : null;
+        const plan = u.lastBossPlan || (daysRemaining && daysRemaining > 150 ? 'Semester Boss (185 Days)' : 'Monthly Boss (31 Days)');
+        const isTrial = Boolean(plan.toLowerCase().includes('trial') || plan.toLowerCase().includes('7 day'));
+
+        activeUsers.push({
+          uid,
+          name: u.name || u.displayName || (u.email ? u.email.split('@')[0] : 'Trader'),
+          email: u.email || null,
+          photoURL: u.photoURL || null,
+          accountTier: u.accountTier || 'Boss',
+          lastBossPlan: plan,
+          bossUntil: bossUntilMs || null,
+          bossSince: u.bossSince ? (typeof u.bossSince.toDate === 'function' ? u.bossSince.toDate().toISOString() : u.bossSince) : null,
+          expiresAt: bossUntilMs > 0 ? new Date(bossUntilMs).toISOString() : null,
+          daysRemaining,
+          isLifetimeOrUnlimited: bossUntilMs === 0 || bossUntilMs == null,
+          isTrial,
+          redeemedPromoCodes: Array.isArray(u.redeemedPromoCodes) ? u.redeemedPromoCodes : [],
+          createdAt: u.createdAt || null,
+        });
+      }
+
+      // Sort: active users with earliest expiry or highest remaining
+      activeUsers.sort((a, b) => {
+        if (a.bossUntil && b.bossUntil) return b.bossUntil - a.bossUntil;
+        if (a.bossUntil) return -1;
+        if (b.bossUntil) return 1;
+        return 0;
+      });
+
+      return NextResponse.json({
+        success: true,
+        activeUsers,
+        totalCount: activeUsers.length,
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // 3. FETCH EXPIRED BOSS USERS (FOR RE-ENGAGEMENT / PROMO CAMPAIGNS)
+    // ─────────────────────────────────────────────
     if (view === 'expired' || searchParams.get('status') === 'expired') {
       const nowMs = Date.now();
       const usersSnap = await db.collection('users').limit(10000).get();
