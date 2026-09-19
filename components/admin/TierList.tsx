@@ -801,7 +801,7 @@ export default function TierList() {
             <span>Search User by Email or UID & Direct Tier Override</span>
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
-            Look up any registered trader by their email address (e.g. user@gmail.com) or Firebase UID to grant or revoke Boss access instantly.
+            Look up any registered trader by their email address or Firebase UID to grant or revoke Boss access instantly.
           </p>
 
           <form onSubmit={handleManualSearch} className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mb-6">
@@ -809,7 +809,7 @@ export default function TierList() {
               type="text"
               value={manualQuery}
               onChange={(e) => setManualQuery(e.target.value)}
-              placeholder="Enter user email (e.g. trader@gmail.com) or Firebase UID..."
+              placeholder="Enter user email or Firebase UID..."
               className="flex-1 px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a2130] text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button

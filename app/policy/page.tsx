@@ -97,8 +97,8 @@ export default function PolicyPage() {
       <h2 className="text-xl font-semibold mt-8 mb-2">Contact</h2>
       <p className="mb-2">
         For any questions or concerns about our privacy policy, please email us at{" "}
-        <a href="mailto:alshahoriar.hossain@gmail.com" className="underline text-indigo-600">
-          alshahoriar.hossain@gmail.com
+        <a href="mailto:hello@shahoriar.bd" className="underline text-indigo-600">
+          hello@shahoriar.bd
         </a>.
       </p>
       <p>

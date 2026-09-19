@@ -112,7 +112,7 @@ The application operates a clear two-tier model:
 - **Main Dashboard (`app/admin/page.tsx`)**:
   - Top-priority **Boss Tier Subscriptions** card displays active Boss count and pending requests.
   - **Direct 1-Click Verification**: If pending Boss requests exist, renders an interactive table with Trader Name, Email, Plan, bKash TrxID, and 1-click **"Approve"** and **"Reject"** buttons.
-  - **Direct Email Upgrade Bar**: Look up any registered user by email (e.g. `user@gmail.com`), select duration, and grant Boss access instantly.
+  - **Direct Email Upgrade Bar**: Look up any registered user by email, select duration, and grant Boss access instantly.
   - Listener on `boss_requests` is strictly gated behind `isAdminMode === true` to prevent unauthenticated console errors.
 - **Dedicated Subscriptions Manager (`app/admin/tier/page.tsx` & `components/admin/TierList.tsx`)**:
   - 4 KPI metric cards: Action Needed (pulsing indicator), Active Boss Users, Approved Subscriptions, Rejected Subscriptions.

@@ -76,7 +76,7 @@ Phase 3.
 | LLM full context | `public/llms-full.txt` | Canonical domain + every example URL + citation examples |
 | PWA manifest | `public/site.webmanifest` | Check `id`, `start_url`, `screenshots` |
 | Android APK | [GitHub Release](https://github.com/zaifears/StockSimulatorBD/releases) (`tech.stocksimulator.zaifears`) | **Hardcoded to the old origin. Must be rebuilt.** See below. |
-| Transactional email sender | `RESEND_FROM_EMAIL` env var, fallback in `app/api/coins/send-recharge-email/route.ts` | Currently `noreply@stocksimulator.tech`. That mailbox dies with the domain. Verify a new sending domain in Resend first. |
+| Transactional email sender | `RESEND_FROM_EMAIL` env var, fallback in `lib/resendAdmin.ts` | Currently `hello@shahoriar.bd`. Verify the sending domain in Resend before relying on the fallback. |
 | README badges | `README.md` | Live demo and APK download links |
 | Firebase Auth | Firebase console → Authentication → Settings → Authorized domains | Add the new domain **before** the switch or email/password and Google sign-in break |
 | Google OAuth client | Google Cloud Console → APIs & Services → Credentials → Authorized JavaScript origins | Separate from Firebase Auth above — different console. Breaks Google One Tap (`components/GoogleOneTap.tsx`) silently if missed |

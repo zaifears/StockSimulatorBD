@@ -207,7 +207,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
   <br/><br/>
 
-  <a href="https://www.stocksimulator.tech/trade">Visit Live Simulator</a> &nbsp;·&nbsp; <a href="https://github.com/zaifears/StockSimulatorBD/issues">Report Issue</a> &nbsp;·&nbsp; <a href="mailto:alshahoriar.hossain@gmail.com">Contact</a>
+  <a href="https://www.stocksimulator.tech/trade">Visit Live Simulator</a> &nbsp;·&nbsp; <a href="https://github.com/zaifears/StockSimulatorBD/issues">Report Issue</a> &nbsp;·&nbsp; <a href="mailto:hello@shahoriar.bd">Contact</a>
 
   <br/><br/>
 

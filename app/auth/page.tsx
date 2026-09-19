@@ -43,9 +43,9 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
   // this job: it is React state, so it only takes effect on the next render,
   // and handleSignUp/handleSignIn both `await` (reCAPTCHA) *before* setting
   // it — leaving a window where a second click re-enters the handler and
-  // fires a second createUserWithEmailAndPassword concurrently. Two accounts
-  // for sheikhtawhid7788@gmail.com were created that way, same email, same
-  // second, two UIDs. A ref flips synchronously, closing that window.
+  // fires a second createUserWithEmailAndPassword concurrently, which can
+  // create duplicate accounts in the same second. A ref flips synchronously,
+  // closing that window.
   const submitInFlightRef = useRef(false)
   const router = useRouter()
   const { verifyRecaptcha: verifyRecaptchaToken, isReady: isRecaptchaReady, isConfigured } = useRecaptcha()
@@ -421,7 +421,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                         required
                         value={formData.email}
                         onChange={handleInputChange}
-                        placeholder="you@example.com"
+                        placeholder="Enter your email"
                         className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                       />
                     </div>
@@ -550,7 +550,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                           required
                           value={formData.email}
                           onChange={handleInputChange}
-                          placeholder="you@example.com"
+                          placeholder="Enter your email"
                           className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         />
                       </div>

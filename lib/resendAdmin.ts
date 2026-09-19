@@ -7,7 +7,7 @@
 
 import { Resend } from 'resend';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'alshahoriar.hossain@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'hello@shahoriar.bd';
 
 export interface SendAdminAlertResult {
   success: boolean;
@@ -27,7 +27,7 @@ export async function sendAdminAlertEmail({
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const senderEmail = process.env.RESEND_FROM_EMAIL || 'StockSimulatorBD <noreply@stocksimulator.tech>';
+  const senderEmail = process.env.RESEND_FROM_EMAIL || 'StockSimulatorBD <hello@shahoriar.bd>';
   const ccEmails = process.env.ADMIN_EMAIL_CC
     ? process.env.ADMIN_EMAIL_CC.split(',').map((e) => e.trim())
     : undefined;

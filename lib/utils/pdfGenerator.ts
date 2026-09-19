@@ -86,7 +86,7 @@ export async function generatePortfolioPdf(data: StatementData) {
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
   doc.text('Risk-Free Dhaka Stock Exchange (DSE) Paper Trading Platform', textLeft, currentY + 8.2);
-  doc.text('Email: shahoriar.hossain@gmail.com | Website: www.stocksimulator.tech', textLeft, currentY + 12);
+  doc.text('Email: hello@shahoriar.bd | Website: www.stocksimulator.tech', textLeft, currentY + 12);
 
   // Right-aligned Statement Title & Date
   // Formats date cleanly like "11-Sep-2026"

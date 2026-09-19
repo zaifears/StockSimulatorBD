@@ -41,6 +41,10 @@ const steps = [
 
 const faqs = [
   {
+    q: 'Is StockSimulatorBD a trading simulator / fake trading simulator?',
+    a: 'Yes. It is a trading simulator / fake trading simulator in the sense that every balance and trade is virtual, so you can practise without risking real money. It uses published DSE prices and realistic market hours, commission and T+1 settlement rules to make the practice useful.',
+  },
+  {
     q: 'What is StockSimulatorBD?',
     a: 'StockSimulatorBD is a free paper trading simulator for the Dhaka Stock Exchange (DSE). You buy and sell real DSE listed shares using a virtual balance, under the same trading hours, settlement rules and commission the real market applies. It is an educational tool, not a brokerage.',
   },

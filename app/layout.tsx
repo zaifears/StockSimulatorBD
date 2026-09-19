@@ -45,6 +45,7 @@ export const metadata: Metadata = {
   applicationName: 'StockSimulatorBD',
   keywords: [
     "DSE simulator", "paper trading Bangladesh", "Dhaka Stock Exchange simulator",
+    "fake trading simulator", "fake stock trading simulator", "fake stock market game",
     "virtual stock trading", "stock market practice Bangladesh", "DSE stocks",
     "learn stock trading", "free paper trading", "Bangladesh stock market",
     "trading simulator", "practice trading", "virtual trading Bangladesh",

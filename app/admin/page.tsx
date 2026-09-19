@@ -562,7 +562,7 @@ export default function AdminDashboard() {
                     type="email"
                     value={quickEmail}
                     onChange={(e) => setQuickEmail(e.target.value)}
-                    placeholder="Enter trader's registered email (e.g. user@gmail.com)..."
+                    placeholder="Enter trader's registered email..."
                     className="w-full px-3.5 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111620] text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
                   />
                 </div>

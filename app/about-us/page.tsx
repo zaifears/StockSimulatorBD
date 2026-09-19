@@ -129,7 +129,7 @@ export default function AboutUsPage() {
             {/* Contact Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-xl mx-auto">
               <a
-                href="mailto:alshahoriar.hossain@gmail.com"
+                href="mailto:hello@shahoriar.bd"
                 className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 transform hover:-translate-y-1"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
