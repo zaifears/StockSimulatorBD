@@ -19,6 +19,7 @@ import TradeModal from '@/components/simulator/trade/TradeModal';
 import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import BossPortfolioBar from '@/components/boss/BossPortfolioBar';
 
 type ViewTab = 'holdings' | 'insights' | 'orders';
 
@@ -121,6 +122,9 @@ function PortfolioScreen() {
       <div className="px-3.5 sm:px-0 mb-3.5">
         <PortfolioSummary totals={totals} />
       </div>
+
+      {/* Boss Portfolio Risk Radar bar — only shown to Bro users */}
+      <BossPortfolioBar isBoss={isBoss} />
 
       {/* Tabs */}
       <div className="flex items-center gap-1.5 px-3.5 sm:px-0 mb-3 overflow-x-auto scrollbar-none">

@@ -19,6 +19,7 @@ import StockSkeleton from '@/components/simulator/trade/StockSkeleton';
 import TradeModal from '@/components/simulator/trade/TradeModal';
 import TradeQuestionnaireModal from '@/components/simulator/trade/TradeQuestionnaireModal';
 import { useAuth } from '@/contexts/AuthContext';
+import BossTradeBanner from '@/components/boss/BossTradeBanner';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
@@ -40,7 +41,7 @@ export default function TradePage() {
 const IS_TRADE_POLL_ACTIVE = false;
 
 function MarketScreen() {
-  const { user } = useAuth();
+  const { user, isBoss } = useAuth();
   const {
     marketInfo, simulatorState, loading: simulatorLoading, isMarketOpen,
     executeTrade, transactionStatus, transactionMessage, resetTransaction,
@@ -349,6 +350,14 @@ function MarketScreen() {
           )}
         </div>
       )}
+
+
+      {/* Boss Tier promotion banner — only visible to Bro users */}
+      <BossTradeBanner
+        isBoss={isBoss}
+        uid={user?.uid}
+        portfolioLength={simulatorState.portfolio.length}
+      />
 
       {simulatorLoading ? (
         <StockSkeleton count={10} />

@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue } from 'react';
+import React, { useMemo, useDeferredValue, useEffect } from 'react';
 import {
   X,
   Minus,
@@ -14,6 +14,8 @@ import {
 import type { MarketInfo, SimulatorState } from '@/hooks/useSimulator';
 import { getCompanyName } from '@/lib/dseCompanyNames';
 import NotTradedInfo from './NotTradedInfo';
+import { useAuth } from '@/contexts/AuthContext';
+import BossPostTradeNudge, { incrementTradeCount } from '@/components/boss/BossPostTradeNudge';
 
 interface Props {
   selectedStock: string;
@@ -52,6 +54,7 @@ export default function TradeModal({
 }: Props) {
   const deferredTradeQuantity = useDeferredValue(tradeQuantity);
   const COMMISSION_RATE = 0.004;
+  const { isBoss, user } = useAuth();
 
   const stockBySymbol = useMemo(
     () => new Map((marketInfo?.stocks || []).map((stock) => [stock.symbol, stock])),
@@ -143,6 +146,16 @@ export default function TradeModal({
         navigator.vibrate(transactionStatus === 'success' ? [50] : [50, 100, 50]);
       }
     }
+  }, [transactionStatus]);
+
+  // Track whether a trade just completed successfully (drives nudge visibility).
+  // incrementTradeCount is called here — synchronously before the nudge reads localStorage.
+  const tradeJustCompleted = transactionStatus === 'success';
+  useEffect(() => {
+    if (transactionStatus === 'success' && !isBoss && user?.uid) {
+      incrementTradeCount(user.uid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactionStatus]);
 
   // Prevent internal clicks from closing the modal
@@ -321,6 +334,9 @@ export default function TradeModal({
                 </div>
               </div>
             )}
+
+            {/* Boss milestone nudge — only shown to Bro users at trade #3/#5/#10 */}
+            <BossPostTradeNudge isBoss={isBoss} uid={user?.uid} tradeJustCompleted={tradeJustCompleted} />
 
             <button
               type="button"
