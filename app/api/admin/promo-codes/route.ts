@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
       const quantity = Number(body.quantity) || 1;
       const expiresInDays = body.expiresInDays != null ? Number(body.expiresInDays) : null;
       const customCode: string | undefined = body.customCode;
+      const maxUses = Math.max(1, Math.floor(Number(body.maxUses) || 1));
+      const maxUsesPerUser = Math.max(1, Math.floor(Number(body.maxUsesPerUser) || 1));
 
       let amount = 0;
       let bossDays: number | null = null;
@@ -84,6 +86,12 @@ export async function POST(req: NextRequest) {
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY_PER_BATCH) {
         return NextResponse.json(
           { success: false, error: `Quantity must be between 1 and ${MAX_QUANTITY_PER_BATCH}` },
+          { status: 400 }
+        );
+      }
+      if (maxUses > 100_000) {
+        return NextResponse.json(
+          { success: false, error: 'Max uses cannot exceed 100,000' },
           { status: 400 }
         );
       }
@@ -132,9 +140,13 @@ export async function POST(req: NextRequest) {
           amount,
           bossDays,
           status: 'active',
+          maxUses,
+          usedCount: 0,
+          maxUsesPerUser,
           redeemed: false,
           redeemedBy: null,
           redeemedAt: null,
+          redemptions: [],
           expiresAt,
           createdBy: adminCheck.uid,
           createdAt: nowIso,
@@ -145,10 +157,10 @@ export async function POST(req: NextRequest) {
       console.log(
         `[admin/promo-codes] ✓ ${adminCheck.uid} generated ${codes.length} ${rewardType} code(s) (reward: ${
           rewardType === 'boss' ? `${bossDays} days` : `৳${amount.toLocaleString()}`
-        })`
+        }, maxUses: ${maxUses}, maxPerUser: ${maxUsesPerUser})`
       );
 
-      return NextResponse.json({ success: true, codes, rewardType, amount, bossDays });
+      return NextResponse.json({ success: true, codes, rewardType, amount, bossDays, maxUses, maxUsesPerUser });
     }
 
     if (action === 'disable') {
@@ -161,8 +173,13 @@ export async function POST(req: NextRequest) {
       await db.runTransaction(async (transaction) => {
         const snap = await transaction.get(ref);
         if (!snap.exists) throw new Error('Code not found');
-        const status = snap.data()?.status;
-        if (status === 'used') throw new Error('This code has already been redeemed and cannot be disabled');
+        const data = snap.data();
+        const status = data?.status;
+        const maxUses = data?.maxUses || 1;
+        const usedCount = data?.usedCount || (status === 'used' ? 1 : 0);
+        if (status === 'used' && usedCount >= maxUses) {
+          throw new Error('This code has already been fully redeemed and cannot be disabled');
+        }
         if (status === 'disabled') return; // already in the desired state
         transaction.update(ref, { status: 'disabled' });
       });
@@ -170,7 +187,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: `${code} disabled` });
     }
 
-    return NextResponse.json({ success: false, error: "Invalid action. Must be 'generate' or 'disable'" }, { status: 400 });
+    if (action === 'delete') {
+      const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
+      if (!code) {
+        return NextResponse.json({ success: false, error: 'Missing code' }, { status: 400 });
+      }
+
+      const ref = db.doc(`promo_codes/${code}`);
+      await db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(ref);
+        if (!snap.exists) throw new Error('Code not found');
+        const data = snap.data();
+        const usedCount = data?.usedCount || 0;
+        if (usedCount > 0 || data?.status === 'used' || (data?.redemptions && data.redemptions.length > 0)) {
+          throw new Error('Cannot delete a promo code that has already been redeemed. Disable it instead.');
+        }
+        transaction.delete(ref);
+      });
+
+      return NextResponse.json({ success: true, message: `${code} deleted` });
+    }
+
+    if (action === 'get_redemptions') {
+      const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
+      if (!code) {
+        return NextResponse.json({ success: false, error: 'Missing code' }, { status: 400 });
+      }
+
+      const redemptionsSnap = await db
+        .collection(`promo_codes/${code}/redemptions`)
+        .orderBy('redeemedAt', 'desc')
+        .limit(200)
+        .get();
+
+      const redemptions = redemptionsSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      return NextResponse.json({ success: true, redemptions });
+    }
+
+    return NextResponse.json({ success: false, error: "Invalid action. Must be 'generate', 'disable', 'delete', or 'get_redemptions'" }, { status: 400 });
   } catch (error: any) {
     console.error('[admin/promo-codes] Failed:', error);
     return NextResponse.json({ success: false, error: error.message || 'Request failed' }, { status: 500 });

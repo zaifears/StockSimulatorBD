@@ -49,7 +49,8 @@ service cloud.firestore {
         return [
           'admin', 'welcomeBonusGranted', 'role', 'isGodMode',
           'disclaimerAgreedAt', 'promoCodeRedeemedAt', 'tradeSurveyCompletedAt',
-          'bossUntil', 'bossSince', 'lastBossPlan'
+          'bossUntil', 'bossSince', 'lastBossPlan',
+          'lastPromoRedeemedAt', 'redeemedPromoCodes', 'promoRedemptions'
         ];
       }
 
@@ -87,7 +88,7 @@ service cloud.firestore {
     }
     
     // ===== PROMO CODES =====
-    // Single-use codes redeemable for a trading-balance credit (see
+    // Promo codes redeemable for a trading-balance credit or Boss tier upgrade (see
     // app/api/simulator/promo-redeem/route.ts and
     // app/api/admin/promo-codes/route.ts). Both generation and redemption go
     // through those Admin SDK routes, which bypass these rules entirely — the
@@ -98,6 +99,11 @@ service cloud.firestore {
     match /promo_codes/{code} {
       allow read: if isAdmin();
       allow write: if false;
+
+      match /redemptions/{redemptionId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
     }
 
     // ===== SURVEY RESPONSES =====

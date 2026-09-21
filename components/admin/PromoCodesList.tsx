@@ -2,72 +2,120 @@
 
 // components/admin/PromoCodesList.tsx
 // Admin panel for generating and managing promo_codes/{CODE} documents.
-// Structural sibling of RechargeList.tsx, but simpler: no server-side
-// pagination (promo codes are a much smaller collection than recharge
-// requests) and a single page with client-side status tabs instead of
-// separate /admin/promo-codes/{status} routes.
-//
-// Reads the collection directly via onSnapshot — firestore.rules grants
-// admins read access to promo_codes for exactly this — but every write
-// (generate, disable) goes through app/api/admin/promo-codes, since that's
-// the only path allowed to write this collection at all.
+// Supports single-use and multi-use promo codes, custom campaign codes with
+// configurable redemption caps, per-user limits, and a detailed audit log
+// of every trader redemption (email, name, timestamp, reward).
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { Home, Loader2, Plus, Copy, Check, Ban, Search, Gift, Crown, Sparkles, Coins, ArrowLeft } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
+import {
+  Loader2, Plus, Copy, Check, Ban, Search, Gift, Crown,
+  Coins, ArrowLeft, Users, Clock, Mail, Trash2, X, ExternalLink,
+  ChevronRight, Sparkles, Filter
+} from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
-interface PromoCode {
+export interface PromoRedemptionEntry {
+  id: string;
+  userId: string;
+  userEmail?: string | null;
+  userName?: string | null;
+  rewardType: 'coins' | 'boss';
+  amount?: number;
+  bossDays?: number;
+  redeemedAt: string;
+}
+
+export interface PromoCode {
   id: string; // = code
   code: string;
   rewardType?: 'coins' | 'boss';
   amount: number;
   bossDays?: number | null;
   status: 'active' | 'used' | 'disabled';
+  maxUses?: number;
+  usedCount?: number;
+  maxUsesPerUser?: number;
   redeemed: boolean;
-  redeemedBy: string | null;
-  redeemedAt: string | null;
+  redeemedBy?: string | null;
+  redeemedAt?: string | null;
+  lastRedeemedAt?: string | null;
+  redemptions?: PromoRedemptionEntry[];
   expiresAt: string | null;
   createdBy: string;
   createdAt: string;
 }
 
-type Tab = 'all' | 'active' | 'used' | 'disabled' | 'expired';
+type Tab = 'all' | 'active' | 'partially_used' | 'used' | 'disabled' | 'expired';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'active', label: 'Active' },
-  { key: 'used', label: 'Used' },
+  { key: 'partially_used', label: 'In Progress' },
+  { key: 'used', label: 'Exhausted / Used' },
   { key: 'disabled', label: 'Disabled' },
   { key: 'expired', label: 'Expired' },
 ];
 
 const isExpired = (c: PromoCode) => !!c.expiresAt && new Date(c.expiresAt).getTime() < Date.now();
 
+export function getCodeUsage(c: PromoCode) {
+  const max = typeof c.maxUses === 'number' && c.maxUses > 0 ? c.maxUses : 1;
+  const used =
+    typeof c.usedCount === 'number'
+      ? c.usedCount
+      : c.status === 'used' || c.redeemed
+      ? 1
+      : 0;
+  const remaining = Math.max(0, max - used);
+  const isFull = used >= max || c.status === 'used';
+  const isPartial = used > 0 && !isFull;
+  return { max, used, remaining, isFull, isPartial };
+}
+
 export default function PromoCodesList() {
   const [codes, setCodes] = useState<PromoCode[]>([]);
   const [tab, setTab] = useState<Tab>('all');
   const [search, setSearch] = useState('');
   const [showGenerate, setShowGenerate] = useState(false);
+  const [inspectingCode, setInspectingCode] = useState<PromoCode | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'promo_codes'), orderBy('createdAt', 'desc'));
+    // Listen to the most recent 300 promo codes
+    const q = query(collection(db, 'promo_codes'), orderBy('createdAt', 'desc'), limit(300));
     const unsubscribe = onSnapshot(
       q,
-      (snap) => setCodes(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PromoCode)),
+      (snap) => {
+        setCodes(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PromoCode));
+      },
       (err) => console.error('Error loading promo codes:', err)
     );
     return () => unsubscribe();
   }, []);
 
+  // Update selected code in modal if updated in real-time snapshot
+  useEffect(() => {
+    if (!inspectingCode) return;
+    const updated = codes.find((c) => c.id === inspectingCode.id);
+    if (updated) setInspectingCode(updated);
+  }, [codes, inspectingCode]);
+
   const counts = useMemo(() => {
-    const c = { all: codes.length, active: 0, used: 0, disabled: 0, expired: 0 };
+    const c = { all: codes.length, active: 0, partially_used: 0, used: 0, disabled: 0, expired: 0 };
     for (const code of codes) {
-      if (code.status === 'used') c.used++;
-      else if (code.status === 'disabled') c.disabled++;
-      else if (isExpired(code)) c.expired++;
-      else c.active++;
+      const { isFull, isPartial } = getCodeUsage(code);
+      if (code.status === 'disabled') {
+        c.disabled++;
+      } else if (isExpired(code)) {
+        c.expired++;
+      } else if (isFull) {
+        c.used++;
+      } else {
+        c.active++;
+        if (isPartial) c.partially_used++;
+      }
     }
     return c;
   }, [codes]);
@@ -75,11 +123,27 @@ export default function PromoCodesList() {
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase();
     return codes.filter((c) => {
-      if (q && !c.code.includes(q)) return false;
+      const { isFull, isPartial } = getCodeUsage(c);
+      const expired = isExpired(c);
+
+      if (q) {
+        const codeMatches = c.code.includes(q);
+        const userMatches = c.redemptions?.some(
+          (r) =>
+            r.userEmail?.toUpperCase().includes(q) ||
+            r.userName?.toUpperCase().includes(q) ||
+            r.userId.toUpperCase().includes(q)
+        );
+        if (!codeMatches && !userMatches) return false;
+      }
+
       if (tab === 'all') return true;
-      if (tab === 'expired') return isExpired(c) && c.status === 'active';
-      if (tab === 'active') return c.status === 'active' && !isExpired(c);
-      return c.status === tab;
+      if (tab === 'expired') return expired && c.status !== 'disabled';
+      if (tab === 'disabled') return c.status === 'disabled';
+      if (tab === 'used') return isFull && c.status !== 'disabled';
+      if (tab === 'partially_used') return isPartial && !expired && c.status === 'active';
+      if (tab === 'active') return !isFull && !expired && c.status === 'active';
+      return true;
     });
   }, [codes, tab, search]);
 
@@ -97,19 +161,21 @@ export default function PromoCodesList() {
               </Link>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-              <Gift className="w-6 h-6 text-amber-500" /> Promo Codes
+              <Gift className="w-6 h-6 text-amber-500" /> Promo Codes Manager
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">Single-use promo codes for trading balance or Boss tier upgrades</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Generate single-use or multi-use campaign codes with live redemption tracking & audit logs
+            </p>
           </div>
           <button
             onClick={() => setShowGenerate(true)}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 min-h-[44px] sm:min-h-0 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-lg shadow-blue-500/30 active:scale-95"
           >
-            <Plus className="w-4 h-4" /> Generate Codes
+            <Plus className="w-4 h-4" /> Create Promo Code
           </button>
         </div>
 
-        {/* Tabs — smooth horizontal touch swipe */}
+        {/* Tabs */}
         <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900/50 p-1 rounded-xl mb-4 overflow-x-auto no-scrollbar flex-nowrap">
           {TABS.map((t) => (
             <button
@@ -132,28 +198,53 @@ export default function PromoCodesList() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by code…"
+            placeholder="Search by code name, trader email, or user UID…"
             className="w-full h-11 pl-10 pr-3 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-xl text-xs sm:text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
+        {/* Code list */}
         <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 shadow-sm">
           {filtered.length === 0 ? (
-            <div className="py-16 text-center text-sm text-gray-400">No codes match this view.</div>
+            <div className="py-16 text-center text-sm text-gray-400">
+              No promo codes found matching your criteria.
+            </div>
           ) : (
-            filtered.map((code) => <CodeRow key={code.id} code={code} expired={isExpired(code)} />)
+            filtered.map((code) => (
+              <CodeRow
+                key={code.id}
+                code={code}
+                onViewRedemptions={() => setInspectingCode(code)}
+              />
+            ))
           )}
         </div>
       </div>
 
       {showGenerate && <GenerateModal onClose={() => setShowGenerate(false)} />}
+      {inspectingCode && (
+        <RedemptionsModal
+          code={inspectingCode}
+          onClose={() => setInspectingCode(null)}
+        />
+      )}
     </div>
   );
 }
 
-function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
+function CodeRow({
+  code,
+  onViewRedemptions,
+}: {
+  code: PromoCode;
+  onViewRedemptions: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const [disabling, setDisabling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const expired = isExpired(code);
+  const { max, used, remaining, isFull, isPartial } = getCodeUsage(code);
 
   const copy = () => {
     navigator.clipboard.writeText(code.code);
@@ -162,7 +253,7 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
   };
 
   const disable = async () => {
-    if (!confirm(`Disable ${code.code}? This can't be undone, but it doesn't affect codes that are already used.`)) return;
+    if (!confirm(`Disable ${code.code}? Nobody else will be able to redeem it.`)) return;
     setDisabling(true);
     try {
       const res = await fetchWithFreshToken('/api/admin/promo-codes', {
@@ -179,31 +270,67 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
     }
   };
 
+  const deleteCode = async () => {
+    if (!confirm(`Delete unredeemed code ${code.code}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetchWithFreshToken('/api/admin/promo-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', code: code.code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete code');
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete code');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const badge =
-    code.status === 'used'
-      ? { label: 'USED', cls: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' }
-      : code.status === 'disabled'
-        ? { label: 'DISABLED', cls: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' }
-        : expired
-          ? { label: 'EXPIRED', cls: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
-          : { label: 'ACTIVE', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' };
+    code.status === 'disabled'
+      ? { label: 'DISABLED', cls: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' }
+      : expired
+      ? { label: 'EXPIRED', cls: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
+      : isFull
+      ? { label: 'FULLY USED', cls: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' }
+      : isPartial
+      ? { label: 'ACTIVE (PARTIAL)', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800' }
+      : { label: 'ACTIVE', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' };
 
   return (
-    <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-      <div className="min-w-0 flex items-start sm:items-center gap-2.5 sm:gap-3">
+    <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors">
+      <div className="min-w-0 flex items-start sm:items-center gap-3">
         <button
           onClick={copy}
-          className="shrink-0 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors active:scale-95 mt-0.5 sm:mt-0"
+          className="shrink-0 p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors active:scale-95 mt-0.5 sm:mt-0"
           title="Copy promo code"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono font-bold text-sm text-gray-900 dark:text-white tracking-wider break-all">{code.code}</span>
-            <span className={`sm:hidden px-2 py-0.5 rounded-full text-[9px] font-bold border ${badge.cls}`}>{badge.label}</span>
+            <span className="font-mono font-extrabold text-sm sm:text-base text-gray-900 dark:text-white tracking-wider break-all">
+              {code.code}
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${badge.cls}`}>
+              {badge.label}
+            </span>
+            {/* Usage Progress Pill */}
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
+                isFull
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/50'
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              {used} / {max} used {remaining > 0 && `(${remaining} left)`}
+            </span>
           </div>
-          <div className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-2 flex-wrap mt-0.5">
+
+          <div className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-2 flex-wrap mt-1">
             {code.rewardType === 'boss' || (code.bossDays && code.bossDays > 0) ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-extrabold text-[10px] border border-amber-500/30">
                 <Crown className="w-3 h-3 fill-current" />
@@ -212,25 +339,65 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
                   : `Boss Tier (${code.bossDays || 31} Days)`}
               </span>
             ) : (
-              <span className="font-bold text-gray-700 dark:text-gray-300">
+              <span className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Coins className="w-3 h-3 text-blue-500" />
                 ৳{code.amount.toLocaleString()} Coins
               </span>
             )}
-            {code.redeemedBy && <span className="font-mono break-all">→ {code.redeemedBy.slice(0, 10)}…</span>}
-            {code.expiresAt && !code.redeemed && <span>expires {new Date(code.expiresAt).toLocaleDateString()}</span>}
+
+            {code.maxUsesPerUser && code.maxUsesPerUser > 1 && (
+              <span className="text-[10px] bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 px-1.5 py-0.5 rounded">
+                Up to {code.maxUsesPerUser}x/user
+              </span>
+            )}
+
+            {code.expiresAt && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Exp: {new Date(code.expiresAt).toLocaleDateString()}
+              </span>
+            )}
+
+            <span>Created {new Date(code.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
+
       <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-center">
-        <span className={`hidden sm:inline-block px-2 py-1 rounded-full text-[10px] font-bold border ${badge.cls}`}>{badge.label}</span>
-        {code.status === 'active' && (
+        {/* View Entries button */}
+        {used > 0 ? (
+          <button
+            onClick={onViewRedemptions}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors active:scale-95"
+            title="Inspect every trader redemption entry"
+          >
+            <Users className="w-3.5 h-3.5 text-blue-500" />
+            <span>Entries ({used})</span>
+          </button>
+        ) : (
+          <span className="text-[11px] text-gray-400 font-mono px-2">0 redemptions</span>
+        )}
+
+        {/* Disable active code */}
+        {code.status === 'active' && !isFull && (
           <button
             onClick={disable}
             disabled={disabling}
-            title="Disable this code"
+            title="Disable future redemptions"
             className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors disabled:opacity-50 active:scale-95"
           >
             {disabling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+          </button>
+        )}
+
+        {/* Delete unredeemed code */}
+        {used === 0 && code.status !== 'used' && (
+          <button
+            onClick={deleteCode}
+            disabled={deleting}
+            title="Delete unredeemed code"
+            className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-50 active:scale-95"
+          >
+            {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
           </button>
         )}
       </div>
@@ -238,13 +405,189 @@ function CodeRow({ code, expired }: { code: PromoCode; expired: boolean }) {
   );
 }
 
+function RedemptionsModal({ code, onClose }: { code: PromoCode; onClose: () => void }) {
+  const [entries, setEntries] = useState<PromoRedemptionEntry[]>(code.redemptions || []);
+  const [loadingEntries, setLoadingEntries] = useState(false);
+  const [copiedEmails, setCopiedEmails] = useState(false);
+  const [copiedUid, setCopiedUid] = useState<string | null>(null);
+
+  const { max, used } = getCodeUsage(code);
+
+  // Fetch full subcollection entries if array was missing or limited
+  useEffect(() => {
+    async function loadFullHistory() {
+      setLoadingEntries(true);
+      try {
+        const res = await fetchWithFreshToken('/api/admin/promo-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_redemptions', code: code.code }),
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.redemptions) && data.redemptions.length > 0) {
+          setEntries(data.redemptions);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch redemptions subcollection:', err);
+      } finally {
+        setLoadingEntries(false);
+      }
+    }
+    loadFullHistory();
+  }, [code.code]);
+
+  const copyAllEmails = () => {
+    const emails = entries
+      .map((e) => e.userEmail)
+      .filter((email): email is string => Boolean(email));
+    const unique = Array.from(new Set(emails));
+    if (unique.length === 0) return;
+    navigator.clipboard.writeText(unique.join(', '));
+    setCopiedEmails(true);
+    setTimeout(() => setCopiedEmails(false), 2000);
+  };
+
+  const copyUid = (uid: string) => {
+    navigator.clipboard.writeText(uid);
+    setCopiedUid(uid);
+    setTimeout(() => setCopiedUid(null), 1500);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full sm:max-w-2xl bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[88vh] flex flex-col shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono font-black text-lg text-gray-900 dark:text-white">
+                {code.code}
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                {used} / {max} Redeemed
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Audit log of all registered trader accounts who redeemed this promo code
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex items-center justify-between gap-2 py-3">
+          <div className="text-xs font-semibold text-gray-500">
+            {entries.length} Redemption Entr{entries.length === 1 ? 'y' : 'ies'} Recorded
+          </div>
+          {entries.some((e) => e.userEmail) && (
+            <button
+              onClick={copyAllEmails}
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-colors"
+            >
+              {copiedEmails ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Mail className="w-3.5 h-3.5" />}
+              {copiedEmails ? 'Copied Emails!' : 'Copy All Emails'}
+            </button>
+          )}
+        </div>
+
+        {/* Entries Table / List */}
+        <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-100 dark:border-gray-800">
+          {loadingEntries && entries.length === 0 ? (
+            <div className="py-12 flex items-center justify-center gap-2 text-sm text-gray-400">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> Loading redemption history…
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="py-12 text-center text-sm text-gray-400">
+              No redemptions recorded for this code yet.
+            </div>
+          ) : (
+            entries.map((entry, idx) => (
+              <div key={entry.id || idx} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {entry.userName || 'DSE Trader'}
+                    </span>
+                    {entry.userEmail && (
+                      <span className="text-gray-500 dark:text-gray-400 font-mono">
+                        ({entry.userEmail})
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-gray-400 flex items-center gap-2 mt-0.5">
+                    <span className="font-mono">UID: {entry.userId.slice(0, 10)}…</span>
+                    <button
+                      onClick={() => copyUid(entry.userId)}
+                      className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      {copiedUid === entry.userId ? 'Copied' : 'Copy UID'}
+                    </button>
+                    <span>•</span>
+                    <span>
+                      {entry.redeemedAt
+                        ? new Date(entry.redeemedAt).toLocaleString('en-US', {
+                            timeZone: 'Asia/Dhaka',
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          }) + ' (Dhaka)'
+                        : 'Recent'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 self-start sm:self-center">
+                  {entry.rewardType === 'boss' || entry.bossDays ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-extrabold text-[10px] border border-amber-500/30">
+                      <Crown className="w-3 h-3 fill-current" />
+                      +{entry.bossDays || 31} Days Boss
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold text-[10px] border border-blue-200 dark:border-blue-800">
+                      <Coins className="w-3 h-3" />
+                      +৳{entry.amount?.toLocaleString()} Coins
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs active:scale-95"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GenerateModal({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<'custom' | 'random'>('custom');
   const [rewardType, setRewardType] = useState<'coins' | 'boss'>('coins');
   const [amount, setAmount] = useState(5000);
   const [bossDays, setBossDays] = useState(31);
   const [quantity, setQuantity] = useState(1);
-  const [expiresInDays, setExpiresInDays] = useState<string>('');
   const [customCode, setCustomCode] = useState('');
+  const [maxUses, setMaxUses] = useState(1);
+  const [allowMultiplePerUser, setAllowMultiplePerUser] = useState(false);
+  const [expiresInDays, setExpiresInDays] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<string[] | null>(null);
@@ -253,101 +596,174 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
     setSubmitting(true);
     setError('');
     try {
-      const token = await auth.currentUser?.getIdToken(true);
-      const res = await fetch('/api/admin/promo-codes', {
+      const isCustom = mode === 'custom' && Boolean(customCode.trim());
+      const normalizedCustomCode = isCustom ? customCode.trim().toUpperCase() : undefined;
+
+      const res = await fetchWithFreshToken('/api/admin/promo-codes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'generate',
           rewardType,
           amount: rewardType === 'coins' ? amount : 0,
           bossDays: rewardType === 'boss' ? bossDays : undefined,
-          quantity: customCode.trim() ? 1 : quantity,
+          quantity: isCustom ? 1 : quantity,
+          maxUses: maxUses,
+          maxUsesPerUser: allowMultiplePerUser ? maxUses : 1,
           expiresInDays: expiresInDays.trim() ? Number(expiresInDays) : undefined,
-          customCode: customCode.trim() || undefined,
+          customCode: normalizedCustomCode,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to generate codes');
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to generate promo codes');
       setCreated(data.codes);
     } catch (err: any) {
-      setError(err.message || 'Failed to generate codes');
+      setError(err.message || 'Failed to generate promo codes');
     } finally {
       setSubmitting(false);
     }
   };
 
   const isSubmitDisabled =
-    submitting || (rewardType === 'coins' && amount <= 0) || (rewardType === 'boss' && (!bossDays || bossDays <= 0));
+    submitting ||
+    (rewardType === 'coins' && amount <= 0) ||
+    (rewardType === 'boss' && (!bossDays || bossDays <= 0)) ||
+    (mode === 'custom' && !customCode.trim());
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+    >
       <div
-        className="w-full sm:max-w-md bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[88vh] overflow-y-auto pb-safe shadow-2xl"
+        className="w-full sm:max-w-lg bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[90vh] overflow-y-auto pb-safe shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {created ? (
           <>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">
-              {created.length} code{created.length === 1 ? '' : 's'} generated
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
+              <Check className="w-6 h-6" />
+            </div>
+            <h2 className="text-center text-lg font-extrabold text-gray-900 dark:text-white mb-1">
+              {created.length} Promo Code{created.length === 1 ? '' : 's'} Created!
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Copy these now to share — they stay visible in the list too, but this is the easiest place to grab them all at once.
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4">
+              {maxUses > 1
+                ? `Each code can be redeemed ${maxUses} times across traders.`
+                : 'Each code is single-use and ready to share.'}
             </p>
+
             <div className="max-h-60 overflow-y-auto space-y-1.5 mb-4">
               {created.map((c) => (
-                <div key={c} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/50 font-mono font-bold text-sm tracking-wider">
-                  {c}
+                <div
+                  key={c}
+                  className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50 font-mono font-bold text-sm tracking-wider"
+                >
+                  <span>{c}</span>
                   <button
                     onClick={() => navigator.clipboard.writeText(c)}
-                    className="p-1.5 rounded bg-white dark:bg-gray-800 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:scale-95"
+                    className="p-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:scale-95 shadow-sm"
                   >
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
             </div>
-            <button
-              onClick={() => navigator.clipboard.writeText(created.join('\n'))}
-              className="w-full mb-2 py-2.5 min-h-[44px] rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-bold active:scale-95"
-            >
-              Copy all
-            </button>
-            <button onClick={onClose} className="w-full py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold active:scale-95">
-              Done
-            </button>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigator.clipboard.writeText(created.join('\n'))}
+                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold active:scale-95"
+              >
+                Copy all
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold active:scale-95"
+              >
+                Done
+              </button>
+            </div>
           </>
         ) : (
           <>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Gift className="w-5 h-5 text-blue-500" /> Generate Promo Codes
+            <h2 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Gift className="w-5 h-5 text-amber-500" /> Create Promo Codes
             </h2>
+
+            {/* Code Mode: Custom Campaign vs Random Generation */}
+            <div className="mb-4">
+              <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                Generation Mode
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setMode('custom')}
+                  className={`py-2 px-3 min-h-[38px] rounded-lg text-xs font-bold transition-all ${
+                    mode === 'custom'
+                      ? 'bg-white dark:bg-[#111418] text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  Custom Named Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('random')}
+                  className={`py-2 px-3 min-h-[38px] rounded-lg text-xs font-bold transition-all ${
+                    mode === 'random'
+                      ? 'bg-white dark:bg-[#111418] text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  Auto-Generate Random
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Code Input (if mode is custom) */}
+            {mode === 'custom' && (
+              <div className="mb-4">
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                  Custom Code Name
+                </label>
+                <input
+                  type="text"
+                  value={customCode}
+                  onChange={(e) => setCustomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+                  placeholder="e.g. EID2026, SUMMERPROMO, DHAKA100"
+                  className="w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold text-sm tracking-wider uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+            )}
 
             {/* Reward Type Toggle */}
             <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+              <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                 Reward Type
               </label>
               <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setRewardType('coins')}
-                  className={`py-2 px-3 min-h-[40px] rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                  className={`py-2 px-3 min-h-[38px] rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     rewardType === 'coins'
                       ? 'bg-white dark:bg-[#111418] text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                      : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   <Coins className="w-3.5 h-3.5 text-blue-500" />
-                  <span>💰 Trading Coins</span>
+                  <span>Trading Balance</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setRewardType('boss')}
-                  className={`py-2 px-3 min-h-[40px] rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                  className={`py-2 px-3 min-h-[38px] rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     rewardType === 'boss'
                       ? 'bg-amber-500 text-gray-950 shadow-sm font-black'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                      : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   <Crown className="w-3.5 h-3.5 fill-current" />
@@ -356,17 +772,17 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
-            {/* Reward-specific fields */}
+            {/* Coins or Boss Inputs */}
             {rewardType === 'coins' ? (
               <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
-                  Coins Amount per code
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                  Coins Amount per Redemption
                 </label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className="w-full h-11 px-3 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold"
+                  className="w-full h-11 px-3.5 mb-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold text-sm"
                 />
                 <div className="flex flex-wrap gap-1.5">
                   {[1000, 5000, 10000, 20000, 50000].map((amt) => (
@@ -374,7 +790,7 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
                       key={amt}
                       type="button"
                       onClick={() => setAmount(amt)}
-                      className={`px-3 py-1.5 min-h-[36px] rounded-lg text-xs font-mono font-semibold transition-colors border active:scale-95 ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-colors border ${
                         amount === amt
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
@@ -387,7 +803,7 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
                   Boss Duration (Days)
                 </label>
                 <div className="grid grid-cols-2 gap-2 mb-2">
@@ -401,7 +817,7 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
                       key={p.days}
                       type="button"
                       onClick={() => setBossDays(p.days)}
-                      className={`p-2.5 min-h-[44px] rounded-xl text-xs font-bold border transition-all text-left active:scale-95 ${
+                      className={`p-2.5 rounded-xl text-xs font-bold border transition-all text-left ${
                         bossDays === p.days
                           ? 'bg-amber-500/20 border-amber-500 text-amber-900 dark:text-amber-200 ring-1 ring-amber-500'
                           : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
@@ -417,52 +833,112 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
                   value={bossDays}
                   onChange={(e) => setBossDays(Math.max(1, Number(e.target.value)))}
                   placeholder="Custom days"
-                  className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono text-sm"
+                  className="w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono text-sm"
                 />
               </div>
             )}
 
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
-              Quantity {customCode.trim() && <span className="normal-case font-normal text-gray-400">(fixed at 1 for a custom code)</span>}
-            </label>
-            <input
-              type="number"
-              value={customCode.trim() ? 1 : quantity}
-              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-              disabled={!!customCode.trim()}
-              className="w-full h-11 px-3 mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold disabled:opacity-50"
-            />
+            {/* Usage Limit: How many times can this code be used? */}
+            <div className="mb-4 p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40">
+              <label className="block text-[11px] font-bold text-blue-900 dark:text-blue-200 mb-1 uppercase tracking-wide">
+                Number of Allowed Uses (Total Redemptions)
+              </label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+                How many traders can redeem this code before it exhausts? (Default: 1 use)
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {[1, 5, 10, 25, 50, 100, 500].map((uses) => (
+                  <button
+                    key={uses}
+                    type="button"
+                    onClick={() => setMaxUses(uses)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border ${
+                      maxUses === uses
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    {uses === 1 ? '1 (Single-use)' : `${uses} uses`}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={100000}
+                value={maxUses}
+                onChange={(e) => setMaxUses(Math.max(1, Number(e.target.value)))}
+                placeholder="Custom number of uses"
+                className="w-full h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111418] font-mono text-sm"
+              />
 
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Expires in (days, optional)</label>
-            <input
-              type="number"
-              value={expiresInDays}
-              onChange={(e) => setExpiresInDays(e.target.value)}
-              placeholder="Never expires"
-              className="w-full h-11 px-3 mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono"
-            />
+              {/* Multi-use per user toggle */}
+              {maxUses > 1 && (
+                <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={allowMultiplePerUser}
+                    onChange={(e) => setAllowMultiplePerUser(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">
+                    Allow the <strong>same trader</strong> to redeem multiple times (Default: 1 use per account)
+                  </span>
+                </label>
+              )}
+            </div>
 
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Custom code (optional)</label>
-            <input
-              type="text"
-              value={customCode}
-              onChange={(e) => setCustomCode(e.target.value.toUpperCase())}
-              placeholder="Leave blank to auto-generate random codes"
-              className="w-full h-11 px-3 mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono uppercase"
-            />
+            {/* Random Mode Quantity */}
+            {mode === 'random' && (
+              <div className="mb-4">
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                  Quantity of Distinct Codes to Generate
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(200, Number(e.target.value))))}
+                  className="w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono font-bold"
+                />
+              </div>
+            )}
 
-            {error && <p className="text-xs text-rose-600 dark:text-rose-400 bg-rose-500/10 rounded-lg px-3 py-2 mb-4">{error}</p>}
+            {/* Expiry */}
+            <div className="mb-4">
+              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
+                Expires in (Days, Optional)
+              </label>
+              <input
+                type="number"
+                value={expiresInDays}
+                onChange={(e) => setExpiresInDays(e.target.value)}
+                placeholder="Leave blank for no expiration"
+                className="w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] font-mono text-sm"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3.5 py-2.5 mb-4">
+                {error}
+              </p>
+            )}
 
             <div className="flex gap-2 pt-2">
-              <button onClick={onClose} className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-bold active:scale-95">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold active:scale-95"
+              >
                 Cancel
               </button>
               <button
                 onClick={submit}
                 disabled={isSubmitDisabled}
-                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-blue-500/25"
               >
-                {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Generate
+                {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Generate Promo Code</span>
               </button>
             </div>
           </>

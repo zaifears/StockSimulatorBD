@@ -48,13 +48,15 @@ const SANE_BALANCE_CAP = 100_000_000;
 type RedeemFailure =
   | 'INVALID_CODE'
   | 'CODE_ALREADY_USED'
+  | 'USER_ALREADY_REDEEMED'
   | 'CODE_DISABLED'
   | 'CODE_EXPIRED'
   | 'BALANCE_CAP';
 
 const FAILURE_RESPONSES: Record<RedeemFailure, { status: number; error: string }> = {
   INVALID_CODE: { status: 404, error: 'That code is not valid.' },
-  CODE_ALREADY_USED: { status: 409, error: 'That code has already been used.' },
+  CODE_ALREADY_USED: { status: 409, error: 'That code has reached its maximum usage limit.' },
+  USER_ALREADY_REDEEMED: { status: 409, error: 'You have already redeemed this promo code.' },
   CODE_DISABLED: { status: 409, error: 'That code is no longer active.' },
   CODE_EXPIRED: { status: 410, error: 'That code has expired.' },
   BALANCE_CAP: { status: 400, error: 'This would exceed the maximum allowed balance.' },
@@ -133,18 +135,40 @@ export async function POST(req: NextRequest) {
       }
 
       const promo = promoSnap.data()!;
-      // Strict platform-wide single-use guarantee: check status, redeemed flag, and redeemedBy
-      if (promo.status === 'used' || promo.redeemed === true || Boolean(promo.redeemedBy)) {
-        throw new RedeemError('CODE_ALREADY_USED');
-      }
       if (promo.status === 'disabled') throw new RedeemError('CODE_DISABLED');
       if (promo.status !== 'active') throw new RedeemError('INVALID_CODE');
       if (typeof promo.expiresAt === 'string' && new Date(promo.expiresAt).getTime() < Date.now()) {
         throw new RedeemError('CODE_EXPIRED');
       }
 
+      // Check total usage cap
+      const maxUses = typeof promo.maxUses === 'number' && promo.maxUses > 0 ? promo.maxUses : 1;
+      const currentUsedCount = typeof promo.usedCount === 'number' ? promo.usedCount : (promo.status === 'used' || promo.redeemed ? 1 : 0);
+
+      if (currentUsedCount >= maxUses || promo.status === 'used') {
+        throw new RedeemError('CODE_ALREADY_USED');
+      }
+
+      // Check per-user limit
+      const maxUsesPerUser = typeof promo.maxUsesPerUser === 'number' && promo.maxUsesPerUser > 0 ? promo.maxUsesPerUser : 1;
+      const userData = userSnap.exists ? userSnap.data() : null;
+      const userPromoRedemptions = userData?.promoRedemptions || {};
+      const userRedemptionCount = typeof userPromoRedemptions[code] === 'number'
+        ? userPromoRedemptions[code]
+        : (userData?.redeemedPromoCodes && Array.isArray(userData.redeemedPromoCodes) && userData.redeemedPromoCodes.includes(code) ? 1 : 0);
+
+      if (userRedemptionCount >= maxUsesPerUser) {
+        throw new RedeemError('USER_ALREADY_REDEEMED');
+      }
+
+      const newUsedCount = currentUsedCount + 1;
+      const isExhausted = newUsedCount >= maxUses;
       const nowIso = new Date().toISOString();
       const isBossPromo = promo.rewardType === 'boss' || (typeof promo.bossDays === 'number' && promo.bossDays > 0);
+
+      const userEmail = userData?.email || decodedToken.email || null;
+      const userName = userData?.name || userData?.displayName || decodedToken.name || null;
+      const redemptionId = db.collection('promo_codes').doc().id;
 
       if (isBossPromo) {
         // ── Boss Tier Promo Redemption ──
@@ -153,7 +177,6 @@ export async function POST(req: NextRequest) {
           throw new RedeemError('INVALID_CODE');
         }
 
-        const userData = userSnap.exists ? userSnap.data() : null;
         const nowMs = Date.now();
         // If user is already active Boss, extend from current expiry; otherwise from now
         const currentUntil =
@@ -164,6 +187,16 @@ export async function POST(req: NextRequest) {
 
         const isTrial = bossDays <= 7;
         const planName = isTrial ? `Boss Tier Trial (${bossDays} Days)` : `Promo Code (${bossDays} Days)`;
+
+        const redemptionEntry = {
+          id: redemptionId,
+          userId: uid,
+          userEmail,
+          userName,
+          rewardType: 'boss',
+          bossDays,
+          redeemedAt: nowIso,
+        };
 
         // Upgrade user to Boss tier authoritatively
         transaction.set(
@@ -176,18 +209,25 @@ export async function POST(req: NextRequest) {
             lastPromoRedeemedAt: nowIso,
             promoCodeRedeemedAt: nowIso,
             redeemedPromoCodes: FieldValue.arrayUnion(code),
+            [`promoRedemptions.${code}`]: FieldValue.increment(1),
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         );
 
-        // Burn code immediately inside atomic transaction
+        // Update promo document
         transaction.update(promoRef, {
-          status: 'used',
-          redeemed: true,
+          usedCount: newUsedCount,
+          status: isExhausted ? 'used' : 'active',
+          redeemed: isExhausted,
           redeemedBy: uid,
           redeemedAt: nowIso,
+          lastRedeemedAt: nowIso,
+          redemptions: FieldValue.arrayUnion(redemptionEntry),
         });
+
+        // Write entry to subcollection for persistent full audit log
+        transaction.set(db.doc(`promo_codes/${code}/redemptions/${redemptionId}`), redemptionEntry);
 
         return {
           rewardType: 'boss' as const,
@@ -215,13 +255,40 @@ export async function POST(req: NextRequest) {
           transaction.set(stateRef, { balance: newBalance, portfolio: [], totalInvested: 0, realizedGainLoss: 0 });
         }
 
-        // Burn code immediately inside atomic transaction
+        // Record in coinTransactions ledger
+        const txRef = db.collection('coinTransactions').doc();
+        transaction.set(txRef, {
+          userId: uid,
+          amount,
+          type: 'promo_code',
+          code,
+          description: `Promo code ${code} redeemed (+৳${amount.toLocaleString()})`,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+
+        const redemptionEntry = {
+          id: redemptionId,
+          userId: uid,
+          userEmail,
+          userName,
+          rewardType: 'coins',
+          amount,
+          redeemedAt: nowIso,
+        };
+
+        // Update promo document
         transaction.update(promoRef, {
-          status: 'used',
-          redeemed: true,
+          usedCount: newUsedCount,
+          status: isExhausted ? 'used' : 'active',
+          redeemed: isExhausted,
           redeemedBy: uid,
           redeemedAt: nowIso,
+          lastRedeemedAt: nowIso,
+          redemptions: FieldValue.arrayUnion(redemptionEntry),
         });
+
+        // Write entry to subcollection for persistent full audit log
+        transaction.set(db.doc(`promo_codes/${code}/redemptions/${redemptionId}`), redemptionEntry);
 
         // Log redemption on user document
         transaction.set(
@@ -230,6 +297,7 @@ export async function POST(req: NextRequest) {
             lastPromoRedeemedAt: nowIso,
             promoCodeRedeemedAt: nowIso,
             redeemedPromoCodes: FieldValue.arrayUnion(code),
+            [`promoRedemptions.${code}`]: FieldValue.increment(1),
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
