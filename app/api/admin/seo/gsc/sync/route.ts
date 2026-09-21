@@ -7,100 +7,6 @@ import { generateSeoOpportunities } from '@/lib/seo/opportunities';
 import { decryptToken, encryptToken } from '@/lib/seo/crypto';
 import { SITE_URL } from '@/lib/siteUrl';
 
-// Curated real-world DSE baseline queries
-const INITIAL_DSE_QUERIES: GscQueryData[] = [
-  {
-    query: 'dse paper trading',
-    clicks: 480,
-    impressions: 4820,
-    ctr: 0.099,
-    position: 2.1,
-    targetPages: ['/trade', '/'],
-    trend: 'rising',
-    previousPeriodImpressions: 3100,
-  },
-  {
-    query: 'bangladesh stock market simulator',
-    clicks: 340,
-    impressions: 3890,
-    ctr: 0.087,
-    position: 2.4,
-    targetPages: ['/', '/trade'],
-    trend: 'stable',
-    previousPeriodImpressions: 3750,
-  },
-  {
-    query: 'dse stock simulator',
-    clicks: 290,
-    impressions: 3450,
-    ctr: 0.084,
-    position: 2.8,
-    targetPages: ['/trade'],
-    trend: 'rising',
-    previousPeriodImpressions: 2200,
-  },
-  {
-    query: 'how to practice stock trading in bangladesh',
-    clicks: 65,
-    impressions: 2840,
-    ctr: 0.022,
-    position: 7.4,
-    targetPages: ['/blog'],
-    trend: 'rising',
-    previousPeriodImpressions: 1100,
-  },
-  {
-    query: 'dse trading rules t+1 circuit breaker',
-    clicks: 45,
-    impressions: 1920,
-    ctr: 0.023,
-    position: 8.4,
-    targetPages: ['/blog'],
-    trend: 'rising',
-    previousPeriodImpressions: 850,
-  },
-  {
-    query: 'gp share price dse live',
-    clicks: 120,
-    impressions: 5120,
-    ctr: 0.023,
-    position: 9.8,
-    targetPages: ['/stocks/gp'],
-    trend: 'stable',
-    previousPeriodImpressions: 4900,
-  },
-  {
-    query: 'square pharma stock analysis dse',
-    clicks: 85,
-    impressions: 2410,
-    ctr: 0.035,
-    position: 6.2,
-    targetPages: ['/stocks/squrpharma'],
-    trend: 'rising',
-    previousPeriodImpressions: 1500,
-  },
-  {
-    query: 'batbc dividend yield history',
-    clicks: 55,
-    impressions: 1840,
-    ctr: 0.029,
-    position: 8.1,
-    targetPages: ['/stocks/batbc'],
-    trend: 'stable',
-    previousPeriodImpressions: 1780,
-  },
-  {
-    query: 'best paper trading app in bd',
-    clicks: 40,
-    impressions: 1650,
-    ctr: 0.024,
-    position: 5.6,
-    targetPages: ['/'],
-    trend: 'rising',
-    previousPeriodImpressions: 920,
-  },
-];
-
 async function getValidAccessToken(connectionDoc: any): Promise<string | null> {
   const clientId = process.env.GOOGLE_GSC_CLIENT_ID || process.env.GSC_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_GSC_CLIENT_SECRET || process.env.GSC_CLIENT_SECRET;
@@ -160,10 +66,7 @@ export async function GET(req: NextRequest) {
       db.collection('gsc_connections').doc('default').get(),
     ]);
 
-    let queries: GscQueryData[] = queriesSnap.docs.map((d) => d.data() as GscQueryData);
-    if (queries.length === 0) {
-      queries = INITIAL_DSE_QUERIES;
-    }
+    const queries: GscQueryData[] = queriesSnap.docs.map((d) => d.data() as GscQueryData);
 
     const connData = connSnap.data();
     const connectionInfo = {
@@ -240,7 +143,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!liveSynced || syncedQueries.length === 0) {
-      syncedQueries = INITIAL_DSE_QUERIES;
+      return NextResponse.json({
+        success: false,
+        liveSynced: false,
+        error: !accessToken
+          ? 'Google Search Console not connected or token expired. Please connect OAuth first.'
+          : 'No queries returned from Search Console for this property.',
+      }, { status: 400 });
     }
 
     // Persist query snapshots in SEO Firestore

@@ -161,34 +161,7 @@ export async function getCitationEvents(): Promise<AiCitationEvent[]> {
   const db = getSeoDb();
   const snap = await db.collection('seo_ai_events').orderBy('detectedAt', 'desc').limit(20).get();
   if (snap.empty) {
-    return [
-      {
-        id: 'evt_sample_1',
-        eventType: 'NEW_CITATION',
-        provider: 'Perplexity',
-        query: 'how to practice DSE trading',
-        details: 'Perplexity now cites https://www.stocksimulator.tech/stocks in response sources.',
-        previousValue: 'not cited',
-        newValue: 'https://www.stocksimulator.tech/stocks',
-        detectedAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
-      },
-      {
-        id: 'evt_sample_2',
-        eventType: 'MENTION_GAINED',
-        provider: 'ChatGPT',
-        query: 'best dse paper trading simulator',
-        details: 'ChatGPT recommended StockSimulatorBD as a free paper trading platform for DSE.',
-        detectedAt: new Date(Date.now() - 3600000 * 24 * 5).toISOString(),
-      },
-      {
-        id: 'evt_sample_3',
-        eventType: 'COMPETITOR_ADDED',
-        provider: 'Claude',
-        query: 'how to buy shares in dse',
-        details: 'Claude added references to DSE official website alongside StockSimulatorBD.',
-        detectedAt: new Date(Date.now() - 3600000 * 24 * 9).toISOString(),
-      },
-    ];
+    return [];
   }
   return snap.docs.map((d) => d.data() as AiCitationEvent);
 }

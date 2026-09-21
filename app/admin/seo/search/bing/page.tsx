@@ -83,7 +83,8 @@ export default function BingWebmasterPage() {
   }
 
   const isConnected = data?.config?.connected;
-  const summary = data?.summary || { totalClicks: 94, totalImpressions: 2180, avgCtr: 4.31, chatClicks: 18, chatImpressions: 410 };
+  const summary = data?.summary || { totalClicks: 0, totalImpressions: 0, avgCtr: 0, chatClicks: 0, chatImpressions: 0, pagesInIndex: 0, inboundLinks: 0 };
+  const gscData = data?.gsc || { connected: false, clicks: 0, impressions: 0, ctr: 0, position: 0 };
   const queries = data?.queries || [];
   const crawl = data?.crawl || [];
   const backlinks = data?.backlinks || [];
@@ -140,18 +141,38 @@ export default function BingWebmasterPage() {
               <span className="font-bold text-sm text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
                 <Search className="w-4 h-4 text-blue-600" /> Google Search Console
               </span>
-              <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">
-                Connected via OAuth
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                gscData.connected
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40'
+                  : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'
+              }`}>
+                {gscData.connected ? 'Connected via OAuth' : 'Not Connected'}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
               <div>
                 <div className="text-[11px] text-gray-500">Google Clicks</div>
-                <div className="text-xl font-bold font-mono tabular-nums text-gray-900 dark:text-white">1,284</div>
+                <div className="text-xl font-bold font-mono tabular-nums text-gray-900 dark:text-white">
+                  {gscData.clicks.toLocaleString()}
+                </div>
               </div>
               <div>
                 <div className="text-[11px] text-gray-500">Google Impressions</div>
-                <div className="text-xl font-bold font-mono tabular-nums text-gray-900 dark:text-white">31,420</div>
+                <div className="text-xl font-bold font-mono tabular-nums text-gray-900 dark:text-white">
+                  {gscData.impressions.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] text-gray-500">Avg. CTR</div>
+                <div className="text-xl font-bold font-mono tabular-nums text-blue-600 dark:text-blue-400">
+                  {gscData.ctr}%
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] text-gray-500">Avg. Position</div>
+                <div className="text-xl font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400">
+                  {gscData.position}
+                </div>
               </div>
             </div>
           </div>
@@ -162,11 +183,15 @@ export default function BingWebmasterPage() {
               <span className="font-bold text-sm text-teal-900 dark:text-teal-300 flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-teal-600" /> Bing Webmaster Tools
               </span>
-              <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 rounded-md">
-                {isConnected ? 'Connected via REST API' : 'Sample Mode'}
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                isConnected
+                  ? 'text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40'
+                  : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800'
+              }`}>
+                {isConnected ? 'Connected via REST API' : 'Not Connected'}
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
               <div>
                 <div className="text-[11px] text-gray-500">Bing Clicks</div>
                 <div className="text-xl font-bold font-mono tabular-nums text-teal-700 dark:text-teal-400">
@@ -180,10 +205,15 @@ export default function BingWebmasterPage() {
                 </div>
               </div>
               <div>
-                <div className="text-[11px] text-gray-500">Bing Chat Traffic</div>
-                <div className="text-xl font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>{summary.chatClicks}</span>
+                <div className="text-[11px] text-gray-500">Avg. CTR</div>
+                <div className="text-xl font-bold font-mono tabular-nums text-teal-600 dark:text-teal-400">
+                  {summary.avgCtr}%
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] text-gray-500">Indexed Pages</div>
+                <div className="text-xl font-bold font-mono tabular-nums text-indigo-600 dark:text-indigo-400">
+                  {summary.pagesInIndex ? summary.pagesInIndex.toLocaleString() : (summary.chatClicks || 0)}
                 </div>
               </div>
             </div>
@@ -292,33 +322,41 @@ export default function BingWebmasterPage() {
           <span className="text-[10px] text-gray-400">External Evidence vs. Internal Page Authority</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 dark:bg-[#151C28] text-gray-500 uppercase tracking-wider font-extrabold border-b border-gray-200 dark:border-gray-800">
-              <tr>
-                <th className="py-3 px-4">Referring Source URL</th>
-                <th className="py-3 px-4">Target Landing Page</th>
-                <th className="py-3 px-4">Anchor Text</th>
-                <th className="py-3 px-4 text-right">Discovered</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-medium">
-              {backlinks.map((b: any) => (
-                <tr key={b.url} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
-                  <td className="py-3 px-4 font-mono text-blue-600 dark:text-blue-400 max-w-[280px] truncate">
-                    <a href={b.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
-                      <span>{b.url}</span>
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                    </a>
-                  </td>
-                  <td className="py-3 px-4 font-mono text-gray-700 dark:text-gray-300">{b.targetPage}</td>
-                  <td className="py-3 px-4 text-gray-500 italic">&ldquo;{b.anchorText || 'N/A'}&rdquo;</td>
-                  <td className="py-3 px-4 text-right font-mono text-gray-400 text-[11px]">{b.discoveredDate}</td>
+        {backlinks.length === 0 ? (
+          <div className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
+            {summary.inboundLinks
+              ? `Bingbot detects ${summary.inboundLinks} external inbound link references to verified pages in its index.`
+              : 'No external backlink URLs currently reported by Bing Webmaster API.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 dark:bg-[#151C28] text-gray-500 uppercase tracking-wider font-extrabold border-b border-gray-200 dark:border-gray-800">
+                <tr>
+                  <th className="py-3 px-4">Referring Source URL</th>
+                  <th className="py-3 px-4">Target Landing Page</th>
+                  <th className="py-3 px-4">Anchor Text</th>
+                  <th className="py-3 px-4 text-right">Discovered</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-medium">
+                {backlinks.map((b: any) => (
+                  <tr key={b.url} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
+                    <td className="py-3 px-4 font-mono text-blue-600 dark:text-blue-400 max-w-[280px] truncate">
+                      <a href={b.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                        <span>{b.url}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-700 dark:text-gray-300">{b.targetPage}</td>
+                    <td className="py-3 px-4 text-gray-500 italic">&ldquo;{b.anchorText || 'N/A'}&rdquo;</td>
+                    <td className="py-3 px-4 text-right font-mono text-gray-400 text-[11px]">{b.discoveredDate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Config Modal */}

@@ -87,7 +87,7 @@ export async function getInspectionQueue(): Promise<UrlInspectionItem[]> {
 }
 
 /**
- * Inspects a URL using Google URL Inspection API or generates verified mock inspection
+ * Inspects a URL using Google URL Inspection API
  */
 export async function inspectUrl(path: string, accessToken?: string): Promise<UrlInspectionItem> {
   const fullUrl = absoluteUrl(path);
@@ -99,14 +99,10 @@ export async function inspectUrl(path: string, accessToken?: string): Promise<Ur
     url: fullUrl,
     path,
     priority,
-    googleIndexed: true,
-    verdict: 'PASS',
-    indexingState: 'INDEXED',
-    lastCrawlTime: new Date().toISOString(),
-    googleCanonical: fullUrl,
-    userCanonical: fullUrl,
-    mobileUsable: true,
-    richResultsStatus: 'Valid structured data detected',
+    googleIndexed: null,
+    verdict: 'UNKNOWN',
+    indexingState: 'UNINSPECTED',
+    richResultsStatus: accessToken ? 'Inspection pending' : 'Requires Google Search Console OAuth',
     lastInspectedAt: new Date().toISOString(),
   };
 

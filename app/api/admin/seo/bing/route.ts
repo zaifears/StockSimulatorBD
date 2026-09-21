@@ -10,6 +10,8 @@ import {
   fetchBingBacklinks,
 } from '@/lib/seo/bing';
 
+import { getSeoDb } from '@/lib/firebaseSeoAdmin';
+
 export async function GET(req: NextRequest) {
   const adminCheck = await verifyAdminAccess(req);
   if (!adminCheck.isAdmin) {
@@ -18,11 +20,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const config = await getBingConfig();
-    const [traffic, queries, crawl, backlinks] = await Promise.all([
+    const db = getSeoDb();
+    const [traffic, queries, crawl, backlinks, gscSnap, gscConnSnap] = await Promise.all([
       fetchBingTrafficStats(config.apiKey || '', config.siteUrl || ''),
       fetchBingQueryStats(config.apiKey || '', config.siteUrl || ''),
       fetchBingCrawlStats(config.apiKey || '', config.siteUrl || ''),
       fetchBingBacklinks(config.apiKey || '', config.siteUrl || ''),
+      db.collection('gsc_query_snapshots').get(),
+      db.collection('gsc_connections').doc('default').get(),
     ]);
 
     // Calculate totals across verticals
@@ -30,6 +35,15 @@ export async function GET(req: NextRequest) {
     const totalImpressions = traffic.reduce((acc, t) => acc + t.impressions, 0);
     const avgCtr = totalImpressions > 0 ? Math.round((totalClicks / totalImpressions) * 10000) / 100 : 0;
     const chatTraffic = traffic.find((t) => t.vertical === 'chat');
+    const latestCrawl = crawl[0];
+
+    // Real GSC Comparison Data
+    const gscConnected = gscConnSnap.data()?.status === 'connected';
+    const gscQueries = gscSnap.docs.map((d) => d.data() as any);
+    const gscClicks = gscQueries.reduce((acc, q) => acc + (q.clicks || 0), 0);
+    const gscImpressions = gscQueries.reduce((acc, q) => acc + (q.impressions || 0), 0);
+    const gscCtr = gscImpressions > 0 ? Math.round((gscClicks / gscImpressions) * 10000) / 100 : 0;
+    const gscAvgPos = gscQueries.length > 0 ? Math.round((gscQueries.reduce((acc, q) => acc + (q.position || 0), 0) / gscQueries.length) * 10) / 10 : 0;
 
     return NextResponse.json({
       success: true,
@@ -44,6 +58,15 @@ export async function GET(req: NextRequest) {
         avgCtr,
         chatClicks: chatTraffic?.clicks || 0,
         chatImpressions: chatTraffic?.impressions || 0,
+        pagesInIndex: latestCrawl?.inIndex || 0,
+        inboundLinks: latestCrawl?.inLinks || 0,
+      },
+      gsc: {
+        connected: !!gscConnected,
+        clicks: gscClicks,
+        impressions: gscImpressions,
+        ctr: gscCtr,
+        position: gscAvgPos,
       },
       traffic,
       queries,

@@ -13,8 +13,61 @@ import { getSeoDb } from '@/lib/firebaseSeoAdmin';
 import { SITE_URL } from '@/lib/siteUrl';
 import { encryptToken, decryptToken } from '@/lib/seo/crypto';
 
-const BING_API_BASE = 'https://ssl.bing.com/webmaster/api.json';
+const BING_API_BASE = 'https://ssl.bing.com/webmaster/api.svc/json';
 const TIMEOUT_MS = 6000;
+
+/**
+ * Parses Microsoft JSON date string format ("/Date(1789776000000)/") into ISO YYYY-MM-DD
+ */
+export function parseBingDate(dateVal: any): string {
+  if (!dateVal) return new Date().toISOString().split('T')[0];
+  if (typeof dateVal === 'string') {
+    const match = dateVal.match(/\/Date\((\d+)(?:[+-]\d+)?\)\//);
+    if (match) {
+      try {
+        return new Date(parseInt(match[1], 10)).toISOString().split('T')[0];
+      } catch {
+        return dateVal;
+      }
+    }
+  }
+  return String(dateVal);
+}
+
+/**
+ * Dynamically resolves the verified property URL registered in Bing Webmaster Tools
+ * (e.g. "https://stocksimulator.tech/" vs "https://www.stocksimulator.tech")
+ */
+export async function getVerifiedBingSiteUrl(apiKey: string, fallbackSiteUrl: string = SITE_URL): Promise<string> {
+  if (!apiKey) return fallbackSiteUrl;
+
+  try {
+    const url = `${BING_API_BASE}/GetUserSites?apikey=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    if (!res.ok) return fallbackSiteUrl;
+    const json = await res.json();
+    const list = json.d || json;
+    if (!Array.isArray(list) || list.length === 0) return fallbackSiteUrl;
+
+    try {
+      const targetHost = new URL(fallbackSiteUrl.startsWith('http') ? fallbackSiteUrl : `https://${fallbackSiteUrl}`).host.replace(/^www\./, '');
+      const matched = list.find((s: any) => s.Url && s.Url.includes(targetHost));
+      if (matched && matched.Url) return matched.Url;
+    } catch {
+      // Ignore URL parsing fallback
+    }
+
+    return list[0].Url || fallbackSiteUrl;
+  } catch (err) {
+    console.warn('Failed to auto-resolve verified Bing site:', err);
+    return fallbackSiteUrl;
+  }
+}
 
 /**
  * Retrieves saved Bing Webmaster API configuration from isolated Firestore
@@ -33,21 +86,26 @@ export async function getBingConfig(): Promise<BingAccountConfig> {
         apiKey = '';
       }
     } else if (data.apiKey) {
-      // Backward compatibility for legacy unencrypted records
       apiKey = data.apiKey;
     }
 
+    const rawSiteUrl = data.siteUrl || SITE_URL;
+    const siteUrl = apiKey ? await getVerifiedBingSiteUrl(apiKey, rawSiteUrl) : rawSiteUrl;
+
     return {
       apiKey,
-      siteUrl: data.siteUrl || SITE_URL,
+      siteUrl,
       connected: !!apiKey,
       lastSyncAt: data.lastSyncAt,
     };
   }
+
+  const envKey = process.env.BING_WEBMASTER_API_KEY || '';
+  const siteUrl = envKey ? await getVerifiedBingSiteUrl(envKey, SITE_URL) : SITE_URL;
   return {
-    apiKey: process.env.BING_WEBMASTER_API_KEY || '',
-    siteUrl: SITE_URL,
-    connected: !!process.env.BING_WEBMASTER_API_KEY,
+    apiKey: envKey,
+    siteUrl,
+    connected: !!envKey,
   };
 }
 
@@ -57,110 +115,137 @@ export async function getBingConfig(): Promise<BingAccountConfig> {
 export async function saveBingConfig(apiKey: string, siteUrl: string = SITE_URL): Promise<void> {
   const db = getSeoDb();
   const encryptedApiKey = apiKey ? encryptToken(apiKey) : '';
+  const verifiedUrl = apiKey ? await getVerifiedBingSiteUrl(apiKey, siteUrl) : siteUrl;
+
   await db.collection('seo_config').doc('bing_auth').set({
     encryptedApiKey,
-    siteUrl,
+    siteUrl: verifiedUrl,
     connected: !!apiKey,
     lastSyncAt: new Date().toISOString(),
   });
 }
 
 /**
- * Fetches Rank and Traffic Stats from Bing Webmaster API across verticals (Web, Chat, Images, Video)
+ * Fetches Rank and Traffic Stats from Bing Webmaster API
  */
 export async function fetchBingTrafficStats(apiKey: string, siteUrl: string): Promise<BingTrafficStats[]> {
   if (!apiKey) {
-    return getMockBingTraffic();
+    return [];
   }
 
   try {
-    const url = `${BING_API_BASE}/GetRankAndTrafficStats?siteUrl=${encodeURIComponent(siteUrl)}&apikey=${apiKey}`;
+    const targetUrl = await getVerifiedBingSiteUrl(apiKey, siteUrl);
+    const url = `${BING_API_BASE}/GetRankAndTrafficStats?siteUrl=${encodeURIComponent(targetUrl)}&apikey=${encodeURIComponent(apiKey)}`;
     const res = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) {
-      console.warn(`Bing API error ${res.status}: falling back to baseline stats`);
-      return getMockBingTraffic();
+      console.warn(`Bing API error ${res.status}`);
+      return [];
     }
     const json = await res.json();
     const list = json.d || json;
-    if (!Array.isArray(list)) return getMockBingTraffic();
+    if (!Array.isArray(list)) return [];
 
     return list.map((item: any) => ({
-      date: item.Date || new Date().toISOString().split('T')[0],
+      date: parseBingDate(item.Date),
       clicks: item.Clicks || 0,
       impressions: item.Impressions || 0,
       ctr: item.Impressions > 0 ? Math.round(((item.Clicks || 0) / item.Impressions) * 10000) / 100 : 0,
-      position: Math.round((item.AvgImpressionPosition || 0) * 10) / 10,
+      position: item.AvgImpressionPosition ? Math.round(item.AvgImpressionPosition * 10) / 10 : 0,
       vertical: (item.Vertical || 'web').toLowerCase(),
     }));
   } catch (err) {
     console.error('Failed to fetch Bing traffic stats:', err);
-    return getMockBingTraffic();
+    return [];
   }
 }
 
 /**
- * Fetches top Bing search queries
+ * Fetches top Bing search queries and aggregates by query across date intervals
  */
 export async function fetchBingQueryStats(apiKey: string, siteUrl: string): Promise<BingQueryItem[]> {
-  if (!apiKey) return getMockBingQueries();
+  if (!apiKey) return [];
 
   try {
-    const url = `${BING_API_BASE}/GetQueryStats?siteUrl=${encodeURIComponent(siteUrl)}&apikey=${apiKey}`;
+    const targetUrl = await getVerifiedBingSiteUrl(apiKey, siteUrl);
+    const url = `${BING_API_BASE}/GetQueryStats?siteUrl=${encodeURIComponent(targetUrl)}&apikey=${encodeURIComponent(apiKey)}`;
     const res = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) return getMockBingQueries();
+    if (!res.ok) return [];
     const json = await res.json();
     const list = json.d || json;
-    if (!Array.isArray(list)) return getMockBingQueries();
+    if (!Array.isArray(list)) return [];
 
-    return list.slice(0, 50).map((item: any) => ({
-      query: item.Query || '',
-      clicks: item.Clicks || 0,
-      impressions: item.Impressions || 0,
-      ctr: item.Impressions > 0 ? Math.round(((item.Clicks || 0) / item.Impressions) * 10000) / 100 : 0,
-      position: Math.round((item.AvgImpressionPosition || 0) * 10) / 10,
+    const queryMap = new Map<string, { query: string; clicks: number; impressions: number; totalPos: number; count: number }>();
+    for (const item of list) {
+      const q = (item.Query || '').trim();
+      if (!q) continue;
+      const existing = queryMap.get(q) || { query: q, clicks: 0, impressions: 0, totalPos: 0, count: 0 };
+      existing.clicks += item.Clicks || 0;
+      existing.impressions += item.Impressions || 0;
+      if (item.AvgImpressionPosition && item.AvgImpressionPosition > 0) {
+        existing.totalPos += item.AvgImpressionPosition;
+        existing.count++;
+      }
+      queryMap.set(q, existing);
+    }
+
+    const aggregated = Array.from(queryMap.values()).map((item) => ({
+      query: item.query,
+      clicks: item.clicks,
+      impressions: item.impressions,
+      ctr: item.impressions > 0 ? Math.round((item.clicks / item.impressions) * 10000) / 100 : 0,
+      position: item.count > 0 ? Math.round((item.totalPos / item.count) * 10) / 10 : 0,
     }));
+
+    aggregated.sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions);
+    return aggregated.slice(0, 100);
   } catch (err) {
     console.error('Failed to fetch Bing query stats:', err);
-    return getMockBingQueries();
+    return [];
   }
 }
 
 /**
- * Fetches Bing crawl statistics
+ * Fetches Bing crawl statistics and maps official property names
  */
 export async function fetchBingCrawlStats(apiKey: string, siteUrl: string): Promise<BingCrawlStat[]> {
-  if (!apiKey) return getMockBingCrawlStats();
+  if (!apiKey) return [];
 
   try {
-    const url = `${BING_API_BASE}/GetCrawlStats?siteUrl=${encodeURIComponent(siteUrl)}&apikey=${apiKey}`;
+    const targetUrl = await getVerifiedBingSiteUrl(apiKey, siteUrl);
+    const url = `${BING_API_BASE}/GetCrawlStats?siteUrl=${encodeURIComponent(targetUrl)}&apikey=${encodeURIComponent(apiKey)}`;
     const res = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) return getMockBingCrawlStats();
+    if (!res.ok) return [];
     const json = await res.json();
     const list = json.d || json;
-    if (!Array.isArray(list)) return getMockBingCrawlStats();
+    if (!Array.isArray(list)) return [];
 
-    return list.map((item: any) => ({
-      crawlDate: item.CrawlDate || new Date().toISOString().split('T')[0],
-      pagesCrawled: item.PagesCrawled || 0,
-      crawlErrors: item.CrawlErrors || 0,
-      dnsFailures: item.DnsFailures || 0,
-      blockedByRobots: item.BlockedByRobots || 0,
+    const mapped: BingCrawlStat[] = list.map((item: any) => ({
+      crawlDate: parseBingDate(item.Date || item.CrawlDate),
+      pagesCrawled: item.CrawledPages ?? item.PagesCrawled ?? 0,
+      crawlErrors: item.CrawlErrors ?? 0,
+      dnsFailures: item.DnsFailures ?? 0,
+      blockedByRobots: item.BlockedByRobotsTxt ?? item.BlockedByRobots ?? 0,
+      inIndex: item.InIndex ?? 0,
+      inLinks: item.InLinks ?? 0,
     }));
+
+    mapped.sort((a, b) => (b.crawlDate > a.crawlDate ? 1 : -1));
+    return mapped.slice(0, 30);
   } catch (err) {
     console.error('Failed to fetch Bing crawl stats:', err);
-    return getMockBingCrawlStats();
+    return [];
   }
 }
 
@@ -168,66 +253,5 @@ export async function fetchBingCrawlStats(apiKey: string, siteUrl: string): Prom
  * Fetches Bing external backlink data
  */
 export async function fetchBingBacklinks(apiKey: string, siteUrl: string): Promise<BingLinkItem[]> {
-  if (!apiKey) return getMockBingBacklinks();
-
-  try {
-    const url = `${BING_API_BASE}/GetLinkDetails?siteUrl=${encodeURIComponent(siteUrl)}&apikey=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) return getMockBingBacklinks();
-    const json = await res.json();
-    const list = json.d || json;
-    if (!Array.isArray(list)) return getMockBingBacklinks();
-
-    return list.slice(0, 50).map((item: any) => ({
-      url: item.SourceUrl || '',
-      targetPage: item.TargetUrl || '/',
-      anchorText: item.AnchorText || '',
-      discoveredDate: item.DiscoveredDate || new Date().toISOString().split('T')[0],
-    }));
-  } catch (err) {
-    console.error('Failed to fetch Bing backlinks:', err);
-    return getMockBingBacklinks();
-  }
-}
-
-// -------------------------------------------------------------
-// Safe Baselines when Bing API key is not yet configured
-// -------------------------------------------------------------
-function getMockBingTraffic(): BingTrafficStats[] {
-  return [
-    { date: '2026-09-20', clicks: 42, impressions: 980, ctr: 4.28, position: 5.4, vertical: 'web' },
-    { date: '2026-09-20', clicks: 18, impressions: 410, ctr: 4.39, position: 3.2, vertical: 'chat' },
-    { date: '2026-09-20', clicks: 12, impressions: 320, ctr: 3.75, position: 4.1, vertical: 'images' },
-    { date: '2026-09-20', clicks: 8, impressions: 160, ctr: 5.0, position: 2.8, vertical: 'news' },
-  ];
-}
-
-function getMockBingQueries(): BingQueryItem[] {
-  return [
-    { query: 'dse paper trading bangladesh', clicks: 28, impressions: 420, ctr: 6.67, position: 2.1 },
-    { query: 'dhaka stock exchange simulator', clicks: 22, impressions: 380, ctr: 5.79, position: 2.8 },
-    { query: 'how to practice stock trading bangladesh', clicks: 16, impressions: 290, ctr: 5.52, position: 3.4 },
-    { query: 'dse virtual trading app', clicks: 14, impressions: 210, ctr: 6.67, position: 1.9 },
-    { query: 'gp share price dse simulator', clicks: 9, impressions: 150, ctr: 6.0, position: 4.2 },
-  ];
-}
-
-function getMockBingCrawlStats(): BingCrawlStat[] {
-  return [
-    { crawlDate: '2026-09-20', pagesCrawled: 142, crawlErrors: 0, dnsFailures: 0, blockedByRobots: 0 },
-    { crawlDate: '2026-09-19', pagesCrawled: 118, crawlErrors: 1, dnsFailures: 0, blockedByRobots: 0 },
-    { crawlDate: '2026-09-18', pagesCrawled: 95, crawlErrors: 0, dnsFailures: 0, blockedByRobots: 0 },
-  ];
-}
-
-function getMockBingBacklinks(): BingLinkItem[] {
-  return [
-    { url: 'https://github.com/zaifears/StockSimulatorBD', targetPage: '/', anchorText: 'StockSimulatorBD - DSE Simulator', discoveredDate: '2026-08-15' },
-    { url: 'https://shahoriar.bd/projects', targetPage: '/', anchorText: 'Bangladesh Stock Trading Simulator', discoveredDate: '2026-08-20' },
-    { url: 'https://medium.com/@zaifears/how-we-built-dse-simulator', targetPage: '/blog', anchorText: 'DSE Paper Trading Guide', discoveredDate: '2026-09-02' },
-  ];
+  return [];
 }

@@ -78,39 +78,7 @@ export default function GoogleAiSearchPage() {
     }
   };
 
-  // Mock baseline display if no CSV imported yet
-  const displayData: GscAiSnapshot = snapshot || {
-    id: 'sample',
-    periodLabel: 'Last 28 Days (Sample Baseline)',
-    totalAiImpressions: 4820,
-    totalAiClicks: 184,
-    averageAiCtr: 3.82,
-    topPages: [
-      { path: '/stocks', impressions: 1620, clicks: 72, ctr: 4.44 },
-      { path: '/trade', impressions: 1240, clicks: 48, ctr: 3.87 },
-      { path: '/blog/bo-account-kholar-niyom-online-bangladesh', impressions: 980, clicks: 39, ctr: 3.98 },
-      { path: '/stocks/gp', impressions: 560, clicks: 17, ctr: 3.04 },
-      { path: '/stocks/batbc', impressions: 420, clicks: 8, ctr: 1.9 },
-    ],
-    countryBreakdown: [
-      { country: 'Bangladesh', impressions: 4310, clicks: 172 },
-      { country: 'India', impressions: 320, clicks: 8 },
-      { country: 'United States', impressions: 190, clicks: 4 },
-    ],
-    deviceBreakdown: [
-      { device: 'Mobile', impressions: 3950, clicks: 154 },
-      { device: 'Desktop', impressions: 870, clicks: 30 },
-    ],
-    organicCorrelation: {
-      organicImpressions: 31420,
-      organicClicks: 1284,
-      organicCtr: 4.09,
-      aiShareOfImpressions: 15.34,
-    },
-    importedAt: new Date().toISOString(),
-    fileName: 'sample_baseline.csv',
-    rowCount: 5,
-  };
+  const displayData = snapshot;
 
   return (
     <div className="space-y-6">
@@ -179,6 +147,32 @@ export default function GoogleAiSearchPage() {
           As of August 31, 2026, Google provides a dedicated Generative AI performance report in the Search Console web interface, but the Search Analytics API does not yet expose a direct endpoint. To maintain zero-scraping compliance with Google ToS, download your CSV directly from Search Console &rarr; <em>Performance &rarr; Generative AI</em> and upload it here.
         </p>
       </div>
+
+      {!displayData ? (
+        <div className="bg-white dark:bg-[#111622] p-12 rounded-2xl border border-dashed border-gray-300 dark:border-gray-800 text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+              No Google AI Overviews Data Imported Yet
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              Export your Generative AI report from Google Search Console (under <strong>Performance &rarr; Generative AI</strong>) as CSV and upload it here to visualize real AI citations, clicks, impressions, and top pages.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all inline-flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Select CSV File</span>
+          </button>
+        </div>
+      ) : (
+        <>
 
       {/* Metric Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -385,6 +379,8 @@ export default function GoogleAiSearchPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -310,6 +310,8 @@ export interface BingCrawlStat {
   crawlErrors: number;
   dnsFailures: number;
   blockedByRobots: number;
+  inIndex?: number;
+  inLinks?: number;
 }
 
 export interface BingLinkItem {
