@@ -127,13 +127,23 @@ export default function RecommendationsPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-auto">
+                <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
                   {rec.status === 'dismissed' ? (
                     <span className="text-xs text-gray-400 font-bold">Dismissed</span>
                   ) : rec.status === 'applied' ? (
-                    <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Approved / Applied
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> Approved / Applied
+                      </span>
+                      {rec.targetUrl && (
+                        <a
+                          href={`/admin/seo/changes?path=${encodeURIComponent(rec.targetUrl)}`}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                        >
+                          Apply in Change Center &rarr;
+                        </a>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <button
@@ -152,6 +162,14 @@ export default function RecommendationsPage() {
                         <Check className="w-3.5 h-3.5" />
                         Approve Action
                       </button>
+                      {rec.targetUrl && (
+                        <a
+                          href={`/admin/seo/changes?path=${encodeURIComponent(rec.targetUrl)}`}
+                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 transition-colors inline-flex items-center gap-1"
+                        >
+                          Open in Change Center &rarr;
+                        </a>
+                      )}
                     </>
                   )}
                 </div>

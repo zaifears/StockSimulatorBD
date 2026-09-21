@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { fetchWithToken } from '@/lib/utils/fetchWithToken';
-import { GitBranch, RotateCcw, CheckCircle2, ShieldCheck, History, Edit3 } from 'lucide-react';
+import { GitBranch, RotateCcw, CheckCircle2, ShieldCheck, History, Edit3, Zap, PlusCircle } from 'lucide-react';
 
 export default function ChangesManagementPage() {
   const [changes, setChanges] = useState<any[]>([]);
@@ -12,6 +12,20 @@ export default function ChangesManagementPage() {
   const [loading, setLoading] = useState(true);
   const [rollbackLoading, setRollbackLoading] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Form state for applying a safe override directly
+  const [newPath, setNewPath] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [applyingOverride, setApplyingOverride] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const queryPath = params.get('path');
+      if (queryPath) setNewPath(queryPath);
+    }
+  }, []);
 
   const fetchChanges = async () => {
     try {
@@ -62,24 +76,117 @@ export default function ChangesManagementPage() {
     }
   };
 
+  const handleApplyNewOverride = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPath.trim()) return;
+    setApplyingOverride(true);
+    setNotice(null);
+
+    try {
+      const res = await fetchWithToken('/api/admin/seo/changes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'apply_override',
+          path: newPath.trim(),
+          title: newTitle.trim(),
+          description: newDescription.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setNotice(`✅ Successfully applied override to ${newPath} and initialized Change Impact monitoring!`);
+        setNewPath('');
+        setNewTitle('');
+        setNewDescription('');
+        fetchChanges();
+      } else {
+        setNotice(`⚠️ Override failed: ${json.error}`);
+      }
+    } catch (err: any) {
+      setNotice(`❌ Failed to apply override: ${err.message}`);
+    } finally {
+      setApplyingOverride(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white dark:bg-[#111622] p-4 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
         <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
           <GitBranch className="w-5 h-5 text-blue-500" />
-          Change Management & Rollback Center
+          Change Management &amp; Rollback Center
         </h2>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-          Strict change lifecycle: Observe → Analyze → Recommend → Preview → Approve → Apply → Verify → Monitor. Every change preserves full before/after rollback state.
+          Strict change lifecycle: Observe &rarr; Analyze &rarr; Recommend &rarr; Preview &rarr; Approve &rarr; Apply &rarr; Verify &rarr; Monitor. Every change preserves full before/after rollback state.
         </p>
       </div>
 
       {notice && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300">
+        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
           {notice}
         </div>
       )}
+
+      {/* Direct Deploy & Track Card */}
+      <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+          <h3 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2">
+            <Edit3 className="w-4 h-4 text-blue-500" /> Deploy Safe Metadata Override &amp; Track Impact
+          </h3>
+          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+            Safe Level 1 Change
+          </span>
+        </div>
+
+        <form onSubmit={handleApplyNewOverride} className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div>
+            <label className="font-bold text-gray-600 dark:text-gray-400">Target Path</label>
+            <input
+              type="text"
+              value={newPath}
+              onChange={(e) => setNewPath(e.target.value)}
+              placeholder="e.g. /trade or /stocks/gp"
+              required
+              className="w-full mt-1 p-2 rounded-xl bg-gray-50 dark:bg-[#161D2A] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="font-bold text-gray-600 dark:text-gray-400">New Meta Title</label>
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Primary intent & value prop"
+              className="w-full mt-1 p-2 rounded-xl bg-gray-50 dark:bg-[#161D2A] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="font-bold text-gray-600 dark:text-gray-400">New Meta Description</label>
+            <input
+              type="text"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Concise 120-155 char summary"
+              className="w-full mt-1 p-2 rounded-xl bg-gray-50 dark:bg-[#161D2A] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+
+          <div className="md:col-span-3 flex justify-end pt-1">
+            <button
+              type="submit"
+              disabled={applyingOverride || !newPath.trim()}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 shadow-sm disabled:opacity-60"
+            >
+              <Zap className={`w-3.5 h-3.5 ${applyingOverride ? 'animate-spin' : ''}`} />
+              {applyingOverride ? 'Applying...' : 'Apply Safe Override & Track Impact'}
+            </button>
+          </div>
+        </form>
+      </div>
 
       {/* Active Safe Overrides Table */}
       <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs">
