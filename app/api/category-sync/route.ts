@@ -1,48 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// app/api/category-sync/route.ts
-// Writes artifacts/{appId}/public/data/market_info/categories from
-// api/category_sync.py's scrape of DSE's market-category boards (A/B/G/N/Z).
-//
-// This closes a real, confirmed gap: hooks/useSimulator.ts has read this
-// exact document since the categoryMap listener was built (merging it onto
-// every stock as `stock.category`, which every category badge in the UI —
-// GP[A], JHRML[B], the Portfolio diversification breakdown, etc. — depends
-// on), but nothing ever wrote to it. firestore.rules already denies the
-// client any write here (`allow write: if false`, same as market_info/latest),
-// so an Admin-SDK route is the only thing that ever could.
-//
-// Unlike price sync (3-minute cadence), DSE's category assignment is a slow-
-// moving administrative fact — it should be scheduled far less often (daily
-// is more than enough). Mirrors app/api/stock-sync/route.ts's auth and
-// Admin SDK init pattern exactly so it can be added as one more entry on
-// whatever external cron already calls /api/stock-sync, using the same
-// CRON_SECRET.
-
-export const maxDuration = 60;
-export const dynamic = 'force-dynamic';
-
-function getAdminApp() {
-  if (getApps().length > 0) return getApps()[0];
-
-  return initializeApp({
-    credential: admin.credential.cert({
-      type: 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_ADMIN_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_ADMIN_CLIENT_ID,
-      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: process.env.FIREBASE_ADMIN_CLIENT_CERT_URL,
-    } as admin.ServiceAccount),
-  });
-}
+import { getAdminDb } from '@/lib/firebaseAdmin';
 
 function buildSyncUrl(): string {
   if (process.env.CATEGORY_SYNC_URL) return process.env.CATEGORY_SYNC_URL;
@@ -123,7 +80,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const db = getFirestore(getAdminApp());
+    const db = getAdminDb();
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID;
 
     if (!appId) {

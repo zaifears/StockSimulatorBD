@@ -1,0 +1,17 @@
+# Documentation and specification files
+*.md
+LICENSE
+
+# Agent tooling directories
+.agents/
+.claude/
+.codex/
+.impeccable/
+.vscode/
+
+# Local utility scripts
+scripts/
+
+# Local test & audit logs
+lighthouse-report.html
+lighthouse-report.json

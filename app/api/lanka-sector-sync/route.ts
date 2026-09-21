@@ -1,49 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// app/api/lanka-sector-sync/route.ts
-// Writes artifacts/{appId}/public/data/market_info/sectors from
-// api/lanka_sector_sync.py's scrape of lankabd.com's DataMatrix board.
-// This is Scraper A from the DSE-market-data-pipeline plan: a slow-moving
-// reference sync (industry sector), meant to run roughly every two weeks —
-// not a price feed, so it doesn't belong on the 3-minute stock-sync cadence.
-//
-// "Only write on change" (per the plan): every run updates a cheap
-// `lastChecked` timestamp so a healthy-but-unchanged run is still visible,
-// but the `sectors` map, `lastChanged`, and a changelog entry are only
-// written when the scrape actually differs from what's stored — which
-// doubles as a free audit trail of real DSE sector reclassifications
-// (artifacts/{appId}/public/data/market_info/sectors/changelog/{id}).
-//
-// Mirrors app/api/category-sync/route.ts's auth pattern, Admin SDK init,
-// and its two-layer defense against a bad scrape overwriting good data:
-// a fixed floor (MIN_TOTAL_SYMBOLS) and a day-over-day drop-fraction guard
-// (MAX_DROP_FRACTION) — real sector moves are a slow trickle, never a mass
-// same-day shift.
-
-export const maxDuration = 60;
-export const dynamic = 'force-dynamic';
-
-function getAdminApp() {
-  if (getApps().length > 0) return getApps()[0];
-
-  return initializeApp({
-    credential: admin.credential.cert({
-      type: 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_ADMIN_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_ADMIN_CLIENT_ID,
-      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: process.env.FIREBASE_ADMIN_CLIENT_CERT_URL,
-    } as admin.ServiceAccount),
-  });
-}
+import { getAdminDb } from '@/lib/firebaseAdmin';
 
 function buildSyncUrl(): string {
   if (process.env.LANKA_SECTOR_SYNC_URL) return process.env.LANKA_SECTOR_SYNC_URL;
@@ -140,7 +96,7 @@ export async function GET(request: NextRequest) {
 
   // ── Diff, sanity-check, and (conditionally) write ────────────────────────
   try {
-    const db = getFirestore(getAdminApp());
+    const db = getAdminDb();
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID;
 
     if (!appId) {

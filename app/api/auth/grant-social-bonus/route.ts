@@ -2,26 +2,12 @@
 // Server-side endpoint to grant 10,000 coin welcome bonus to new social login users
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    } as any),
-  });
-}
-
-const adminAuth = getAuth();
-const db = getFirestore();
+import { getAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 
 export async function POST(request: NextRequest) {
   try {
+    const adminAuth = getAdminAuth();
+    const db = getAdminDb();
     // 🔒 AUTHENTICATION: Verify user is authenticated
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {

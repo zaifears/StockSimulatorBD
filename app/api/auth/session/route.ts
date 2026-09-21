@@ -1,37 +1,5 @@
-import { auth } from 'firebase-admin';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Only initialize on runtime (not build time)
-let adminApp: any = null;
-
-function getAdminApp() {
-  if (adminApp) return adminApp;
-  
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  
-  if (!serviceAccountKey) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set');
-  }
-
-  try {
-    const credential = cert(JSON.parse(serviceAccountKey));
-    const apps = getApps();
-    
-    if (apps.length === 0) {
-      adminApp = initializeApp({
-        credential,
-      });
-    } else {
-      adminApp = apps[0];
-    }
-    
-    return adminApp;
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin:', error);
-    throw new Error('Failed to initialize Firebase Admin');
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,9 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token required' }, { status: 400 });
     }
 
-    // Get Firebase Admin app
-    const adminApp = getAdminApp();
-    const adminAuth = auth(adminApp);
+    // Get Firebase Admin auth
+    const adminAuth = getAdminAuth();
 
     // Verify the token with Firebase Admin SDK
     const decodedToken = await adminAuth.verifyIdToken(token);

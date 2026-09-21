@@ -1,61 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminDb } from '@/lib/firebaseAdmin';
 import { isMarketOpenServer } from '@/lib/utils/marketHours';
 import { sendAdminAlertEmail } from '@/lib/resendAdmin';
-
-// app/api/price-failsafe-sync/route.ts
-// Scraper B of the DSE-market-data-pipeline plan. Unlike stock-sync/
-// category-sync/lanka-sector-sync, this route does NOT unconditionally
-// scrape-and-write on every invocation — it's meant to be hit on the same
-// kind of frequent cron cadence as stock-sync, but only *acts* when the
-// primary scraper's heartbeat (market_info/latest.lastUpdated) has gone
-// stale during market hours. api/market_sync.py "never broke" so far, but
-// that's not something to trust indefinitely — this is the backstop for the
-// day it does, sourcing prices from lankabd.com (api/lanka_price_sync.py)
-// instead of dsebd.org, and emailing the admin via Resend (lib/resendAdmin)
-// so a silent outage doesn't just sit there un-noticed.
-//
-// State lives in two docs under the same market_info collection stock-sync
-// already writes to:
-//   market_info/latest         — same doc stock-sync writes; only touched
-//                                 here when actually activating the failsafe,
-//                                 and always with source: 'lankabd-failsafe'
-//                                 so it's obvious which source is live. The
-//                                 next successful stock-sync .set() (full
-//                                 replace, no merge) wipes these fields
-//                                 automatically on recovery — no extra
-//                                 recovery-write code needed for that doc.
-//   market_info/failsafeStatus — { active, activatedAt, primaryLastUpdated,
-//                                 lastAlertSentAt, lastCheckedAt }. Tracks
-//                                 whether we're currently in a failsafe
-//                                 episode and when the admin was last
-//                                 emailed about it, purely for this route's
-//                                 own bookkeeping (cooldown + recovery
-//                                 detection).
-
-export const maxDuration = 60;
-export const dynamic = 'force-dynamic';
-
-function getAdminApp() {
-  if (getApps().length > 0) return getApps()[0];
-
-  return initializeApp({
-    credential: admin.credential.cert({
-      type: 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_ADMIN_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_ADMIN_CLIENT_ID,
-      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: process.env.FIREBASE_ADMIN_CLIENT_CERT_URL,
-    } as admin.ServiceAccount),
-  });
-}
 
 function buildSyncUrl(): string {
   if (process.env.LANKA_PRICE_SYNC_URL) return process.env.LANKA_PRICE_SYNC_URL;
@@ -109,7 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'NEXT_PUBLIC_SIMULATOR_APP_ID env var is not set' }, { status: 500 });
   }
 
-  const db = getFirestore(getAdminApp());
+  const db = getAdminDb();
   const marketInfoCol = db
     .collection('artifacts')
     .doc(appId)

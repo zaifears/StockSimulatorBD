@@ -5,26 +5,8 @@
  * Uses Firebase custom claims (set via Firebase Admin SDK)
  */
 
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { NextRequest, NextResponse } from 'next/server';
-
-function getAdminApp() {
-  if (getApps().length > 0) {
-    return getApps()[0];
-  }
-  
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  
-  return initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    }),
-  });
-}
 
 /**
  * Verify that the request is from an authenticated admin user
@@ -46,9 +28,8 @@ export async function verifyAdminAccess(req: NextRequest): Promise<
 
     const token = authHeader.substring(7).trim();
 
-    // Initialize admin app and verify token
-    const adminApp = getAdminApp();
-    const adminAuth = getAuth(adminApp);
+    // Get admin auth and verify token
+    const adminAuth = getAdminAuth();
 
     let decodedToken;
     try {
@@ -134,8 +115,7 @@ export const adminAuthMiddleware = async (req: NextRequest) => {
  * await setAdminClaim('user_uid', true);
  */
 export async function setAdminClaim(uid: string, isAdmin: boolean): Promise<void> {
-  const adminApp = getAdminApp();
-  const adminAuth = getAuth(adminApp);
+  const adminAuth = getAdminAuth();
 
   await adminAuth.setCustomUserClaims(uid, { admin: isAdmin });
   console.log(`✅ Admin claim ${isAdmin ? 'granted' : 'revoked'} for user ${uid}`);
@@ -146,8 +126,7 @@ export async function setAdminClaim(uid: string, isAdmin: boolean): Promise<void
  */
 export async function isUserAdmin(uid: string): Promise<boolean> {
   try {
-    const adminApp = getAdminApp();
-    const adminAuth = getAuth(adminApp);
+    const adminAuth = getAdminAuth();
     
     const user = await adminAuth.getUser(uid);
     return user.customClaims?.admin === true;
