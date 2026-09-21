@@ -66,15 +66,15 @@ export async function getInspectionQueue(): Promise<UrlInspectionItem[]> {
       url: absoluteUrl(path),
       path,
       priority: determinePriority(path),
-      googleIndexed: true,
-      verdict: 'PASS',
-      indexingState: 'INDEXED',
-      lastCrawlTime: new Date(Date.now() - 86400000 * 2).toISOString(),
-      googleCanonical: absoluteUrl(path),
+      googleIndexed: null,
+      verdict: 'UNKNOWN',
+      indexingState: 'UNINSPECTED',
+      lastCrawlTime: null as any,
+      googleCanonical: null as any,
       userCanonical: absoluteUrl(path),
-      mobileUsable: true,
-      richResultsStatus: 'Valid',
-      lastInspectedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+      mobileUsable: null as any,
+      richResultsStatus: 'Pending Inspection',
+      lastInspectedAt: null as any,
     }));
 
     for (const item of initialItems) {

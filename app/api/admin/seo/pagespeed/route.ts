@@ -14,7 +14,17 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const targetUrl = searchParams.get('url') || SITE_URL;
+  const rawUrl = searchParams.get('url') || SITE_URL;
+  let targetUrl = SITE_URL;
+  try {
+    const parsed = new URL(rawUrl);
+    const mainHost = new URL(SITE_URL).hostname;
+    if (parsed.hostname === mainHost || parsed.hostname === `www.${mainHost}` || parsed.hostname.endsWith(mainHost)) {
+      targetUrl = parsed.toString();
+    }
+  } catch {
+    targetUrl = SITE_URL;
+  }
   const forceFresh = searchParams.get('fresh') === 'true';
 
   const urlHash = crypto.createHash('sha256').update(targetUrl).digest('hex').substring(0, 16);
@@ -52,31 +62,37 @@ export async function GET(req: NextRequest) {
 
     const res = await fetch(psiUrl, {
       headers: { 'User-Agent': 'StockSimulatorBD-Auditor/1.0' },
+      signal: AbortSignal.timeout(10000),
       next: { revalidate: 3600 },
     });
 
-    let scores = { performance: 92, accessibility: 96, bestPractices: 95, seo: 100 };
-    let metrics = { fcp: '1.2 s', lcp: '2.1 s', cls: '0.01', fid: '18 ms' };
-
-    if (res.ok) {
-      const json = await res.json();
-      const categories = json.lighthouseResult?.categories || {};
-      const audits = json.lighthouseResult?.audits || {};
-
-      scores = {
-        performance: Math.round((categories.performance?.score ?? 0.9) * 100),
-        accessibility: Math.round((categories.accessibility?.score ?? 0.95) * 100),
-        bestPractices: Math.round((categories['best-practices']?.score ?? 0.95) * 100),
-        seo: Math.round((categories.seo?.score ?? 1.0) * 100),
-      };
-
-      metrics = {
-        fcp: audits['first-contentful-paint']?.displayValue || '1.2 s',
-        lcp: audits['largest-contentful-paint']?.displayValue || '2.2 s',
-        cls: audits['cumulative-layout-shift']?.displayValue || '0.01',
-        fid: audits['max-potential-fid']?.displayValue || '20 ms',
-      };
+    if (!res.ok) {
+      const errText = await res.text();
+      let msg = `Google PageSpeed API returned HTTP ${res.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        msg = errJson.error?.message || msg;
+      } catch {}
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
     }
+
+    const json = await res.json();
+    const categories = json.lighthouseResult?.categories || {};
+    const audits = json.lighthouseResult?.audits || {};
+
+    const scores = {
+      performance: categories.performance?.score != null ? Math.round(categories.performance.score * 100) : null,
+      accessibility: categories.accessibility?.score != null ? Math.round(categories.accessibility.score * 100) : null,
+      bestPractices: categories['best-practices']?.score != null ? Math.round(categories['best-practices'].score * 100) : null,
+      seo: categories.seo?.score != null ? Math.round(categories.seo.score * 100) : null,
+    };
+
+    const metrics = {
+      fcp: audits['first-contentful-paint']?.displayValue || 'N/A',
+      lcp: audits['largest-contentful-paint']?.displayValue || 'N/A',
+      cls: audits['cumulative-layout-shift']?.displayValue || 'N/A',
+      fid: audits['max-potential-fid']?.displayValue || 'N/A',
+    };
 
     const auditedAt = new Date().toISOString();
 

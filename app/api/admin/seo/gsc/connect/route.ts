@@ -4,6 +4,8 @@ import { verifyAdminAccess } from '@/lib/utils/adminVerification';
 import { absoluteUrl } from '@/lib/siteUrl';
 import crypto from 'crypto';
 
+import { getSeoDb } from '@/lib/firebaseSeoAdmin';
+
 export async function GET(req: NextRequest) {
   const adminCheck = await verifyAdminAccess(req);
   if (!adminCheck.isAdmin) {
@@ -31,6 +33,18 @@ export async function GET(req: NextRequest) {
   // Random state to prevent CSRF
   const state = crypto.randomBytes(16).toString('hex');
 
+  // Persist state in isolated SEO Firestore as an unshakeable fallback
+  // (Prevents handshake drops when privacy shields or Brave block cross-origin redirect cookies)
+  try {
+    const seoDb = getSeoDb();
+    await seoDb.collection('seo_oauth_states').doc(state).set({
+      state,
+      createdAt: Date.now(),
+    });
+  } catch (dbErr) {
+    console.warn('Failed to persist OAuth state to SEO db (cookie will still be used):', dbErr);
+  }
+
   const scope = 'https://www.googleapis.com/auth/webmasters.readonly';
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
     clientId
@@ -51,8 +65,8 @@ export async function GET(req: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 600, // 10 minutes
-    path: '/api/admin/seo/gsc',
+    maxAge: 900, // 15 minutes
+    path: '/',
   });
 
   return response;

@@ -34,7 +34,17 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const targetUrl = searchParams.get('url') || SITE_URL;
+  const rawUrl = searchParams.get('url') || SITE_URL;
+  let targetUrl = SITE_URL;
+  try {
+    const parsed = new URL(rawUrl);
+    const mainHost = new URL(SITE_URL).hostname;
+    if (parsed.hostname === mainHost || parsed.hostname === `www.${mainHost}` || parsed.hostname.endsWith(mainHost)) {
+      targetUrl = parsed.toString();
+    }
+  } catch {
+    targetUrl = SITE_URL;
+  }
   const forceFresh = searchParams.get('fresh') === 'true';
 
   const urlHash = crypto.createHash('sha256').update(targetUrl).digest('hex').substring(0, 16);

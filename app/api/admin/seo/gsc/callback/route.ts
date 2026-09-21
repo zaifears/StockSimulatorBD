@@ -4,6 +4,8 @@ import { getSeoDb } from '@/lib/firebaseSeoAdmin';
 import { encryptToken } from '@/lib/seo/crypto';
 import { SITE_URL, absoluteUrl } from '@/lib/siteUrl';
 
+import { discoverGscSites } from '@/lib/seo/gscSites';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
@@ -16,7 +18,32 @@ export async function GET(req: NextRequest) {
   }
 
   // Verify OAuth CSRF State to prevent connection hijacking (RFC 6749 §10.12)
-  if (!stateCookie || !stateParam || stateCookie !== stateParam) {
+  let stateValid = false;
+  if (stateParam) {
+    if (stateCookie && stateCookie === stateParam) {
+      stateValid = true;
+    } else {
+      // Fallback verification via isolated SEO Firestore in case browser privacy shields
+      // (e.g. Brave Shields, Safari ITP, partitioned storage) dropped the redirect cookie
+      try {
+        const seoDb = getSeoDb();
+        const stateDoc = await seoDb.collection('seo_oauth_states').doc(stateParam).get();
+        if (stateDoc.exists) {
+          const data = stateDoc.data();
+          // Verify 15-minute validity window
+          if (data?.createdAt && Date.now() - data.createdAt < 15 * 60 * 1000) {
+            stateValid = true;
+          }
+          // Consume state (one-time use nonce)
+          await stateDoc.ref.delete().catch(() => {});
+        }
+      } catch (dbErr) {
+        console.warn('Error verifying OAuth state doc:', dbErr);
+      }
+    }
+  }
+
+  if (!stateValid) {
     return NextResponse.redirect(absoluteUrl('/admin/seo/search?gsc_error=invalid_csrf_state'));
   }
 
@@ -54,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     const { access_token, refresh_token, expires_in } = tokenData;
 
-    // Encrypt the refresh token using AES-256-GCM before writing to Firestore
+    // Encrypt tokens using AES-256-GCM before writing to Firestore
     const encryptedRefreshToken = refresh_token ? encryptToken(refresh_token) : null;
     const encryptedAccessToken = encryptToken(access_token);
 
@@ -66,10 +93,14 @@ export async function GET(req: NextRequest) {
     // If Google didn't return a new refresh token on re-auth, preserve existing encrypted refresh token
     const finalEncryptedRefreshToken = encryptedRefreshToken || existingData?.encryptedRefreshToken;
 
+    // Auto-discover verified sites from Google Search Console API
+    const { properties, matchedProperty } = await discoverGscSites(access_token);
+
     await connectionRef.set(
       {
         status: 'connected',
-        propertyUrl: `${SITE_URL}/`,
+        propertyUrl: matchedProperty,
+        availableProperties: properties.map((p) => p.siteUrl),
         encryptedAccessToken,
         encryptedRefreshToken: finalEncryptedRefreshToken,
         tokenExpiresAt: Date.now() + (expires_in || 3600) * 1000,
@@ -78,7 +109,9 @@ export async function GET(req: NextRequest) {
       { merge: true }
     );
 
-    const response = NextResponse.redirect(absoluteUrl('/admin/seo/search?gsc_connected=true'));
+    const response = NextResponse.redirect(
+      absoluteUrl(`/admin/seo/search?gsc_connected=true&property=${encodeURIComponent(matchedProperty)}`)
+    );
     response.cookies.delete('gsc_oauth_state');
     return response;
   } catch (err: any) {

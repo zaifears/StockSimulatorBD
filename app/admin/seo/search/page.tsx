@@ -8,10 +8,16 @@ import { GscQueryData } from '@/lib/seo/types';
 
 export default function SearchConsolePage() {
   const [queries, setQueries] = useState<GscQueryData[]>([]);
+  const [dimensions, setDimensions] = useState<{
+    countries?: Array<{ country: string; clicks: number; impressions: number }>;
+    devices?: Array<{ device: string; clicks: number; impressions: number }>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [purging, setPurging] = useState(false);
   const [connection, setConnection] = useState<any>(null);
+  const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [filterText, setFilterText] = useState('');
   const [activeTab, setActiveTab] = useState<'queries' | 'dimensions'>('queries');
   const [sortField, setSortField] = useState<'impressions' | 'clicks' | 'ctr' | 'position'>('impressions');
@@ -23,6 +29,7 @@ export default function SearchConsolePage() {
       if (json.success) {
         setQueries(json.queries || []);
         setConnection(json.connection || null);
+        setDimensions(json.dimensions || null);
       }
     } catch (err) {
       console.error('Error loading GSC data:', err);
@@ -33,20 +40,51 @@ export default function SearchConsolePage() {
 
   useEffect(() => {
     fetchGscData();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const isConnected = params.get('gsc_connected') === 'true';
+      const property = params.get('property');
+      const err = params.get('gsc_error');
+
+      if (isConnected) {
+        setAlertMessage({
+          type: 'success',
+          text: `Google Search Console connected successfully! Verified property: ${property || 'Domain Property'}. Click "Sync Search Console" below to pull live queries.`,
+        });
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (err) {
+        let friendlyErr = err;
+        if (err === 'invalid_csrf_state') {
+          friendlyErr = 'Security validation failed (CSRF state mismatch). Please click "Connect Search Console" to retry.';
+        } else if (err === 'access_denied') {
+          friendlyErr = 'Access permission was declined on Google sign-in screen.';
+        }
+        setAlertMessage({
+          type: 'error',
+          text: `Search Console connection failed: ${friendlyErr}`,
+        });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
   }, []);
 
   const handleConnectGsc = async () => {
     setConnecting(true);
+    setAlertMessage(null);
     try {
       const res = await fetchWithToken('/api/admin/seo/gsc/connect');
       const json = await res.json();
       if (json.success && json.authUrl) {
         window.location.href = json.authUrl;
       } else {
-        alert(json.error || 'Failed to initiate Google OAuth. Check GOOGLE_GSC_CLIENT_ID in environment.');
+        setAlertMessage({
+          type: 'error',
+          text: json.error || 'Failed to initiate Google OAuth. Check GOOGLE_GSC_CLIENT_ID and GOOGLE_GSC_CLIENT_SECRET.',
+        });
       }
     } catch (err: any) {
-      alert(`OAuth error: ${err.message}`);
+      setAlertMessage({ type: 'error', text: `OAuth error: ${err.message}` });
     } finally {
       setConnecting(false);
     }
@@ -54,16 +92,45 @@ export default function SearchConsolePage() {
 
   const handleSync = async () => {
     setSyncing(true);
+    setAlertMessage(null);
     try {
       const res = await fetchWithToken('/api/admin/seo/gsc/sync', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
+        setAlertMessage({
+          type: 'success',
+          text: `Live Sync Successful: Imported ${json.syncedQueriesCount} real search queries from ${json.propertyUrl || 'Google Search Console'}.`,
+        });
         await fetchGscData();
+      } else {
+        setAlertMessage({
+          type: 'error',
+          text: json.error || 'Failed to sync with Search Console.',
+        });
       }
-    } catch (err) {
-      console.error('Failed to sync GSC:', err);
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: `Search Console sync error: ${err.message}` });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handlePurge = async () => {
+    if (!confirm('Purge all Search Console query snapshots from Firestore? Real data will be pulled again on next sync.')) {
+      return;
+    }
+    setPurging(true);
+    try {
+      const res = await fetchWithToken('/api/admin/seo/gsc/sync', { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setAlertMessage({ type: 'info', text: json.message || 'Purged query snapshots from Firestore.' });
+        await fetchGscData();
+      }
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: `Purge error: ${err.message}` });
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -81,6 +148,32 @@ export default function SearchConsolePage() {
 
   return (
     <div className="space-y-6">
+      {/* Dynamic Status / Alert Banner */}
+      {alertMessage && (
+        <div
+          className={`p-4 rounded-2xl border flex items-start justify-between gap-3 text-xs ${
+            alertMessage.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+              : alertMessage.type === 'error'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+              : 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-bold">
+              {alertMessage.type === 'success' ? '✅' : alertMessage.type === 'error' ? '⚠️' : 'ℹ️'}
+            </span>
+            <span>{alertMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setAlertMessage(null)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#111622] p-4 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
         <div>
@@ -112,6 +205,17 @@ export default function SearchConsolePage() {
             >
               <Globe className="w-3.5 h-3.5" />
               {connecting ? 'Connecting...' : 'Connect Search Console'}
+            </button>
+          )}
+
+          {queries.length > 0 && (
+            <button
+              onClick={handlePurge}
+              disabled={purging}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800 transition-all active:scale-95"
+              title="Purge cached queries from Firestore"
+            >
+              {purging ? 'Purging...' : 'Clear Cached Data'}
             </button>
           )}
 
@@ -217,128 +321,158 @@ export default function SearchConsolePage() {
       </div>
 
       {activeTab === 'queries' ? (
-        <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 dark:bg-[#151C28] text-gray-500 uppercase tracking-wider font-extrabold border-b border-gray-200 dark:border-gray-800">
-                <tr>
-                  <th className="py-3 px-4">Search Query</th>
-                  <th
-                    className="py-3 px-4 cursor-pointer hover:text-blue-500"
-                    onClick={() => setSortField('clicks')}
-                  >
-                    Clicks {sortField === 'clicks' && '▼'}
-                  </th>
-                  <th
-                    className="py-3 px-4 cursor-pointer hover:text-blue-500"
-                    onClick={() => setSortField('impressions')}
-                  >
-                    Impressions {sortField === 'impressions' && '▼'}
-                  </th>
-                  <th
-                    className="py-3 px-4 cursor-pointer hover:text-blue-500"
-                    onClick={() => setSortField('ctr')}
-                  >
-                    CTR {sortField === 'ctr' && '▼'}
-                  </th>
-                  <th
-                    className="py-3 px-4 cursor-pointer hover:text-blue-500"
-                    onClick={() => setSortField('position')}
-                  >
-                    Position {sortField === 'position' && '▲'}
-                  </th>
-                  <th className="py-3 px-4">Landing Page</th>
-                  <th className="py-3 px-4">Opportunity</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-medium">
-                {filteredQueries.map((q, idx) => {
-                  const isHighImpressionLowCtr = q.impressions > 1500 && q.ctr < 0.035;
-                  const isStrikingDistance = q.position >= 4 && q.position <= 15;
-
-                  return (
-                    <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
-                      <td className="py-3 px-4 font-bold text-gray-900 dark:text-white">
-                        {q.query}
-                        {q.trend === 'rising' && (
-                          <span className="ml-2 inline-flex items-center text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-sm">
-                            Rising ↑
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 font-mono">{q.clicks}</td>
-                      <td className="py-3 px-4 font-mono">{q.impressions.toLocaleString()}</td>
-                      <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">
-                        {(q.ctr * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-3 px-4 font-mono">{q.position.toFixed(1)}</td>
-                      <td className="py-3 px-4 text-gray-500 font-mono text-[11px] truncate max-w-[150px]">
-                        {q.targetPages?.[0] || '/trade'}
-                      </td>
-                      <td className="py-3 px-4">
-                        {isHighImpressionLowCtr ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                            Low CTR
-                          </span>
-                        ) : isStrikingDistance ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                            Striking Pos {q.position.toFixed(1)}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-gray-400">Stable</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        queries.length === 0 ? (
+          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center shadow-xs">
+            <Search className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">No Search Console Queries Recorded</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+              All fallback mock data has been completely removed. Click &quot;Sync Search Console&quot; above to pull live organic queries, impressions, and CTR directly from Google.
+            </p>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 dark:bg-[#151C28] text-gray-500 uppercase tracking-wider font-extrabold border-b border-gray-200 dark:border-gray-800">
+                  <tr>
+                    <th className="py-3 px-4">Search Query</th>
+                    <th
+                      className="py-3 px-4 cursor-pointer hover:text-blue-500"
+                      onClick={() => setSortField('clicks')}
+                    >
+                      Clicks {sortField === 'clicks' && '▼'}
+                    </th>
+                    <th
+                      className="py-3 px-4 cursor-pointer hover:text-blue-500"
+                      onClick={() => setSortField('impressions')}
+                    >
+                      Impressions {sortField === 'impressions' && '▼'}
+                    </th>
+                    <th
+                      className="py-3 px-4 cursor-pointer hover:text-blue-500"
+                      onClick={() => setSortField('ctr')}
+                    >
+                      CTR {sortField === 'ctr' && '▼'}
+                    </th>
+                    <th
+                      className="py-3 px-4 cursor-pointer hover:text-blue-500"
+                      onClick={() => setSortField('position')}
+                    >
+                      Position {sortField === 'position' && '▲'}
+                    </th>
+                    <th className="py-3 px-4">Landing Page</th>
+                    <th className="py-3 px-4">Opportunity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-medium">
+                  {filteredQueries.map((q, idx) => {
+                    const isHighImpressionLowCtr = q.impressions > 1500 && q.ctr < 0.035;
+                    const isStrikingDistance = q.position >= 4 && q.position <= 15;
+
+                    return (
+                      <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
+                        <td className="py-3 px-4 font-bold text-gray-900 dark:text-white">
+                          {q.query}
+                          {q.trend === 'rising' && (
+                            <span className="ml-2 inline-flex items-center text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-sm">
+                              Rising ↑
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-mono">{q.clicks}</td>
+                        <td className="py-3 px-4 font-mono">{q.impressions.toLocaleString()}</td>
+                        <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">
+                          {(q.ctr * 100).toFixed(1)}%
+                        </td>
+                        <td className="py-3 px-4 font-mono">{q.position.toFixed(1)}</td>
+                        <td className="py-3 px-4 text-gray-500 font-mono text-[11px] truncate max-w-[150px]">
+                          {q.targetPages?.[0] || '/trade'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {isHighImpressionLowCtr ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                              Low CTR
+                            </span>
+                          ) : isStrikingDistance ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              Striking Pos {q.position.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">Stable</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 p-5 rounded-2xl">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
               <Globe className="w-4 h-4 text-blue-500" /> Top Countries (Geographic Distribution)
             </h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>🇧🇩 Bangladesh</span>
-                <strong className="font-mono">88.4% (27,780 imp)</strong>
+            {dimensions?.countries && dimensions.countries.length > 0 ? (
+              <div className="space-y-2 text-xs">
+                {(() => {
+                  const totalImp = dimensions.countries.reduce((acc, c) => acc + (c.impressions || 0), 0);
+                  return dimensions.countries.map((c, i) => {
+                    const pct = totalImp > 0 ? ((c.impressions / totalImp) * 100).toFixed(1) : '0.0';
+                    return (
+                      <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{c.country}</span>
+                        <strong className="font-mono text-gray-900 dark:text-white">
+                          {pct}% ({c.impressions.toLocaleString()} imp, {c.clicks.toLocaleString()} clicks)
+                        </strong>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>🇺🇸 United States (Expats)</span>
-                <strong className="font-mono">4.2% (1,320 imp)</strong>
+            ) : (
+              <div className="py-8 text-center text-xs text-gray-400">
+                No country breakdown recorded yet. Click &quot;Sync Search Console&quot; to fetch empirical geographic distribution.
               </div>
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>🇬🇧 United Kingdom</span>
-                <strong className="font-mono">3.1% (970 imp)</strong>
-              </div>
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>🇦🇪 United Arab Emirates</span>
-                <strong className="font-mono">2.5% (780 imp)</strong>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 p-5 rounded-2xl">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
               <Smartphone className="w-4 h-4 text-purple-500" /> Device Breakdown
             </h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>📱 Mobile</span>
-                <strong className="font-mono text-purple-500">76.8% (24,120 imp)</strong>
+            {dimensions?.devices && dimensions.devices.length > 0 ? (
+              <div className="space-y-2 text-xs">
+                {(() => {
+                  const totalImp = dimensions.devices.reduce((acc, d) => acc + (d.impressions || 0), 0);
+                  return dimensions.devices.map((d, i) => {
+                    const pct = totalImp > 0 ? ((d.impressions / totalImp) * 100).toFixed(1) : '0.0';
+                    const icon =
+                      d.device.toLowerCase().includes('mobile')
+                        ? '📱 Mobile'
+                        : d.device.toLowerCase().includes('desktop')
+                        ? '💻 Desktop'
+                        : d.device.toLowerCase().includes('tablet')
+                        ? '📟 Tablet'
+                        : d.device;
+                    return (
+                      <div key={i} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{icon}</span>
+                        <strong className="font-mono text-purple-600 dark:text-purple-400">
+                          {pct}% ({d.impressions.toLocaleString()} imp, {d.clicks.toLocaleString()} clicks)
+                        </strong>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>💻 Desktop</span>
-                <strong className="font-mono text-blue-500">21.5% (6,750 imp)</strong>
+            ) : (
+              <div className="py-8 text-center text-xs text-gray-400">
+                No device breakdown recorded yet. Click &quot;Sync Search Console&quot; to fetch empirical device distribution.
               </div>
-              <div className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <span>📟 Tablet</span>
-                <strong className="font-mono text-gray-500">1.7% (550 imp)</strong>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}

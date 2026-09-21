@@ -53,6 +53,20 @@ async function getValidAccessToken(connectionDoc: any): Promise<string | null> {
   }
 }
 
+import { discoverGscSites } from '@/lib/seo/gscSites';
+
+const MOCK_SIGNATURES = [
+  'dse share price',
+  'bangladesh stock market paper trading',
+  'dse stock simulator',
+  'gp share price dse',
+  'best shares to buy in dse today',
+  'how to trade in dse',
+  'dse trading rules',
+  'dse candlestick chart live',
+  'beximco pharma share price',
+];
+
 export async function GET(req: NextRequest) {
   const adminCheck = await verifyAdminAccess(req);
   if (!adminCheck.isAdmin) {
@@ -61,25 +75,49 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = getSeoDb();
-    const [queriesSnap, connSnap] = await Promise.all([
+    const [queriesSnap, connSnap, dimSnap] = await Promise.all([
       db.collection('gsc_query_snapshots').get(),
       db.collection('gsc_connections').doc('default').get(),
+      db.collection('gsc_dimensions').doc('summary').get(),
     ]);
 
-    const queries: GscQueryData[] = queriesSnap.docs.map((d) => d.data() as GscQueryData);
-
+    let queries: GscQueryData[] = queriesSnap.docs.map((d) => d.data() as GscQueryData);
     const connData = connSnap.data();
+
+    // Auto-detect and purge any stale mock queries from previous sessions
+    const hasMockData = queries.some(
+      (q) =>
+        MOCK_SIGNATURES.includes(q.query?.toLowerCase()?.trim()) &&
+        (q.impressions === 4820 || q.impressions === 3890 || q.clicks === 480)
+    );
+
+    if (hasMockData) {
+      const purgeBatch = db.batch();
+      for (const doc of queriesSnap.docs) {
+        const queryText = (doc.data() as any)?.query?.toLowerCase()?.trim();
+        if (MOCK_SIGNATURES.includes(queryText)) {
+          purgeBatch.delete(doc.ref);
+        }
+      }
+      await purgeBatch.commit().catch(() => {});
+      queries = queries.filter((q) => !MOCK_SIGNATURES.includes(q.query?.toLowerCase()?.trim()));
+    }
+
     const connectionInfo = {
       connected: connData?.status === 'connected',
-      propertyUrl: connData?.propertyUrl || `${SITE_URL}/`,
+      propertyUrl: connData?.propertyUrl || `sc-domain:${new URL(SITE_URL).hostname.replace(/^www\./, '')}`,
+      availableProperties: connData?.availableProperties || [],
       lastConnectedAt: connData?.lastConnectedAt || null,
       lastSyncAt: connData?.lastSyncAt || null,
     };
+
+    const dimensions = dimSnap.exists ? dimSnap.data() : null;
 
     return NextResponse.json({
       success: true,
       queries,
       connection: connectionInfo,
+      dimensions,
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -98,19 +136,49 @@ export async function POST(req: NextRequest) {
     const connData = connSnap.data();
 
     const accessToken = await getValidAccessToken(connData);
-    let liveSynced = false;
-    let syncedQueries: GscQueryData[] = [];
+    if (!accessToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          liveSynced: false,
+          error:
+            'Google Search Console is not connected or the refresh token has expired. Please click "Connect Search Console" to authorize.',
+        },
+        { status: 400 }
+      );
+    }
 
-    if (accessToken && connData?.propertyUrl) {
-      // Query Google Search Console Search Analytics API
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0];
+    // Resolve propertyUrl: self-heal if missing or currently an HTTP prefix that lacks permissions
+    let activePropertyUrl = connData?.propertyUrl;
+    if (!activePropertyUrl || activePropertyUrl.startsWith('http')) {
+      const discovery = await discoverGscSites(accessToken);
+      if (discovery.matchedProperty) {
+        activePropertyUrl = discovery.matchedProperty;
+        await db.collection('gsc_connections').doc('default').update({
+          propertyUrl: activePropertyUrl,
+          availableProperties: discovery.properties.map((p) => p.siteUrl),
+        });
+      }
+    }
 
-      const gscApiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
-        connData.propertyUrl
+    if (!activePropertyUrl) {
+      activePropertyUrl = `sc-domain:${new URL(SITE_URL).hostname.replace(/^www\./, '')}`;
+    }
+
+    // Google Search Console API query configuration
+    const now = new Date();
+    // 2-day buffer for Search Console indexing finalization
+    const endDateObj = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const startDateObj = new Date(endDateObj.getTime() - 28 * 24 * 60 * 60 * 1000);
+    const endDate = endDateObj.toISOString().split('T')[0];
+    const startDate = startDateObj.toISOString().split('T')[0];
+
+    const runGscQuery = async (propUrl: string, dimensions: string[]) => {
+      const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
+        propUrl
       )}/searchAnalytics/query`;
 
-      const gscRes = await fetch(gscApiUrl, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -119,51 +187,157 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           startDate,
           endDate,
-          dimensions: ['query', 'page'],
-          rowLimit: 100,
+          dimensions,
+          dataState: 'all',
+          rowLimit: 250,
         }),
       });
 
-      if (gscRes.ok) {
-        const gscData = await gscRes.json();
-        const rows = gscData.rows || [];
+      return res;
+    };
 
-        syncedQueries = rows.map((r: any) => ({
-          query: r.keys?.[0] || '',
-          targetPages: [r.keys?.[1] || '/'],
-          clicks: r.clicks || 0,
-          impressions: r.impressions || 0,
-          ctr: r.ctr || 0,
-          position: r.position || 0,
-          trend: 'stable',
-        }));
+    let gscRes = await runGscQuery(activePropertyUrl, ['query', 'page']);
 
-        liveSynced = true;
+    // Self-healing fallback: If propertyUrl gave 403 or 404, re-discover verified sites from Google and retry once
+    if (!gscRes.ok && (gscRes.status === 403 || gscRes.status === 404)) {
+      console.warn(`GSC query failed with ${gscRes.status} for ${activePropertyUrl}. Attempting site re-discovery...`);
+      const discovery = await discoverGscSites(accessToken);
+      if (discovery.matchedProperty && discovery.matchedProperty !== activePropertyUrl) {
+        activePropertyUrl = discovery.matchedProperty;
+        await db.collection('gsc_connections').doc('default').update({
+          propertyUrl: activePropertyUrl,
+          availableProperties: discovery.properties.map((p) => p.siteUrl),
+        });
+        gscRes = await runGscQuery(activePropertyUrl, ['query', 'page']);
       }
     }
 
-    if (!liveSynced || syncedQueries.length === 0) {
-      return NextResponse.json({
-        success: false,
-        liveSynced: false,
-        error: !accessToken
-          ? 'Google Search Console not connected or token expired. Please connect OAuth first.'
-          : 'No queries returned from Search Console for this property.',
-      }, { status: 400 });
+    if (!gscRes.ok) {
+      const errText = await gscRes.text();
+      let parsedErr = 'Google Search Console API request failed.';
+      try {
+        const errJson = JSON.parse(errText);
+        parsedErr = errJson.error?.message || errText;
+      } catch {
+        parsedErr = errText;
+      }
+      return NextResponse.json(
+        {
+          success: false,
+          liveSynced: false,
+          propertyUrl: activePropertyUrl,
+          error: `Search Console API error (${gscRes.status}): ${parsedErr}`,
+        },
+        { status: 400 }
+      );
     }
 
-    // Persist query snapshots in SEO Firestore
+    const gscData = await gscRes.json();
+    const rows = gscData.rows || [];
+
+    // Aggregate queries across landing pages
+    const queryMap = new Map<string, GscQueryData>();
+    for (const r of rows) {
+      const query = (r.keys?.[0] || '').trim();
+      const page = r.keys?.[1] || '/';
+      if (!query) continue;
+
+      if (!queryMap.has(query)) {
+        queryMap.set(query, {
+          query,
+          clicks: r.clicks || 0,
+          impressions: r.impressions || 0,
+          ctr: r.ctr ? Math.round(r.ctr * 1000) / 1000 : 0,
+          position: r.position ? Math.round(r.position * 10) / 10 : 0,
+          targetPages: [page],
+          trend: 'stable',
+        });
+      } else {
+        const existing = queryMap.get(query)!;
+        const totalImp = existing.impressions + (r.impressions || 0);
+        const totalClicks = existing.clicks + (r.clicks || 0);
+        const weightedPos =
+          totalImp > 0
+            ? (existing.position * existing.impressions + (r.position || 0) * (r.impressions || 0)) / totalImp
+            : existing.position;
+        const ctr = totalImp > 0 ? totalClicks / totalImp : 0;
+
+        if (!existing.targetPages.includes(page)) {
+          existing.targetPages.push(page);
+        }
+        existing.clicks = totalClicks;
+        existing.impressions = totalImp;
+        existing.position = Math.round(weightedPos * 10) / 10;
+        existing.ctr = Math.round(ctr * 1000) / 1000;
+      }
+    }
+
+    const syncedQueries = Array.from(queryMap.values());
+
+    // Also fetch real dimensions: Country and Device breakdown
+    let countriesData: Array<{ country: string; clicks: number; impressions: number }> = [];
+    let devicesData: Array<{ device: string; clicks: number; impressions: number }> = [];
+
+    try {
+      const [countryRes, deviceRes] = await Promise.all([
+        runGscQuery(activePropertyUrl, ['country']),
+        runGscQuery(activePropertyUrl, ['device']),
+      ]);
+
+      if (countryRes.ok) {
+        const cJson = await countryRes.json();
+        countriesData = (cJson.rows || []).slice(0, 10).map((r: any) => ({
+          country: r.keys?.[0] || 'Unknown',
+          clicks: r.clicks || 0,
+          impressions: r.impressions || 0,
+        }));
+      }
+
+      if (deviceRes.ok) {
+        const dJson = await deviceRes.json();
+        devicesData = (dJson.rows || []).slice(0, 5).map((r: any) => ({
+          device: r.keys?.[0] || 'Unknown',
+          clicks: r.clicks || 0,
+          impressions: r.impressions || 0,
+        }));
+      }
+    } catch (dimErr) {
+      console.warn('Could not fetch dimension breakdown:', dimErr);
+    }
+
+    // Wipe stale existing query snapshots to ensure no old mock data remains
+    const existingSnapshots = await db.collection('gsc_query_snapshots').get();
     const batch = db.batch();
-    for (const q of syncedQueries) {
-      const docRef = db.collection('gsc_query_snapshots').doc(encodeURIComponent(q.query.slice(0, 50)));
-      batch.set(docRef, q, { merge: true });
+    for (const doc of existingSnapshots.docs) {
+      batch.delete(doc.ref);
     }
 
-    // Record last sync timestamp
+    // Persist real empirical query snapshots
+    for (const q of syncedQueries) {
+      const docId = encodeURIComponent(q.query.slice(0, 50).toLowerCase().replace(/\s+/g, '-'));
+      const docRef = db.collection('gsc_query_snapshots').doc(docId);
+      batch.set(docRef, q);
+    }
+
+    // Persist real dimension breakdown
+    batch.set(
+      db.collection('gsc_dimensions').doc('summary'),
+      {
+        countries: countriesData,
+        devices: devicesData,
+        lastUpdated: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    // Update connection status
     batch.set(
       db.collection('gsc_connections').doc('default'),
       {
+        status: 'connected',
+        propertyUrl: activePropertyUrl,
         lastSyncAt: new Date().toISOString(),
+        syncedQueriesCount: syncedQueries.length,
       },
       { merge: true }
     );
@@ -171,17 +345,42 @@ export async function POST(req: NextRequest) {
     await batch.commit();
 
     // Trigger opportunity engine
-    const opps = await generateSeoOpportunities();
+    const opps = await generateSeoOpportunities().catch(() => []);
 
     return NextResponse.json({
       success: true,
-      liveSynced,
+      liveSynced: true,
+      propertyUrl: activePropertyUrl,
       syncedQueriesCount: syncedQueries.length,
       opportunitiesGenerated: opps.length,
       lastSyncAt: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error('GSC Sync Error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const adminCheck = await verifyAdminAccess(req);
+  if (!adminCheck.isAdmin) {
+    return NextResponse.json({ error: adminCheck.error }, { status: 401 });
+  }
+
+  try {
+    const db = getSeoDb();
+    const existingSnapshots = await db.collection('gsc_query_snapshots').get();
+    const batch = db.batch();
+    for (const doc of existingSnapshots.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully purged ${existingSnapshots.size} query snapshots from SEO Firestore.`,
+    });
+  } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

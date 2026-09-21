@@ -77,8 +77,10 @@ export default function SeoOverviewPage() {
       const res = await fetchWithToken('/api/admin/seo/gsc/sync', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
-        setNotice(`✅ Synced ${json.syncedQueriesCount} Search Console query snapshots!`);
+        setNotice(`✅ Synced ${json.syncedQueriesCount} Search Console query snapshots from ${json.propertyUrl || 'Google'}!`);
         fetchOverview();
+      } else {
+        setNotice(`❌ GSC sync failed: ${json.error}`);
       }
     } catch (err: any) {
       setNotice(`❌ GSC sync error: ${err.message}`);
