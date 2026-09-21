@@ -117,11 +117,11 @@ export default function AiCrawlersPage() {
               {summaries.map((s) => (
                 <tr key={s.botName} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
                   <td className="py-3 px-4 font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className={`w-2 h-2 rounded-full ${s.totalRequests > 0 ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                     <span>{s.botName}</span>
                   </td>
                   <td className="py-3 px-4 font-mono text-gray-500 text-[11px]">
-                    {new Date(s.lastSeen).toLocaleDateString()}
+                    {s.lastSeen ? new Date(s.lastSeen).toLocaleDateString() : 'Not yet observed'}
                   </td>
                   <td className="py-3 px-4 text-right font-mono tabular-nums font-bold text-gray-900 dark:text-white">
                     {s.totalRequests.toLocaleString()}

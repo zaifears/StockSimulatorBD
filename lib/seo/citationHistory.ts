@@ -35,56 +35,38 @@ export async function getCitationTimeline(): Promise<{
     }
   });
 
-  // Provide realistic empirical timeline if few observations logged
-  const defaultTimeline: AiCitationTimelinePoint[] = [
-    {
-      dateMonth: '2026-09',
-      query: 'how to practice DSE trading',
-      chatGptCited: true,
-      geminiCited: true,
-      perplexityCited: true,
-      claudeCited: true,
-    },
-    {
-      dateMonth: '2026-08',
-      query: 'best dse paper trading simulator',
-      chatGptCited: false,
-      geminiCited: true,
-      perplexityCited: true,
-      claudeCited: true,
-    },
-    {
-      dateMonth: '2026-07',
-      query: 'dse virtual portfolio bangladesh',
-      chatGptCited: true,
-      geminiCited: false,
-      perplexityCited: true,
-      claudeCited: false,
-    },
-    {
-      dateMonth: '2026-06',
-      query: 'practice trading without money dse',
-      chatGptCited: true,
-      geminiCited: false,
-      perplexityCited: true,
-      claudeCited: false,
-    },
-  ];
+  // Aggregate real observations into month-by-month timeline points
+  const timelineMap: Record<string, AiCitationTimelinePoint> = {};
+  observations.forEach((obs) => {
+    const month = obs.observedAt ? obs.observedAt.slice(0, 7) : new Date().toISOString().slice(0, 7);
+    const key = `${month}_${obs.query}`;
+    if (!timelineMap[key]) {
+      timelineMap[key] = {
+        dateMonth: month,
+        query: obs.query,
+        chatGptCited: false,
+        geminiCited: false,
+        perplexityCited: false,
+        claudeCited: false,
+      };
+    }
+    if (obs.cited) {
+      if (obs.provider === 'ChatGPT') timelineMap[key].chatGptCited = true;
+      if (obs.provider === 'Gemini') timelineMap[key].geminiCited = true;
+      if (obs.provider === 'Perplexity') timelineMap[key].perplexityCited = true;
+      if (obs.provider === 'Claude') timelineMap[key].claudeCited = true;
+    }
+  });
 
-  const defaultUrlDistribution = [
-    { path: '/stocks', count: 18 },
-    { path: '/trade', count: 14 },
-    { path: '/blog/bo-account-kholar-niyom-online-bangladesh', count: 8 },
-    { path: '/stocks/gp', count: 5 },
-  ];
+  const timeline = Object.values(timelineMap).sort((a, b) => b.dateMonth.localeCompare(a.dateMonth));
 
   return {
-    timeline: defaultTimeline,
-    totalObservations: Math.max(observations.length, 40),
-    totalCitedCount: Math.max(totalCited, 28),
-    citationUrlDistribution: Object.keys(urlCountMap).length > 0
-      ? Object.entries(urlCountMap).map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count)
-      : defaultUrlDistribution,
+    timeline,
+    totalObservations: observations.length,
+    totalCitedCount: totalCited,
+    citationUrlDistribution: Object.entries(urlCountMap)
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count),
   };
 }
 

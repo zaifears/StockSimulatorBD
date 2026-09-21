@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch latest organic search snapshot to compute correlation
     const organicDoc = await db.collection('seo_gsc_snapshots').doc('latest').get();
-    let organicTotals = { impressions: 31420, clicks: 1284, ctr: 4.09 }; // safe baseline if no GSC sync yet
+    let organicTotals = { impressions: 0, clicks: 0, ctr: 0 };
     if (organicDoc.exists) {
       const data = organicDoc.data();
       if (data?.summary) {

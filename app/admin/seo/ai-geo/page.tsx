@@ -468,32 +468,40 @@ export default function AiGeoLabPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-medium">
-                {timeline.map((t, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-gray-900 dark:text-white">{t.dateMonth}</td>
-                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300 max-w-[150px] truncate">{t.query}</td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={t.chatGptCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
-                        {t.chatGptCited ? '✓' : '✗'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={t.geminiCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
-                        {t.geminiCited ? '✓' : '✗'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={t.perplexityCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
-                        {t.perplexityCited ? '✓' : '✗'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={t.claudeCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
-                        {t.claudeCited ? '✓' : '✗'}
-                      </span>
+                {timeline.length > 0 ? (
+                  timeline.map((t, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-[#161D2A]/50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-gray-900 dark:text-white">{t.dateMonth}</td>
+                      <td className="py-3 px-4 text-gray-700 dark:text-gray-300 max-w-[150px] truncate">{t.query}</td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={t.chatGptCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
+                          {t.chatGptCited ? '✓' : '✗'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={t.geminiCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
+                          {t.geminiCited ? '✓' : '✗'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={t.perplexityCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
+                          {t.perplexityCited ? '✓' : '✗'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={t.claudeCited ? 'text-emerald-500 font-bold' : 'text-gray-300 dark:text-gray-600'}>
+                          {t.claudeCited ? '✓' : '✗'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-xs text-gray-400">
+                      No citation timeline points recorded yet. Run a prompt test above to start tracking.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

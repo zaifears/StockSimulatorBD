@@ -88,12 +88,17 @@ export function parseHtmlContent(html: string, pageUrl: string): Omit<SeoPagePro
   for (const script of jsonLdScripts) {
     try {
       const parsed = JSON.parse(script[1]);
+      // Helper: @type can be a string OR an array like ["Organization","WebSite"]
+      const pushType = (t: unknown) => {
+        if (typeof t === 'string') schemaTypes.push(t);
+        else if (Array.isArray(t)) t.forEach((v) => typeof v === 'string' && schemaTypes.push(v));
+      };
       if (Array.isArray(parsed)) {
-        parsed.forEach((item) => item['@type'] && schemaTypes.push(item['@type']));
+        parsed.forEach((item) => pushType(item['@type']));
       } else if (parsed['@graph'] && Array.isArray(parsed['@graph'])) {
-        parsed['@graph'].forEach((item: any) => item['@type'] && schemaTypes.push(item['@type']));
+        parsed['@graph'].forEach((item: any) => pushType(item['@type']));
       } else if (parsed['@type']) {
-        schemaTypes.push(parsed['@type']);
+        pushType(parsed['@type']);
       }
     } catch {
       issues.push({ code: 'INVALID_JSON_LD', type: 'critical', message: 'Invalid JSON-LD syntax detected in script block', field: 'schemaTypes' });

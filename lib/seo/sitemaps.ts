@@ -84,10 +84,10 @@ export async function auditSitemapDiscrepancies(): Promise<SitemapIntelligence> 
     }
   }
 
-  // If no pages crawled yet, provide clean baseline
-  if (totalInSitemap === 0) {
-    totalInSitemap = 440; // Total DSE stocks + blog articles + static pages
-    totalCrawled = 440;
+  // Accurately reflect crawled count from Firestore
+  if (totalInSitemap === 0 && pages.length === 0) {
+    totalInSitemap = 0;
+    totalCrawled = 0;
   }
 
   const sitemapReport: SitemapIntelligence = {

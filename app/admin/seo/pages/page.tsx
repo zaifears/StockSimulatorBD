@@ -40,6 +40,16 @@ export default function PagesAuditPage() {
   const [savingOverride, setSavingOverride] = useState(false);
   const [overrideNotice, setOverrideNotice] = useState<string | null>(null);
 
+  // Crawl runner state
+  const [crawling, setCrawling] = useState(false);
+  const [crawlProgress, setCrawlProgress] = useState<{
+    percent: number;
+    processed: number;
+    total: number;
+    completed: boolean;
+  } | null>(null);
+  const [crawlError, setCrawlError] = useState<string | null>(null);
+
   const fetchPages = async () => {
     try {
       const res = await fetchWithToken('/api/admin/seo/crawl');
@@ -51,6 +61,61 @@ export default function PagesAuditPage() {
       console.error('Failed to load crawled pages:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fires sequential batch POST requests until the crawl is complete.
+  // Each batch crawls 20 URLs; the API tracks cursor position in Firestore.
+  const runCrawl = async (fresh = false) => {
+    setCrawling(true);
+    setCrawlError(null);
+    setCrawlProgress(null);
+
+    try {
+      let completed = false;
+      // First request: start fresh or resume
+      let res = await fetchWithToken('/api/admin/seo/crawl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: fresh ? 'start_fresh' : 'next_batch', batchSize: 20 }),
+      });
+      let json = await res.json();
+
+      if (!json.success) throw new Error(json.error || 'Crawl failed');
+
+      setCrawlProgress({
+        percent: json.percent ?? 0,
+        processed: json.processedCount ?? 0,
+        total: json.totalUrls ?? 0,
+        completed: !!json.completed,
+      });
+      completed = !!json.completed;
+
+      // Continue firing batches until done
+      while (!completed) {
+        res = await fetchWithToken('/api/admin/seo/crawl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'next_batch', batchSize: 20 }),
+        });
+        json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Batch failed');
+
+        setCrawlProgress({
+          percent: json.percent ?? 100,
+          processed: json.processedCount ?? 0,
+          total: json.totalUrls ?? 0,
+          completed: !!json.completed,
+        });
+        completed = !!json.completed;
+      }
+
+      // Reload page data after crawl finishes
+      await fetchPages();
+    } catch (err: any) {
+      setCrawlError(err.message || 'Unknown crawl error');
+    } finally {
+      setCrawling(false);
     }
   };
 
@@ -138,20 +203,77 @@ export default function PagesAuditPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#111622] p-4 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
-        <div>
-          <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <FileCode2 className="w-5 h-5 text-blue-500" />
-            Page Inventory & Technical Audit
-          </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Full site inventory, schema validation, metadata lengths, and technical health inspection.
-          </p>
+      <div className="bg-white dark:bg-[#111622] p-4 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <FileCode2 className="w-5 h-5 text-blue-500" />
+              Page Inventory &amp; Technical Audit
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Full site inventory, schema validation, metadata lengths, and technical health inspection.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              {pages.length} pages
+            </span>
+            {pages.length > 0 && !crawling && (
+              <button
+                onClick={() => runCrawl(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                  bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                  hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Crawl
+              </button>
+            )}
+            <button
+              onClick={() => runCrawl(true)}
+              disabled={crawling}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                bg-blue-600 hover:bg-blue-700 text-white shadow-xs
+                disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <Zap className={`w-3.5 h-3.5 ${crawling ? 'animate-pulse' : ''}`} />
+              {crawling ? 'Crawling…' : pages.length === 0 ? 'Run Crawl' : 'Re-crawl All'}
+            </button>
+          </div>
         </div>
 
-        <div className="text-xs text-gray-500">
-          Total Crawled: <strong className="text-gray-900 dark:text-white font-mono">{pages.length}</strong> pages
-        </div>
+        {/* Live progress bar */}
+        {crawling && crawlProgress && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-mono text-gray-500">
+              <span>{crawlProgress.processed} / {crawlProgress.total} pages</span>
+              <span>{crawlProgress.percent}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                style={{ width: `${crawlProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Crawl complete notice */}
+        {!crawling && crawlProgress?.completed && (
+          <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Crawl complete — {crawlProgress.processed} pages indexed
+          </div>
+        )}
+
+        {/* Error banner */}
+        {crawlError && (
+          <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-xl border border-red-200 dark:border-red-800">
+            <XCircle className="w-3.5 h-3.5 shrink-0" />
+            {crawlError}
+          </div>
+        )}
       </div>
 
       {/* Filter Bar */}

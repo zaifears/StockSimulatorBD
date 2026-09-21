@@ -24,7 +24,18 @@ interface Props {
 
 const TRADE_COUNT_KEY = (uid: string) => `ssbd_trade_count_${uid}`;
 const SESSION_DISMISSED_KEY = 'ssbd_boss_nudge_dismissed_session';
-const MILESTONE_TRADES = new Set([3, 5, 10]);
+
+/**
+ * Returns true when the nudge should appear:
+ * - Early milestones: trade #3, #5, #10 (warming up the user)
+ * - Recurring: every 3rd trade after #10 (13, 16, 19, 22 …)
+ * Boss tier is always checked first by the caller before this runs.
+ */
+function shouldShowNudge(count: number): boolean {
+  if (count === 3 || count === 5 || count === 10) return true;
+  if (count > 10 && (count - 10) % 3 === 0) return true; // 13, 16, 19, 22 …
+  return false;
+}
 
 /**
  * Increments the persistent trade counter for this user.
@@ -42,6 +53,7 @@ export default function BossPostTradeNudge({ isBoss, uid, tradeJustCompleted }: 
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // isBoss checked first — Boss users never see this nudge under any condition
     if (isBoss || !uid || typeof window === 'undefined') return;
     if (!tradeJustCompleted) return;
 
@@ -52,7 +64,7 @@ export default function BossPostTradeNudge({ isBoss, uid, tradeJustCompleted }: 
     const raw = localStorage.getItem(TRADE_COUNT_KEY(uid));
     const count = raw ? parseInt(raw, 10) : 0;
 
-    if (MILESTONE_TRADES.has(count)) {
+    if (shouldShowNudge(count)) {
       setVisible(true);
     }
   }, [isBoss, uid, tradeJustCompleted]);
