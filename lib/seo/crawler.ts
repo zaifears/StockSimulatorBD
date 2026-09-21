@@ -78,9 +78,9 @@ export function parseHtmlContent(html: string, pageUrl: string): Omit<SeoPagePro
   const ogTitleMatch = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["'][^>]*>/i);
   const ogDescMatch = html.match(/<meta\s+[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["'][^>]*>/i);
   const ogImgMatch = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']*)["'][^>]*>/i);
-  const ogTitle = ogTitleMatch ? ogTitleMatch[1].trim() : undefined;
-  const ogDescription = ogDescMatch ? ogDescMatch[1].trim() : undefined;
-  const ogImage = ogImgMatch ? ogImgMatch[1].trim() : undefined;
+  const ogTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
+  const ogDescription = ogDescMatch ? ogDescMatch[1].trim() : '';
+  const ogImage = ogImgMatch ? ogImgMatch[1].trim() : '';
 
   // 7. JSON-LD Structured Data
   const jsonLdScripts = Array.from(html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi));

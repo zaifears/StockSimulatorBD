@@ -65,6 +65,7 @@ export function getSeoDb(): Firestore {
 
   const app = getSeoApp();
   seoDbInstance = getFirestore(app);
+  seoDbInstance.settings({ ignoreUndefinedProperties: true });
   return seoDbInstance;
 }
 
