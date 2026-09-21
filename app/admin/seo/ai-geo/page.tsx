@@ -10,6 +10,7 @@ import {
   Sparkles,
   Send,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   ExternalLink,
   ShieldCheck,
@@ -184,23 +185,44 @@ export default function AiGeoLabPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
               <span>Entity Clarity</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {diagnostic.entityClarity ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              )}
             </div>
             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
               <span>Topic Coverage</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {diagnostic.topicCoverage ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              )}
             </div>
             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
               <span>Crawlability (AI Bots)</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {diagnostic.crawlability ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              )}
             </div>
             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
               <span>Internal Linking</span>
-              <span className="font-bold text-emerald-500">{diagnostic.internalLinking.toUpperCase()}</span>
+              <span className={`font-bold ${
+                diagnostic.internalLinking === 'strong' ? 'text-emerald-500' :
+                diagnostic.internalLinking === 'moderate' ? 'text-amber-500' : 'text-gray-400'
+              }`}>
+                {diagnostic.internalLinking.toUpperCase()}
+              </span>
             </div>
             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
               <span>Structured Data</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {diagnostic.structuredData ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              )}
             </div>
           </div>
         </div>

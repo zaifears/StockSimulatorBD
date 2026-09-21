@@ -212,19 +212,21 @@ export async function getPersistentPrompts(): Promise<AiPromptTemplate[]> {
 }
 
 /**
- * Evaluates empirical AI readiness diagnostics
+ * Evaluates empirical AI readiness diagnostics strictly from crawled inventory.
+ * If 0 pages have been crawled, returns false/weak until real audit data exists.
  */
 export function evaluateAiReadiness(pagesCount: number, schemaCount: number, orphanCount: number): AiReadinessDiagnostic {
+  const hasInventory = pagesCount > 0;
   return {
-    entityClarity: true,
-    topicCoverage: pagesCount > 50,
-    answerCompleteness: pagesCount > 100 ? 'good' : 'fair',
-    sourceAttribution: true,
-    freshness: true,
-    crawlability: true,
-    semanticStructure: true,
-    internalLinking: orphanCount === 0 ? 'strong' : orphanCount < 5 ? 'moderate' : 'weak',
-    citationWorthiness: 'high',
+    entityClarity: hasInventory,
+    topicCoverage: pagesCount >= 50,
+    answerCompleteness: pagesCount >= 100 ? 'good' : pagesCount > 20 ? 'fair' : 'poor',
+    sourceAttribution: hasInventory,
+    freshness: hasInventory,
+    crawlability: true, // Verified from app/robots.ts: all AI crawlers allowed
+    semanticStructure: hasInventory,
+    internalLinking: !hasInventory ? 'weak' : orphanCount === 0 ? 'strong' : orphanCount < 5 ? 'moderate' : 'weak',
+    citationWorthiness: hasInventory ? 'high' : 'low',
     structuredData: schemaCount > 0,
   };
 }
