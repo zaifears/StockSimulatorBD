@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   X,
   Clock,
@@ -10,6 +10,7 @@ import {
   ExternalLink,
   CheckCircle2,
   Repeat,
+  Info,
 } from 'lucide-react';
 import {
   getNextMarketOpen,
@@ -34,8 +35,21 @@ export default function MarketClosedModal({
   source = 'unknown',
 }: MarketClosedModalProps) {
   const { user } = useAuth();
-  const [leadMinutes, setLeadMinutes] = useState<0 | 15>(15);
+  // Default to At Market Open (10:00 AM)
+  const [leadMinutes, setLeadMinutes] = useState<0 | 15>(0);
   const [copiedStatus, setCopiedStatus] = useState<string | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [pendingGCalReturn, setPendingGCalReturn] = useState<boolean>(false);
+  const gcalOpenedAtRef = useRef<number>(0);
+
+  // Reset internal state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsConfirmed(false);
+      setPendingGCalReturn(false);
+      gcalOpenedAtRef.current = 0;
+    }
+  }, [isOpen]);
 
   // Compute next market open info
   const nextSession: NextMarketSession = useMemo(() => {
@@ -51,6 +65,37 @@ export default function MarketClosedModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Detect when user returns from Google Calendar tab/app
+  useEffect(() => {
+    if (!pendingGCalReturn) return;
+
+    const checkReturn = () => {
+      // Require at least 800ms so transient blur/focus on initial open doesn't fire immediately
+      if (Date.now() - gcalOpenedAtRef.current > 800) {
+        setIsConfirmed(true);
+        setPendingGCalReturn(false);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkReturn();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      checkReturn();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [pendingGCalReturn]);
 
   // Send lightweight analytics beacon
   const trackReminder = useCallback(
@@ -86,9 +131,17 @@ export default function MarketClosedModal({
       isRecurring: false,
     });
     trackReminder('google_calendar', false);
-    setCopiedStatus('Opening Google Calendar…');
+    gcalOpenedAtRef.current = Date.now();
+    setPendingGCalReturn(true);
+
+    try {
+      sessionStorage.setItem('ssbd_market_reminder_set', 'true');
+      window.dispatchEvent(new Event('ssbd_reminder_updated'));
+    } catch {
+      // Ignore storage errors
+    }
+
     window.open(url, '_blank', 'noopener,noreferrer');
-    setTimeout(() => setCopiedStatus(null), 4000);
   }, [nextSession, leadMinutes, trackReminder]);
 
   const handleAppleIcs = useCallback(() => {
@@ -100,7 +153,16 @@ export default function MarketClosedModal({
     });
     trackReminder('apple_ics', false);
     downloadIcsFile(content, 'dse-market-open.ics');
+    setIsConfirmed(true);
     setCopiedStatus('Calendar invite downloaded!');
+
+    try {
+      sessionStorage.setItem('ssbd_market_reminder_set', 'true');
+      window.dispatchEvent(new Event('ssbd_reminder_updated'));
+    } catch {
+      // Ignore storage errors
+    }
+
     setTimeout(() => setCopiedStatus(null), 4000);
   }, [nextSession, leadMinutes, trackReminder]);
 
@@ -113,7 +175,16 @@ export default function MarketClosedModal({
     });
     trackReminder('weekly_ics', true);
     downloadIcsFile(content, 'dse-weekly-trading-schedule.ics');
+    setIsConfirmed(true);
     setCopiedStatus('Weekly schedule downloaded!');
+
+    try {
+      sessionStorage.setItem('ssbd_market_reminder_set', 'true');
+      window.dispatchEvent(new Event('ssbd_reminder_updated'));
+    } catch {
+      // Ignore storage errors
+    }
+
     setTimeout(() => setCopiedStatus(null), 4000);
   }, [nextSession, leadMinutes, trackReminder]);
 
@@ -176,23 +247,12 @@ export default function MarketClosedModal({
             </div>
           </div>
 
-          {/* Timing Selector */}
+          {/* Timing Selector - Default: At market open (10:00 AM) */}
           <div>
             <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1.5">
               Remind me:
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setLeadMinutes(15)}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                  leadMinutes === 15
-                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-400 shadow-2xs'
-                    : 'bg-white dark:bg-[#161B22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-                }`}
-              >
-                15 min before (9:45 AM)
-              </button>
               <button
                 type="button"
                 onClick={() => setLeadMinutes(0)}
@@ -204,6 +264,17 @@ export default function MarketClosedModal({
               >
                 At market open (10:00 AM)
               </button>
+              <button
+                type="button"
+                onClick={() => setLeadMinutes(15)}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
+                  leadMinutes === 15
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-400 shadow-2xs'
+                    : 'bg-white dark:bg-[#161B22] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                }`}
+              >
+                15 min before (9:45 AM)
+              </button>
             </div>
           </div>
 
@@ -212,14 +283,30 @@ export default function MarketClosedModal({
             <button
               type="button"
               onClick={handleGoogleCalendar}
-              className="w-full h-12 px-4 rounded-xl text-white font-bold text-sm bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-between shadow-md shadow-blue-600/20"
+              className={`w-full h-12 px-4 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-between shadow-md ${
+                isConfirmed
+                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                  : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.98] shadow-blue-600/20'
+              }`}
             >
               <span className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>Add to Google Calendar</span>
+                <span>
+                  {isConfirmed
+                    ? 'Re-open in Google Calendar'
+                    : 'Add to Google Calendar'}
+                </span>
               </span>
               <ExternalLink className="w-4 h-4 opacity-70" />
             </button>
+
+            {/* Explanatory Redirect Note */}
+            <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
+              <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <span>
+                You will be redirected to Google Calendar — just click <strong>&quot;Save&quot;</strong> in the next screen.
+              </span>
+            </div>
 
             <button
               type="button"
@@ -233,6 +320,59 @@ export default function MarketClosedModal({
               <Download className="w-4 h-4 opacity-70" />
             </button>
           </div>
+
+          {/* Pending Google Calendar Notification */}
+          {pendingGCalReturn && !isConfirmed && (
+            <div className="py-2.5 px-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-xs font-medium text-blue-900 dark:text-blue-200 flex items-center justify-between gap-2 animate-pulse">
+              <div className="flex items-center gap-2 min-w-0">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="truncate">Google Calendar opened in new tab…</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmed(true);
+                  setPendingGCalReturn(false);
+                }}
+                className="underline text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 font-bold shrink-0 text-[11px]"
+              >
+                I clicked Save
+              </button>
+            </div>
+          )}
+
+          {/* Confirmed Status Card & Thank You Banner */}
+          {isConfirmed && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/15 to-teal-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-100 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-200">
+                      Reminder Confirmed!
+                    </h4>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      Saved
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-800/85 dark:text-emerald-200/85 mt-1 leading-relaxed">
+                    Thank you for setting a reminder! We look forward to seeing you when DSE trading begins at <strong className="text-emerald-950 dark:text-white">{nextSession.nextOpenDhakaFormatted}</strong>.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-emerald-500/20 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 transition-all shadow-xs"
+                >
+                  Done · Return to Simulator
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Status Feedback Toast */}
           {copiedStatus && (
