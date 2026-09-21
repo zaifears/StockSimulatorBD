@@ -13,11 +13,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Coins, Crown, Shield } from 'lucide-react';
+import { Search, Coins, Crown, Shield, Bell } from 'lucide-react';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPortfolioTotals, getMarketBreadth } from '@/lib/utils/portfolio';
 import { formatDhakaClock } from '@/lib/utils/dhakaTime';
+import MarketClosedModal from '@/components/market/MarketClosedModal';
 
 const fmtMoney = (n: number, dp = 2) =>
   n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -55,6 +56,7 @@ interface Props {
 export default function MarketStrip({ onSearchClick }: Props) {
   const { marketInfo, simulatorState, isMarketOpen } = useSharedSimulator();
   const { user, isBoss } = useAuth();
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const marketOpen = isMarketOpen();
 
   const totals = useMemo(
@@ -77,23 +79,31 @@ export default function MarketStrip({ onSearchClick }: Props) {
           </Link>
 
           {/* Market state — the single most important thing on this bar */}
-          <div
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tabular-nums shrink-0 transition-colors ${
-              marketOpen
-                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                : 'bg-red-500/10 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-500/20'
-            }`}
-            title={marketOpen ? 'Market open — 10:00 to 14:15 Dhaka time' : 'Market closed'}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                marketOpen ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-red-500'
-              }`}
-              aria-hidden="true"
-            />
-            <span>{marketOpen ? 'OPEN' : 'CLOSED'}</span>
-            <LiveClock />
-          </div>
+          {marketOpen ? (
+            <div
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tabular-nums shrink-0 transition-colors bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              title="Market open — 10:00 to 14:15 Dhaka time"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse"
+                aria-hidden="true"
+              />
+              <span>OPEN</span>
+              <LiveClock />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCalendarModalOpen(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tabular-nums shrink-0 transition-all bg-red-500/10 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/50 hover:bg-red-500/15 active:scale-95 cursor-pointer"
+              title="Market closed — Click to set calendar reminder for next session"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" aria-hidden="true" />
+              <span>CLOSED</span>
+              <Bell className="w-3 h-3 ml-0.5 opacity-80" />
+              <LiveClock />
+            </button>
+          )}
 
           <div className="flex-1 min-w-[6px]" />
 
@@ -176,6 +186,12 @@ export default function MarketStrip({ onSearchClick }: Props) {
           </dl>
         </div>
       </div>
+
+      <MarketClosedModal
+        isOpen={calendarModalOpen}
+        onClose={() => setCalendarModalOpen(false)}
+        source="market_strip"
+      />
     </header>
   );
 }

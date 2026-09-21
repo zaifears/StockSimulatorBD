@@ -123,9 +123,11 @@ export async function GET(req: NextRequest) {
     const last7Keys = trendKeys.slice(-7);
 
     // ── Daily rollups (cheap: at most 30 single-doc reads) ──────────────
-    const dailySnaps = await Promise.all(
-      trendKeys.map((key) => db.collection('analytics_daily').doc(key).get())
-    );
+    const [dailySnaps, reminderSummarySnap] = await Promise.all([
+      Promise.all(trendKeys.map((key) => db.collection('analytics_daily').doc(key).get())),
+      db.collection('analytics_market_reminders').doc('summary').get().catch(() => null),
+    ]);
+    const reminderSummary = reminderSummarySnap && reminderSummarySnap.exists ? reminderSummarySnap.data() : null;
     const dailyByKey = new Map<string, any>();
     dailySnaps.forEach((snap, i) => {
       dailyByKey.set(trendKeys[i], snap.exists ? snap.data() : null);
@@ -931,6 +933,12 @@ export async function GET(req: NextRequest) {
         leastActiveUsers,
         trading,
         tradingError,
+        marketReminders: {
+          total: reminderSummary?.totalCount || 0,
+          byType: reminderSummary?.byType || {},
+          bySource: reminderSummary?.bySource || {},
+          lastAcceptedAt: reminderSummary?.lastAcceptedAt ? toIso(reminderSummary.lastAcceptedAt) : null,
+        },
         methodologyNote:
           'Visit tracking started when this dashboard shipped — there is no historical data from before that. "Least active" is ranked among the oldest-registered accounts. Retention approximates "returned N+ days after signup" from last-visit data, not a full daily visit history.' +
           (balancesTruncated ? ' Coin circulation was computed from a capped sample of balances and may undercount.' : ''),

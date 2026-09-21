@@ -20,6 +20,8 @@ import TradeModal from '@/components/simulator/trade/TradeModal';
 import TradeQuestionnaireModal from '@/components/simulator/trade/TradeQuestionnaireModal';
 import { useAuth } from '@/contexts/AuthContext';
 import BossTradeBanner from '@/components/boss/BossTradeBanner';
+import MarketClosedModal from '@/components/market/MarketClosedModal';
+import MarketClosedBanner from '@/components/market/MarketClosedBanner';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
@@ -97,6 +99,8 @@ function MarketScreen() {
   const [selectedSector, setSelectedSector] = useState('All');
   const [visibleCount, setVisibleCount] = useState(50);
   const [holidays, setHolidays] = useState<string[]>([]);
+  const [marketClosedModalOpen, setMarketClosedModalOpen] = useState(false);
+  const [marketClosedModalSource, setMarketClosedModalSource] = useState('trade_banner');
 
   useRegisterSearchFocus(() => searchInputRef.current?.focus());
 
@@ -105,6 +109,11 @@ function MarketScreen() {
   }, []);
 
   const marketOpen = isMarketOpen();
+
+  const handleOpenMarketClosed = useCallback((source: string = 'trade_banner') => {
+    setMarketClosedModalSource(source);
+    setMarketClosedModalOpen(true);
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
@@ -352,6 +361,14 @@ function MarketScreen() {
       )}
 
 
+      {/* Off-hours Market Schedule banner */}
+      {!marketOpen && (
+        <MarketClosedBanner
+          onOpenModal={() => handleOpenMarketClosed('trade_banner')}
+          holidays={holidays}
+        />
+      )}
+
       {/* Boss Tier promotion banner — only visible to Bro users */}
       <BossTradeBanner
         isBoss={isBoss}
@@ -395,6 +412,7 @@ function MarketScreen() {
                       marketOpen={marketOpen}
                       variant="market"
                       onTrade={onTrade}
+                      onMarketClosedClick={(sym, type) => handleOpenMarketClosed(`trade_row_${type}`)}
                     />
                   ))}
                 </tbody>
@@ -417,6 +435,7 @@ function MarketScreen() {
                 portfolioItem={portfolioBySymbol.get(stock.symbol)}
                 marketOpen={marketOpen}
                 onTrade={onTrade}
+                onMarketClosedClick={(sym, type) => handleOpenMarketClosed(`market_row_${type}`)}
               />
             ))}
 
@@ -452,6 +471,13 @@ function MarketScreen() {
           resetTransaction={resetTransaction}
         />
       )}
+
+      <MarketClosedModal
+        isOpen={marketClosedModalOpen}
+        onClose={() => setMarketClosedModalOpen(false)}
+        holidays={holidays}
+        source={marketClosedModalSource}
+      />
 
       {IS_TRADE_POLL_ACTIVE && showSurvey && (
         <TradeQuestionnaireModal onSuccess={handleSurveySuccess} />

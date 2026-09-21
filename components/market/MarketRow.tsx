@@ -35,9 +35,16 @@ interface Props {
   portfolioItem?: PortfolioItem;
   marketOpen: boolean;
   onTrade: (symbol: string, type: 'buy' | 'sell') => void;
+  onMarketClosedClick?: (symbol: string, type: 'buy' | 'sell') => void;
 }
 
-export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }: Props) {
+export default function MarketRow({
+  stock,
+  portfolioItem,
+  marketOpen,
+  onTrade,
+  onMarketClosedClick,
+}: Props) {
   const router = useRouter();
   const isTraded = stock.traded !== false;
   const isUp = stock.change > 0;
@@ -190,10 +197,26 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            if (!marketOpen) {
+              if (onMarketClosedClick) {
+                onMarketClosedClick(stock.symbol, 'buy');
+              } else {
+                onTrade(stock.symbol, 'buy');
+              }
+              return;
+            }
+            if (!isTraded) return;
             onTrade(stock.symbol, 'buy');
           }}
-          disabled={!marketOpen || !isTraded}
-          className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all shadow-xs"
+          disabled={marketOpen && !isTraded}
+          title={!marketOpen ? 'Market is closed — click to set calendar alarm' : !isTraded ? 'Not traded today' : undefined}
+          className={`flex-1 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs ${
+            marketOpen
+              ? isTraded
+                ? 'text-white bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 cursor-pointer'
+          }`}
         >
           Buy
         </button>
@@ -201,10 +224,26 @@ export default function MarketRow({ stock, portfolioItem, marketOpen, onTrade }:
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            if (!marketOpen) {
+              if (onMarketClosedClick) {
+                onMarketClosedClick(stock.symbol, 'sell');
+              } else {
+                onTrade(stock.symbol, 'sell');
+              }
+              return;
+            }
+            if (!isTraded) return;
             onTrade(stock.symbol, 'sell');
           }}
-          disabled={!marketOpen || !isTraded}
-          className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 active:scale-95 transition-all shadow-xs"
+          disabled={marketOpen && !isTraded}
+          title={!marketOpen ? 'Market is closed — click to set calendar alarm' : !isTraded ? 'Not traded today' : undefined}
+          className={`flex-1 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs ${
+            marketOpen
+              ? isTraded
+                ? 'text-white bg-rose-600 hover:bg-rose-700'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/20 cursor-pointer'
+          }`}
         >
           Sell
         </button>

@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Minus, Clock, Bell } from 'lucide-react';
 import Link from 'next/link';
 import NotTradedInfo from './trade/NotTradedInfo';
+import MarketClosedModal from '@/components/market/MarketClosedModal';
+import { getNextMarketOpen } from '@/lib/utils/marketSchedule';
 
 interface TradeExecutionPanelProps {
   symbol: string;
@@ -34,6 +36,9 @@ export default function TradeExecutionPanel({
 }: TradeExecutionPanelProps) {
   const [quantity, setQuantity] = useState<string>('1');
   const [submittingType, setSubmittingType] = useState<'BUY' | 'SELL' | null>(null);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+
+  const nextSession = useMemo(() => getNextMarketOpen(), []);
 
   // 0.4% standard DSE broker commission
   const BROKER_FEE_RATE = 0.004;
@@ -51,7 +56,12 @@ export default function TradeExecutionPanel({
   const isInputDisabled = submittingType !== null || !isMarketOpen || !isAuthenticated;
 
   const handleTrade = async (type: 'BUY' | 'SELL') => {
-    if (isInputDisabled) return;
+    if (!isAuthenticated) return;
+    if (!isMarketOpen) {
+      setIsCalendarModalOpen(true);
+      return;
+    }
+    if (submittingType !== null || (type === 'BUY' ? !canBuy : !canSell)) return;
     setSubmittingType(type);
     try {
       await onExecute(type, qtyNum);
@@ -124,10 +134,21 @@ export default function TradeExecutionPanel({
           <NotTradedInfo lastClose={lastClose} />
         </div>
       ) : !isMarketOpen ? (
-        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg flex items-center justify-center">
-          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-            Market is currently closed
-          </p>
+        <div className="mb-4 p-3.5 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/25 rounded-2xl flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 truncate">
+              Market is closed · Resumes {nextSession.nextOpenDhakaFormatted}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCalendarModalOpen(true)}
+            className="px-2.5 py-1 text-xs font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center gap-1 shrink-0 active:scale-95 transition-all shadow-2xs"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>Remind Me</span>
+          </button>
         </div>
       ) : null}
 
@@ -222,10 +243,16 @@ export default function TradeExecutionPanel({
             value="BUY"
             type="button"
             onClick={() => handleTrade('BUY')}
-            disabled={!canBuy || isInputDisabled}
-            className="w-full py-3.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/20 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
+            disabled={isAuthenticated && isMarketOpen && (!canBuy || submittingType !== null)}
+            className={`w-full py-3.5 rounded-xl font-bold text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              !isMarketOpen
+                ? 'bg-emerald-600/85 hover:bg-emerald-600 border border-emerald-500/30 cursor-pointer'
+                : !canBuy || submittingType !== null
+                ? 'bg-emerald-500 opacity-40 shadow-none cursor-not-allowed'
+                : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
+            }`}
           >
-            {submittingType === 'BUY' ? '...' : 'BUY'}
+            {submittingType === 'BUY' ? '...' : !isMarketOpen ? 'Set Buy Alarm' : 'BUY'}
           </button>
 
           <button
@@ -233,13 +260,25 @@ export default function TradeExecutionPanel({
             value="SELL"
             type="button"
             onClick={() => handleTrade('SELL')}
-            disabled={!canSell || isInputDisabled}
-            className="w-full py-3.5 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-sm shadow-rose-500/20 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
+            disabled={isAuthenticated && isMarketOpen && (!canSell || submittingType !== null)}
+            className={`w-full py-3.5 rounded-xl font-bold text-white shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              !isMarketOpen
+                ? 'bg-rose-600/85 hover:bg-rose-600 border border-rose-500/30 cursor-pointer'
+                : !canSell || submittingType !== null
+                ? 'bg-rose-500 opacity-40 shadow-none cursor-not-allowed'
+                : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
+            }`}
           >
-            {submittingType === 'SELL' ? '...' : 'SELL'}
+            {submittingType === 'SELL' ? '...' : !isMarketOpen ? 'Set Sell Alarm' : 'SELL'}
           </button>
         </div>
       )}
+
+      <MarketClosedModal
+        isOpen={isCalendarModalOpen}
+        onClose={() => setIsCalendarModalOpen(false)}
+        source="trade_panel"
+      />
     </form>
   );
 }

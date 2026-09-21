@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useEffect } from 'react';
+import React, { useMemo, useDeferredValue, useEffect, useState } from 'react';
 import {
   X,
   Minus,
@@ -10,12 +10,14 @@ import {
   Briefcase,
   TrendingUp,
   TrendingDown,
+  Bell,
 } from 'lucide-react';
 import type { MarketInfo, SimulatorState } from '@/hooks/useSimulator';
 import { getCompanyName } from '@/lib/dseCompanyNames';
 import NotTradedInfo from './NotTradedInfo';
 import { useAuth } from '@/contexts/AuthContext';
 import BossPostTradeNudge, { incrementTradeCount } from '@/components/boss/BossPostTradeNudge';
+import MarketClosedModal from '@/components/market/MarketClosedModal';
 
 interface Props {
   selectedStock: string;
@@ -55,6 +57,7 @@ export default function TradeModal({
   const deferredTradeQuantity = useDeferredValue(tradeQuantity);
   const COMMISSION_RATE = 0.004;
   const { isBoss, user } = useAuth();
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   const stockBySymbol = useMemo(
     () => new Map((marketInfo?.stocks || []).map((stock) => [stock.symbol, stock])),
@@ -122,8 +125,7 @@ export default function TradeModal({
       lastClose,
       isDisabled:
         transactionStatus === 'processing' ||
-        !marketOpen ||
-        !isTraded ||
+        (marketOpen && !isTraded) ||
         qty <= 0 ||
         (tradeType === 'buy' && !canAfford) ||
         (tradeType === 'sell' && !canSellQty),
@@ -170,6 +172,10 @@ export default function TradeModal({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!marketOpen) {
+      setShowCalendarModal(true);
+      return;
+    }
     if (!tradeSummary.isDisabled) {
       onExecute();
     }
@@ -611,10 +617,10 @@ export default function TradeModal({
             <div className="px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-4 border-t border-gray-100 dark:border-gray-800/80 bg-white/50 dark:bg-[#16202D]/50">
               <button
                 type="submit"
-                disabled={tradeSummary.isDisabled}
+                disabled={marketOpen && tradeSummary.isDisabled}
                 className={`w-full h-13 py-3.5 rounded-2xl text-white font-black text-base shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
                   !marketOpen
-                    ? 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed shadow-none'
+                    ? 'bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-600/25 cursor-pointer'
                     : tradeSummary.isDisabled
                     ? 'bg-gray-300 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none'
                     : tradeType === 'buy'
@@ -623,12 +629,27 @@ export default function TradeModal({
                 }`}
               >
                 {transactionStatus === 'processing' && <RefreshCw className="w-4 h-4 animate-spin" />}
-                {tradeType === 'buy' ? 'Confirm Buy' : 'Confirm Sell'}
+                {!marketOpen ? (
+                  <span className="flex items-center gap-1.5">
+                    <Bell className="w-4 h-4" />
+                    <span>Market Closed · Set Reminder</span>
+                  </span>
+                ) : tradeType === 'buy' ? (
+                  'Confirm Buy'
+                ) : (
+                  'Confirm Sell'
+                )}
               </button>
             </div>
           </form>
         )}
       </div>
+
+      <MarketClosedModal
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        source={`trade_modal_${tradeType}`}
+      />
     </div>
   );
 }

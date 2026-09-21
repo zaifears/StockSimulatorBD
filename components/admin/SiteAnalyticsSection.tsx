@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode, type MouseEvent, type TouchEvent } from 'react';
 import Link from 'next/link';
-import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart, Loader2, RefreshCw, CheckCircle2, Sparkles, FileText, Code2, Download, Calendar } from 'lucide-react';
+import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart, Loader2, RefreshCw, CheckCircle2, Sparkles, FileText, Code2, Download, Calendar, Bell } from 'lucide-react';
 import { BD_GEO_BUCKETS, type GeoBucketKey } from '@/lib/utils/geoBucket';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import AnalyticsExportModal from './AnalyticsExportModal';
@@ -178,8 +178,14 @@ export interface SiteAnalyticsData {
   mostActiveUsers: UserRow[];
   leastActiveUsers: UserRow[];
   trading: TradingActivity | null;
-  tradingError?: string | null;
-  methodologyNote?: string;
+  tradingError: string | null;
+  marketReminders?: {
+    total: number;
+    byType?: Record<string, number>;
+    bySource?: Record<string, number>;
+    lastAcceptedAt?: string | null;
+  };
+  methodologyNote: string;
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────
@@ -1753,7 +1759,7 @@ export default function SiteAnalyticsSection({
             {data.activeRightNow.toLocaleString()} online now
           </span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
           <StatTile label="Visits today" value={formatCompact(data.visitors.today)} accent="blue" icon={<Icon.Users />} />
           <StatTile label="Last 7 days" value={formatCompact(data.visitors.last7Days)} accent="blue" icon={<Icon.Users />} />
           <StatTile label="Last 30 days" value={formatCompact(data.visitors.last30Days)} accent="blue" icon={<Icon.Users />} />
@@ -1763,6 +1769,13 @@ export default function SiteAnalyticsSection({
             sublabel={`${formatDuration(data.avgSessionSeconds.last7Days)} avg (7d)`}
             accent="green"
             icon={<Icon.Clock />}
+          />
+          <StatTile
+            label="Market Reminders"
+            value={formatCompact(data.marketReminders?.total || 0)}
+            sublabel={`${data.marketReminders?.byType?.google_calendar || 0} GCal · ${(data.marketReminders?.byType?.apple_ics || 0) + (data.marketReminders?.byType?.weekly_ics || 0)} iCal`}
+            accent="purple"
+            icon={<Bell className="w-4 h-4" />}
           />
         </div>
       </div>

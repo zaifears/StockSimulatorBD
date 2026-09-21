@@ -21,13 +21,34 @@ interface Props {
   marketOpen: boolean;
   variant: 'market' | 'portfolio';
   onTrade: (symbol: string, type: 'buy' | 'sell') => void;
+  onMarketClosedClick?: (symbol: string, type: 'buy' | 'sell') => void;
 }
 
-export default function StockRow({ stock, portfolioItem, marketOpen, variant, onTrade }: Props) {
+export default function StockRow({
+  stock,
+  portfolioItem,
+  marketOpen,
+  variant,
+  onTrade,
+  onMarketClosedClick,
+}: Props) {
   const isUp = stock.change >= 0;
   const companyName = getCompanyName(stock.symbol);
 
   const isTraded = stock.traded !== false;
+
+  const handleAction = (type: 'buy' | 'sell') => {
+    if (!marketOpen) {
+      if (onMarketClosedClick) {
+        onMarketClosedClick(stock.symbol, type);
+      } else {
+        onTrade(stock.symbol, type);
+      }
+      return;
+    }
+    if (!isTraded) return;
+    onTrade(stock.symbol, type);
+  };
 
   if (variant === 'portfolio' && portfolioItem) {
     const avgCost = portfolioItem.averageBuyPrice;
@@ -43,22 +64,21 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
 
     return (
       <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-        <td className="px-5 py-3">
+        <td className="px-5 lg:px-6 py-3.5">
           <div className="flex flex-col">
             <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-500 transition-colors">{stock.symbol}</span>
-            {companyName && <span className="text-[10px] text-gray-400 truncate max-w-[180px]" title={companyName}>{companyName}</span>}
+            {companyName && <span className="text-[10px] text-gray-400 truncate max-w-[180px] lg:max-w-xs xl:max-w-sm" title={companyName}>{companyName}</span>}
           </div>
         </td>
-        <td className="px-5 py-3 text-center">
-          {stock.category ? (
-            <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${getCategoryColor(stock.category).badge}`}>{stock.category}</span>
-          ) : <span className="text-gray-400 dark:text-gray-500 text-xs">-</span>}
+        <td className="px-5 lg:px-6 py-3.5 text-right font-mono font-medium text-gray-700 dark:text-gray-300">
+          {portfolioItem.quantity.toLocaleString()}
         </td>
-        <td className="px-5 py-3 text-right"><span className="font-mono font-semibold text-gray-900 dark:text-gray-100">{portfolioItem.quantity}</span></td>
-        <td className="px-5 py-3 text-right"><span className="font-mono text-gray-700 dark:text-gray-300">৳{avgCost.toFixed(2)}</span></td>
-        <td className="px-5 py-3 text-right">
+        <td className="px-5 lg:px-6 py-3.5 text-right font-mono text-gray-700 dark:text-gray-300">
+          ৳{avgCost.toFixed(2)}
+        </td>
+        <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
           {isTraded ? (
-            <span className="font-mono font-medium text-gray-900 dark:text-gray-100">৳{stock.ltp.toFixed(2)}</span>
+            <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">৳{stock.ltp.toFixed(2)}</span>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 dark:text-gray-500">
               Not traded
@@ -66,22 +86,20 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
             </span>
           )}
         </td>
-        <td className="px-5 py-3 text-right">
-          <div className={`inline-flex flex-col items-end ${isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
-            <span className="font-mono font-bold text-xs flex items-center gap-0.5">
-              {isUp ? '+' : ''}{stock.changePercent.toFixed(2)}%
-              {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+        <td className="px-5 lg:px-6 py-3.5 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
+          ৳{currentValue.toFixed(2)}
+        </td>
+        <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
+          <div className={`inline-flex flex-col items-end ${isPnlUp ? 'text-emerald-500' : 'text-rose-500'}`}>
+            <span className="font-mono font-bold text-xs flex items-center gap-1">
+              {isPnlUp ? '+' : ''}{pnlPercent.toFixed(2)}%
+              {isPnlUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
             </span>
+            <span className="text-[10px] opacity-70 font-mono">{isPnlUp ? '+' : ''}৳{pnl.toFixed(2)}</span>
           </div>
         </td>
-        <td className="px-5 py-3 text-right">
-          <div className={`inline-flex flex-col items-end ${isPnlUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-            <span className="font-mono font-bold text-sm">{isPnlUp ? '+' : ''}৳{pnl.toFixed(2)}</span>
-            <span className="text-[10px] font-mono opacity-80">{isPnlUp ? '+' : ''}{pnlPercent.toFixed(2)}%</span>
-          </div>
-        </td>
-        <td className="px-5 py-3 text-right whitespace-nowrap">
-          <div className="flex justify-end items-center gap-1.5 whitespace-nowrap shrink-0">
+        <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">
+          <div className="flex justify-end items-center gap-1.5 sm:gap-2">
             <Link
               href={`/stocks/${stock.symbol.toLowerCase()}`}
               onClick={() => {
@@ -98,8 +116,36 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
             >
               Chart
             </Link>
-            <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
-            <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
+            <button
+              type="button"
+              onClick={() => handleAction('buy')}
+              disabled={marketOpen && !isTraded}
+              title={!marketOpen ? 'Market is closed — click to set calendar alarm' : !isTraded ? 'Not traded today' : undefined}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                marketOpen
+                  ? isTraded
+                    ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 cursor-pointer'
+              }`}
+            >
+              Buy
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAction('sell')}
+              disabled={marketOpen && !isTraded}
+              title={!marketOpen ? 'Market is closed — click to set calendar alarm' : !isTraded ? 'Not traded today' : undefined}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                marketOpen
+                  ? isTraded
+                    ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/20 cursor-pointer'
+              }`}
+            >
+              Sell
+            </button>
           </div>
         </td>
       </tr>
@@ -178,8 +224,36 @@ export default function StockRow({ stock, portfolioItem, marketOpen, variant, on
           >
             Chart
           </Link>
-          <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Buy</button>
-          <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${marketOpen && isTraded ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}>Sell</button>
+          <button
+            type="button"
+            onClick={() => handleAction('buy')}
+            disabled={marketOpen && !isTraded}
+            title={!marketOpen ? 'Market is closed — click to set calendar alarm' : !isTraded ? 'Not traded today' : undefined}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+              marketOpen
+                ? isTraded
+                  ? 'bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white cursor-pointer'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 cursor-pointer'
+            }`}
+          >
+            Buy
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAction('sell')}
+            disabled={marketOpen && !isTraded}
+            title={!marketOpen ? 'Market is closed — click to set calendar alarm' : !isTraded ? 'Not traded today' : undefined}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+              marketOpen
+                ? isTraded
+                  ? 'bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white cursor-pointer'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/20 cursor-pointer'
+            }`}
+          >
+            Sell
+          </button>
         </div>
       </td>
     </tr>
