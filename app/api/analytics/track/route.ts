@@ -110,10 +110,27 @@ function categorizeReferrer(referrer: string | null, ownHostname: string): strin
   return 'other';
 }
 
+/** Canonicalize URL path to prevent case or trailing slash fragmentation */
+function normalizeAnalyticsPath(path: string): string {
+  let cleaned = (path || '/').split('?')[0].split('#')[0].trim();
+  if (cleaned.length > 1 && cleaned.endsWith('/')) {
+    cleaned = cleaned.slice(0, -1);
+  }
+  if (/^\/stocks\/[^\/]+$/i.test(cleaned)) {
+    const symbol = cleaned.slice('/stocks/'.length).toUpperCase();
+    return `/stocks/${symbol}`;
+  }
+  if (/^\/blog\/[^\/]+$/i.test(cleaned)) {
+    const slug = cleaned.slice('/blog/'.length).toLowerCase();
+    return `/blog/${slug}`;
+  }
+  return cleaned;
+}
+
 /** Turn a URL path into a safe, stable Firestore document id. */
 function pathToDocId(path: string): string {
-  const cleaned = (path || '/').split('?')[0].split('#')[0];
-  const id = `p_${cleaned.replace(/\//g, '_')}`;
+  const norm = normalizeAnalyticsPath(path);
+  const id = `p_${norm.replace(/\//g, '_')}`;
   return id.length > 400 ? id.slice(0, 400) : id;
 }
 
@@ -152,7 +169,7 @@ export async function POST(req: NextRequest) {
       const uid = await tryVerifyUid(body?.idToken);
       const dateKey = getDhakaDateKey(0);
       const hour = getDhakaHour();
-      const entryPath = sanitizeString(body?.entryPath, 300) || '/';
+      const entryPath = normalizeAnalyticsPath(sanitizeString(body?.entryPath, 300) || '/');
       const referrer = sanitizeString(body?.referrer, 300);
       const guestId = sanitizeString(body?.guestId, 100);
       const deviceType = VALID_DEVICE_TYPES.has(body?.deviceType) ? body.deviceType : 'unknown';
@@ -288,7 +305,8 @@ export async function POST(req: NextRequest) {
     const session = sessionSnap.data()!;
     const dateKey: string = session.dateKey || getDhakaDateKey(0);
     const delta = clampNumber(body?.deltaActiveSeconds, 0, MAX_DELTA_SECONDS, 0);
-    const lastPath = sanitizeString(body?.path, 300);
+    const rawPath = sanitizeString(body?.path, 300);
+    const lastPath = rawPath ? normalizeAnalyticsPath(rawPath) : null;
     const incomingPageCount = clampNumber(body?.pageCount, 0, MAX_PAGE_COUNT, 0);
 
     const sessionUpdate: Record<string, any> = {

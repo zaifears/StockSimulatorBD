@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode, type MouseEvent, type TouchEvent } from 'react';
 import Link from 'next/link';
-import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart, Loader2, RefreshCw, CheckCircle2, Sparkles, FileText, Code2, Download } from 'lucide-react';
+import { Users, Clock, UserPlus, Coins, TrendingUp, TrendingDown, Compass, Activity, ArrowRight, MapPin, Radio, ShieldAlert, ShieldCheck, Wallet, Repeat, Newspaper, LineChart, Loader2, RefreshCw, CheckCircle2, Sparkles, FileText, Code2, Download, Calendar } from 'lucide-react';
 import { BD_GEO_BUCKETS, type GeoBucketKey } from '@/lib/utils/geoBucket';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import AnalyticsExportModal from './AnalyticsExportModal';
@@ -28,6 +28,46 @@ interface UserRow {
   totalActiveSeconds: number;
   lastVisitAt: string | null;
   createdAt?: string | null;
+  daysQuiet?: number;
+  window?: '7d' | 'all-time';
+}
+
+export interface HourlyActivityPoint {
+  hour: number;
+  hourLabel: string;
+  sessions: number;
+  sessions7d: number;
+  isDseMarketHour: boolean;
+}
+
+export interface DayOfWeekActivityPoint {
+  dayIndex: number;
+  day: string;
+  shortDay: string;
+  sessions: number;
+  percentage: number;
+  isDseTradingDay: boolean;
+}
+
+export interface MonthCalendarDay {
+  dateKey: string;
+  day: number;
+  dayOfWeek: number;
+  sessions: number;
+  avgSeconds?: number;
+  intensity: number;
+  isDseTradingDay: boolean;
+  isToday: boolean;
+}
+
+export interface MonthlyCalendarData {
+  year: number;
+  month: number;
+  monthName: string;
+  firstDayOfWeek: number;
+  totalDays: number;
+  maxSessions: number;
+  days: MonthCalendarDay[];
 }
 
 interface CoinRow {
@@ -100,6 +140,9 @@ export interface SiteAnalyticsData {
   bounceRate: number;
   retention: { d1: RetentionBucket; d7: RetentionBucket; d30: RetentionBucket; sampledUsers: number; truncated: boolean };
   peakHours: { hour: number; sessions: number }[];
+  hourlyActivity?: HourlyActivityPoint[];
+  dayOfWeekActivity?: DayOfWeekActivityPoint[];
+  monthlyCalendar?: MonthlyCalendarData;
   topLandingPages: PageRow[];
   topBlogPosts: PageRow[];
   topStockPages: PageRow[];
@@ -1092,6 +1135,350 @@ function PeakHoursChart({ hours }: { hours: { hour: number; sessions: number }[]
   );
 }
 
+// ── Hourly peak activity chart (24h with DSE market hours highlight) ─────
+
+function HourlyActivityChart({ data }: { data?: HourlyActivityPoint[] }) {
+  const [hoveredHour, setHoveredHour] = useState<HourlyActivityPoint | null>(null);
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Hourly Activity Pattern (Dhaka Time)</h3>
+        <p className="text-sm text-gray-400 dark:text-gray-500">No hourly activity recorded yet</p>
+      </div>
+    );
+  }
+
+  const maxSessions = Math.max(...data.map((h) => h.sessions), 1);
+  const totalSessions = data.reduce((sum, h) => sum + h.sessions, 0);
+  const marketHoursSessions = data.filter((h) => h.isDseMarketHour).reduce((sum, h) => sum + h.sessions, 0);
+  const marketSharePct = totalSessions > 0 ? Math.round((marketHoursSessions / totalSessions) * 100) : 0;
+
+  return (
+    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-500" />
+              Hourly Peak Activity (24h Dhaka Time)
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Traffic distribution across Bangladesh Standard Time (BST, UTC+6)
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold self-start sm:self-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {marketSharePct}% during DSE Trading Hours
+          </span>
+        </div>
+
+        {/* 24-hour bar chart */}
+        <div className="relative pt-6 pb-2">
+          {hoveredHour && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-black text-white px-3 py-1 rounded-lg text-xs font-semibold shadow-lg pointer-events-none flex items-center gap-2 z-10 whitespace-nowrap">
+              <span className="font-mono font-bold">{hoveredHour.hourLabel}</span>
+              <span>&middot;</span>
+              <span className="text-blue-400 font-bold">{hoveredHour.sessions} visits (30d)</span>
+              <span>&middot;</span>
+              <span className={hoveredHour.isDseMarketHour ? 'text-emerald-400 font-bold' : 'text-gray-400'}>
+                {hoveredHour.isDseMarketHour ? 'DSE Market Open' : 'Off Hours'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-end gap-[3px] h-28 w-full">
+            {data.map((h) => {
+              const heightPct = Math.max((h.sessions / maxSessions) * 100, 4);
+              const isHovered = hoveredHour?.hour === h.hour;
+              return (
+                <div
+                  key={h.hour}
+                  onMouseEnter={() => setHoveredHour(h)}
+                  onMouseLeave={() => setHoveredHour(null)}
+                  className="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end"
+                >
+                  <div
+                    style={{ height: `${heightPct}%` }}
+                    className={`w-full rounded-t transition-all ${
+                      isHovered
+                        ? 'bg-amber-500 dark:bg-amber-400 shadow-md ring-2 ring-amber-300 dark:ring-amber-500'
+                        : h.isDseMarketHour
+                        ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-500'
+                        : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400'
+                    }`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-between mt-2 text-[10px] font-mono text-gray-400 dark:text-gray-500">
+            <span>00:00</span>
+            <span>06:00</span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">10:00-14:30 (DSE)</span>
+            <span>18:00</span>
+            <span>23:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs pt-3 border-t border-gray-100 dark:border-gray-800/80 text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 dark:bg-blue-500" />
+            <span>DSE Market Hours (10am–2:30pm)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-gray-300 dark:bg-gray-700" />
+            <span>Off Hours</span>
+          </div>
+        </div>
+        <span className="text-[11px] font-medium">Dhaka Time (UTC+6)</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Day of week activity chart (Sun-Sat with trading days highlight) ──────
+
+function DayOfWeekActivityChart({ data }: { data?: DayOfWeekActivityPoint[] }) {
+  const [hoveredDay, setHoveredDay] = useState<DayOfWeekActivityPoint | null>(null);
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Weekly Activity Pattern</h3>
+        <p className="text-sm text-gray-400 dark:text-gray-500">No weekly data recorded yet</p>
+      </div>
+    );
+  }
+
+  const maxSessions = Math.max(...data.map((d) => d.sessions), 1);
+  const tradingDaysSessions = data.filter((d) => d.isDseTradingDay).reduce((sum, d) => sum + d.sessions, 0);
+  const weekendSessions = data.filter((d) => !d.isDseTradingDay).reduce((sum, d) => sum + d.sessions, 0);
+
+  return (
+    <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
+              Day of Week Activity (Sun &ndash; Sat)
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Trading days (Sun-Thu) vs Weekend (Fri-Sat)
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-bold self-start sm:self-auto">
+            {tradingDaysSessions} trading day visits &middot; {weekendSessions} weekend
+          </span>
+        </div>
+
+        {/* 7-day bar chart */}
+        <div className="relative pt-6 pb-2">
+          {hoveredDay && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-black text-white px-3 py-1 rounded-lg text-xs font-semibold shadow-lg pointer-events-none flex items-center gap-2 z-10 whitespace-nowrap">
+              <span className="font-bold">{hoveredDay.day}</span>
+              <span>&middot;</span>
+              <span className="text-emerald-400 font-bold">{hoveredDay.sessions} visits ({hoveredDay.percentage}%)</span>
+              <span>&middot;</span>
+              <span className={hoveredDay.isDseTradingDay ? 'text-blue-400 font-semibold' : 'text-amber-400'}>
+                {hoveredDay.isDseTradingDay ? 'DSE Open' : 'Weekend (Closed)'}
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-7 gap-2 sm:gap-3 h-28 items-end">
+            {data.map((d) => {
+              const heightPct = Math.max((d.sessions / maxSessions) * 100, 6);
+              const isHovered = hoveredDay?.dayIndex === d.dayIndex;
+              return (
+                <div
+                  key={d.dayIndex}
+                  onMouseEnter={() => setHoveredDay(d)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  className="flex flex-col items-center h-full justify-end cursor-pointer group"
+                >
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1 group-hover:text-gray-900 dark:group-hover:text-white">
+                    {formatCompact(d.sessions)}
+                  </span>
+                  <div
+                    style={{ height: `${heightPct}%` }}
+                    className={`w-full rounded-t transition-all ${
+                      isHovered
+                        ? 'bg-amber-500 dark:bg-amber-400 shadow-md'
+                        : d.isDseTradingDay
+                        ? 'bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500'
+                        : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400'
+                    }`}
+                  />
+                  <span className={`text-[11px] font-bold mt-2 ${d.isDseTradingDay ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                    {d.shortDay}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs pt-3 border-t border-gray-100 dark:border-gray-800/80 text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-500" />
+            <span>Market Trading Days (Sun–Thu)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-gray-300 dark:bg-gray-700" />
+            <span>Weekend (Fri–Sat)</span>
+          </div>
+        </div>
+        <span className="text-[11px] font-medium">30-Day Total</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Monthly activity calendar heatmap ─────────────────────────────────────
+
+function MonthlyActivityCalendar({ calendar }: { calendar?: MonthlyCalendarData }) {
+  const [hoveredDay, setHoveredDay] = useState<MonthCalendarDay | null>(null);
+
+  if (!calendar || !calendar.days || calendar.days.length === 0) {
+    return (
+      <div>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Monthly Activity Calendar</h3>
+        <p className="text-sm text-gray-400 dark:text-gray-500">No monthly calendar data available</p>
+      </div>
+    );
+  }
+
+  const weekHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const leadingBlanks = Array.from({ length: calendar.firstDayOfWeek }, (_, i) => i);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-purple-500" />
+            Monthly Activity Heatmap &mdash; {calendar.monthName} {calendar.year}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Daily visitor volume heatmap. Darker hues represent high-traffic days.
+          </p>
+        </div>
+
+        {/* Hover inspector badge */}
+        {hoveredDay ? (
+          <div className="text-xs bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-xl text-blue-900 dark:text-blue-300 font-medium">
+            <strong className="font-bold">{hoveredDay.dateKey}</strong>: {hoveredDay.sessions} visits
+            {hoveredDay.avgSeconds ? ` &middot; ${formatDuration(hoveredDay.avgSeconds)} avg` : ''}
+            {' '}({hoveredDay.isDseTradingDay ? 'DSE Open' : 'Weekend'})
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 dark:text-gray-500">
+            Hover over any day to inspect visitors
+          </div>
+        )}
+      </div>
+
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+        {weekHeaders.map((w, idx) => (
+          <div key={w} className={idx === 5 || idx === 6 ? 'text-amber-600/70 dark:text-amber-400/60' : ''}>
+            {w}
+          </div>
+        ))}
+      </div>
+
+      {/* Days grid */}
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+        {leadingBlanks.map((b) => (
+          <div key={`blank-${b}`} className="h-14 sm:h-16 rounded-xl bg-gray-50/50 dark:bg-gray-800/10 border border-dashed border-gray-100 dark:border-gray-800/40" />
+        ))}
+
+        {calendar.days.map((d) => {
+          const isWeekend = !d.isDseTradingDay;
+          const isHovered = hoveredDay?.dateKey === d.dateKey;
+
+          let bgClass = 'bg-gray-50 dark:bg-[#151C28] text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-800';
+          if (d.intensity === 1) {
+            bgClass = 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200/80 dark:border-blue-900/50';
+          } else if (d.intensity === 2) {
+            bgClass = 'bg-blue-100 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-700';
+          } else if (d.intensity === 3) {
+            bgClass = 'bg-blue-500 text-white border-blue-600 shadow-xs font-semibold';
+          } else if (d.intensity === 4) {
+            bgClass = 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-blue-600 shadow-md font-bold ring-1 ring-blue-400';
+          }
+
+          return (
+            <div
+              key={d.dateKey}
+              onMouseEnter={() => setHoveredDay(d)}
+              onMouseLeave={() => setHoveredDay(null)}
+              className={`h-14 sm:h-16 rounded-xl p-2 border transition-all cursor-pointer flex flex-col justify-between ${bgClass} ${
+                isHovered ? 'scale-105 z-10 ring-2 ring-amber-400' : ''
+              } ${d.isToday ? 'ring-2 ring-emerald-500' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-bold ${d.isToday ? 'underline decoration-emerald-500 decoration-2' : ''}`}>
+                  {d.day}
+                </span>
+                {d.isToday && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                )}
+                {isWeekend && !d.isToday && (
+                  <span className="text-[9px] opacity-60 font-mono">wknd</span>
+                )}
+              </div>
+
+              <div className="text-right">
+                {d.sessions > 0 ? (
+                  <span className="text-[11px] sm:text-xs font-bold font-mono leading-none">
+                    {d.sessions} <span className="text-[9px] opacity-80 font-normal">visits</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] opacity-40 font-mono">&mdash;</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-3 border-t border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium">Activity Intensity:</span>
+          <div className="flex items-center gap-1">
+            <span className="w-3.5 h-3.5 rounded bg-gray-50 dark:bg-[#151C28] border border-gray-200 dark:border-gray-800" title="0 visits" />
+            <span className="w-3.5 h-3.5 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200" title="Low traffic" />
+            <span className="w-3.5 h-3.5 rounded bg-blue-100 dark:bg-blue-900/60 border border-blue-300" title="Moderate traffic" />
+            <span className="w-3.5 h-3.5 rounded bg-blue-500 text-white" title="High traffic" />
+            <span className="w-3.5 h-3.5 rounded bg-gradient-to-br from-blue-600 to-indigo-600 text-white" title="Peak traffic" />
+          </div>
+          <span className="text-[10px] text-gray-400">Low &rarr; Peak</span>
+        </div>
+
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full ring-2 ring-emerald-500 bg-transparent" />
+            <span>Today</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="text-amber-500 font-mono text-xs font-bold">wknd</span>
+            <span>DSE Closed</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Simple ranked list (top pages / most-traded stocks) ──────────────────
 
 function RankedListCard({
@@ -1436,37 +1823,56 @@ export default function SiteAnalyticsSection({
         </div>
       </div>
 
-      {/* Peak hours + top landing pages */}
-      <div className="grid grid-cols-1 lg:grid-cols-[65fr_35fr] gap-3 sm:gap-4">
-        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Peak activity hours (7d, Dhaka time)</h3>
-          <PeakHoursChart hours={data.peakHours} />
+      {/* Time & Activity Intelligence — Hourly, Day of Week, and Monthly Calendar */}
+      <div>
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-blue-500" />
+          Visitor Time &amp; Activity Intelligence
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4">
+          <HourlyActivityChart data={data.hourlyActivity} />
+          <DayOfWeekActivityChart data={data.dayOfWeekActivity} />
         </div>
-        <RankedListCard
-          title="Top Landing Pages"
-          icon={<Icon.Compass />}
-          accent="purple"
-          rows={data.topLandingPages.map((p) => ({ label: p.path, value: formatCompact(p.views) }))}
-          emptyText="No page view data yet"
-        />
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
+          <MonthlyActivityCalendar calendar={data.monthlyCalendar} />
+        </div>
       </div>
 
       {/* Content performance — which blog posts and stock pages pull traffic */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <RankedListCard
-          title="Top Blog Posts"
-          icon={<Newspaper className="w-4 h-4" />}
-          accent="indigo"
-          rows={data.topBlogPosts.map((p) => ({ label: p.path.replace(/^\/blog\//, ''), value: formatCompact(p.views) }))}
-          emptyText="No blog view data yet"
-        />
-        <RankedListCard
-          title="Top Stock Pages"
-          icon={<LineChart className="w-4 h-4" />}
-          accent="blue"
-          rows={data.topStockPages.map((p) => ({ label: p.path.replace(/^\/stocks\//, '').toUpperCase(), value: formatCompact(p.views) }))}
-          emptyText="No stock page view data yet"
-        />
+      <div>
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+          <Compass className="w-4 h-4 text-purple-500" />
+          Top Content &amp; Landing Pages
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+          <RankedListCard
+            title="Top Landing Pages"
+            icon={<Icon.Compass />}
+            accent="purple"
+            rows={data.topLandingPages.map((p) => ({ label: p.path, value: formatCompact(p.views) }))}
+            emptyText="No page view data yet"
+          />
+          <RankedListCard
+            title="Top Blog Posts"
+            icon={<Newspaper className="w-4 h-4" />}
+            accent="indigo"
+            rows={data.topBlogPosts.map((p) => ({
+              label: p.path.replace(/^\/blog\//i, '').replace(/\/$/, ''),
+              value: formatCompact(p.views),
+            }))}
+            emptyText="No blog view data yet"
+          />
+          <RankedListCard
+            title="Top Stock Pages"
+            icon={<LineChart className="w-4 h-4" />}
+            accent="blue"
+            rows={data.topStockPages.map((p) => ({
+              label: p.path.replace(/^\/stocks\//i, '').replace(/\/$/, '').toUpperCase(),
+              value: formatCompact(p.views),
+            }))}
+            emptyText="No stock page view data yet"
+          />
+        </div>
       </div>
 
       {/* Registrations KPI row */}
@@ -1616,12 +2022,12 @@ export default function SiteAnalyticsSection({
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           <UserListCard
-            title="Most Active Users"
+            title="Most Active Users (Last 7 Days)"
             icon={<Icon.TrendUp />}
             accent="green"
             users={data.mostActiveUsers}
             emptyText="No visit data yet"
-            metricLabel={(u) => `${u.visitCount} visits total`}
+            metricLabel={(u) => (u.window === '7d' || !u.window ? `${u.visitCount} visits (7d)` : `${u.visitCount} visits total`)}
             viewAllHref="/admin/users/most-active"
           />
           <UserListCard
@@ -1629,8 +2035,12 @@ export default function SiteAnalyticsSection({
             icon={<Icon.TrendDown />}
             accent="amber"
             users={data.leastActiveUsers}
-            emptyText="Not enough data yet"
-            metricLabel={(u) => `${u.visitCount} visits total`}
+            emptyText="No quiet users detected"
+            metricLabel={(u) =>
+              u.daysQuiet !== undefined && u.daysQuiet > 0
+                ? `${u.daysQuiet}d quiet · ${u.visitCount} past visits`
+                : `${u.visitCount} visits`
+            }
             viewAllHref="/admin/users/going-quiet"
           />
           <CoinLeaderboardCard users={data.topCoinHolders} viewAllHref="/admin/users/top-coin-holders" />

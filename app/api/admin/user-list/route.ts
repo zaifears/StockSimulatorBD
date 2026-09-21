@@ -70,38 +70,69 @@ export async function GET(req: NextRequest) {
     let truncated = usersTruncated;
 
     if (type === 'most-active') {
+      const weekCutoff = new Date(Date.now() - 7 * 86400000);
+      const weekSessionsSnap = await db
+        .collection('analytics_sessions')
+        .where('startedAt', '>=', weekCutoff)
+        .limit(10000)
+        .get();
+
+      const userWeekMap = new Map<string, { sessions: number; activeSeconds: number; lastPingMs: number }>();
+      for (const doc of weekSessionsSnap.docs) {
+        const s = doc.data();
+        if (!s.uid) continue;
+        const existing = userWeekMap.get(s.uid) || { sessions: 0, activeSeconds: 0, lastPingMs: 0 };
+        existing.sessions += 1;
+        existing.activeSeconds += s.activeSeconds || 0;
+        const pingMs = toMillis(s.lastPingAt || s.startedAt);
+        if (pingMs > existing.lastPingMs) existing.lastPingMs = pingMs;
+        userWeekMap.set(s.uid, existing);
+      }
+
       rows = users
-        .map((u) => ({
-          uid: u.uid,
-          name: displayName(u),
-          email: u.email || null,
-          visitCount: u.visitCount || 0,
-          totalActiveSeconds: u.totalActiveSeconds || 0,
-          lastVisitAt: toIso(u.lastVisitAt),
-          createdAt: u.createdAt || null,
-        }))
-        .sort((a, b) => b.visitCount - a.visitCount);
+        .map((u) => {
+          const weekStats = userWeekMap.get(u.uid);
+          return {
+            uid: u.uid,
+            name: displayName(u),
+            email: u.email || null,
+            visitCount: weekStats ? weekStats.sessions : 0,
+            allTimeVisits: u.visitCount || 0,
+            totalActiveSeconds: weekStats ? weekStats.activeSeconds : u.totalActiveSeconds || 0,
+            lastVisitAt: weekStats?.lastPingMs ? new Date(weekStats.lastPingMs).toISOString() : toIso(u.lastVisitAt),
+            createdAt: u.createdAt || null,
+          };
+        })
+        .sort((a, b) => (b.visitCount !== a.visitCount ? b.visitCount - a.visitCount : (b.allTimeVisits || 0) - (a.allTimeVisits || 0)));
     } else if (type === 'going-quiet') {
-      // Same reasoning as the dashboard preview: only accounts old enough to
-      // have had a fair chance to come back are eligible, and a missing
-      // visitCount correctly sorts to the bottom (0 visits) rather than
-      // being excluded the way an orderBy('visitCount') query would.
-      const cutoffIso = dhakaDateKeyToUtcMidnightISO(getDhakaDateKey(MIN_ACCOUNT_AGE_DAYS_FOR_INACTIVE));
+      // Prioritize users who had past visits (visitCount >= 1) but have been quiet for 5+ days
+      const quietCutoffMs = Date.now() - 5 * 86400000;
       rows = users
-        .filter((u) => u.createdAt && u.createdAt <= cutoffIso)
-        .map((u) => ({
-          uid: u.uid,
-          name: displayName(u),
-          email: u.email || null,
-          visitCount: u.visitCount || 0,
-          totalActiveSeconds: u.totalActiveSeconds || 0,
-          lastVisitAt: toIso(u.lastVisitAt),
-          createdAt: u.createdAt || null,
-        }))
+        .filter((u) => {
+          const lastMs = toMillis(u.lastVisitAt);
+          return (u.visitCount && u.visitCount >= 1 && lastMs <= quietCutoffMs) || (!u.visitCount && u.createdAt);
+        })
+        .map((u) => {
+          const lastMs = toMillis(u.lastVisitAt);
+          const daysQuiet = lastMs > 0 ? Math.floor((Date.now() - lastMs) / 86400000) : null;
+          return {
+            uid: u.uid,
+            name: displayName(u),
+            email: u.email || null,
+            visitCount: u.visitCount || 0,
+            totalActiveSeconds: u.totalActiveSeconds || 0,
+            lastVisitAt: toIso(u.lastVisitAt),
+            daysQuiet,
+            createdAt: u.createdAt || null,
+          };
+        })
         .sort((a, b) => {
-          const visitDiff = a.visitCount - b.visitCount;
-          if (visitDiff !== 0) return visitDiff;
-          return toMillis(a.lastVisitAt) - toMillis(b.lastVisitAt);
+          if ((a.visitCount || 0) > 0 && (b.visitCount || 0) === 0) return -1;
+          if ((a.visitCount || 0) === 0 && (b.visitCount || 0) > 0) return 1;
+          if ((a.visitCount || 0) > 0 && (b.visitCount || 0) > 0) {
+            return toMillis(a.lastVisitAt) - toMillis(b.lastVisitAt);
+          }
+          return toMillis(a.createdAt) - toMillis(b.createdAt);
         });
     } else {
       // top-coins — the real trading balance (see lib/utils/simulatorBalances.ts),

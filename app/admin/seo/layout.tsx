@@ -77,10 +77,11 @@ export default function SeoAdminLayout({ children }: { children: React.ReactNode
             <div className="flex items-center gap-3">
               <Link
                 href="/admin"
-                className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 dark:bg-gray-800/80 hover:bg-gray-200 transition-colors"
-                title="Back to Admin Command Center"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-2xs shrink-0"
+                title="Return to Main Admin Dashboard"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>&larr; Back to /admin</span>
               </Link>
               <div>
                 <div className="flex items-center gap-2">
@@ -107,6 +108,7 @@ export default function SeoAdminLayout({ children }: { children: React.ReactNode
                   onChange={(e) => router.push(e.target.value)}
                   className="w-full text-xs font-bold bg-white dark:bg-[#151C28] border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-gray-800 dark:text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 >
+                  <option value="/admin">&larr; Back to /admin (Dashboard)</option>
                   {NAV_GROUPS.map((group) => (
                     <optgroup key={group.name} label={group.name}>
                       {group.items.map((tab) => (
@@ -137,6 +139,15 @@ export default function SeoAdminLayout({ children }: { children: React.ReactNode
 
           {/* Categorized Multi-Row Responsive Tabs (Zero Sideways Scrollbar) */}
           <nav className="hidden sm:flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800/60">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800/60 transition-all mr-1 shadow-2xs"
+              title="Return to Main Admin Command Center"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>&larr; Admin</span>
+            </Link>
+            <span className="h-4 w-px bg-gray-200 dark:bg-gray-800 mx-0.5 self-center" />
             {NAV_GROUPS.map((group, gIdx) => (
               <React.Fragment key={group.name}>
                 {gIdx > 0 && (

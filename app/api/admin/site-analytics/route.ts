@@ -34,9 +34,9 @@ const TOP_STOCKS_LIMIT = 8;
 // cheap even on a busy day. Ordered newest-first, so a truncation only ever
 // drops the *older* end of the 30-day window, not today's activity.
 const TRADE_FETCH_CAP = 3000;
-// Broader page-view scan so blog/stock-page leaderboards can be sliced out of
-// the same read instead of three separate top-N queries.
-const PAGES_SCAN_LIMIT = 60;
+// Broader page-view scan so all blog and stock-page leaderboards are accurately sliced
+// without starving blog posts with fewer views than the 60th stock page.
+const PAGES_SCAN_LIMIT = 1000;
 // "Currently online" window — a session pinging within this window (and not
 // yet ended) counts as live. Matches the ~25s heartbeat interval with room
 // for one missed beat.
@@ -193,22 +193,147 @@ export async function GET(req: NextRequest) {
     const bounceEligibleSessions = sumField(last7Keys, 'completedSessions');
     const bounceRate = bounceEligibleSessions > 0 ? Math.round((bounceSessions / bounceEligibleSessions) * 100) : 0;
 
-    // ── Peak activity hours, Dhaka local time (last 7 days) ──────────────
+    // ── Peak activity hours, Dhaka local time (last 7 days & 30 days) ──────────────
     const peakHours = Array.from({ length: 24 }, (_, hour) => ({
       hour,
       sessions: sumField(last7Keys, `hour_${hour}`),
     }));
 
-    // ── Top pages (all-time running counter) — one broader scan, sliced
-    // three ways so blog/stock-page popularity don't cost extra queries.
+    const hourlyActivity = Array.from({ length: 24 }, (_, hour) => {
+      const sessions30d = sumField(trendKeys, `hour_${hour}`);
+      const sessions7d = sumField(last7Keys, `hour_${hour}`);
+      return {
+        hour,
+        hourLabel: `${String(hour).padStart(2, '0')}:00`,
+        sessions: sessions30d,
+        sessions7d,
+        // DSE regular continuous trading runs 10:00 AM to 2:30 PM (BST)
+        isDseMarketHour: hour >= 10 && hour <= 14,
+      };
+    });
+
+    // ── Day of week activity distribution (last 30 days) ─────────────────
+    const DAYS_OF_WEEK = [
+      { key: 0, label: 'Sunday', shortLabel: 'Sun', isDseTradingDay: true },
+      { key: 1, label: 'Monday', shortLabel: 'Mon', isDseTradingDay: true },
+      { key: 2, label: 'Tuesday', shortLabel: 'Tue', isDseTradingDay: true },
+      { key: 3, label: 'Wednesday', shortLabel: 'Wed', isDseTradingDay: true },
+      { key: 4, label: 'Thursday', shortLabel: 'Thu', isDseTradingDay: true },
+      { key: 5, label: 'Friday', shortLabel: 'Fri', isDseTradingDay: false },
+      { key: 6, label: 'Saturday', shortLabel: 'Sat', isDseTradingDay: false },
+    ];
+    const dayOfWeekSessions: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    trendKeys.forEach((key) => {
+      const [y, m, d] = key.split('-').map(Number);
+      const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      const dayOfWeek = dateObj.getUTCDay();
+      const s = dailyByKey.get(key)?.totalSessions || 0;
+      dayOfWeekSessions[dayOfWeek] = (dayOfWeekSessions[dayOfWeek] || 0) + s;
+    });
+    const totalWeekDaySessions = Object.values(dayOfWeekSessions).reduce((a, b) => a + b, 0);
+    const dayOfWeekActivity = DAYS_OF_WEEK.map((d) => {
+      const sess = dayOfWeekSessions[d.key] || 0;
+      const percentage = totalWeekDaySessions > 0 ? Math.round((sess / totalWeekDaySessions) * 100) : 0;
+      return {
+        dayIndex: d.key,
+        day: d.label,
+        shortDay: d.shortLabel,
+        sessions: sess,
+        percentage,
+        isDseTradingDay: d.isDseTradingDay,
+      };
+    });
+
+    // ── Monthly activity calendar (current month in Dhaka time) ──────────
+    const [curYear, curMonth] = todayKey.split('-').map(Number);
+    const daysInCurMonth = new Date(curYear, curMonth, 0).getDate();
+    const firstDayOfMonthUtc = new Date(Date.UTC(curYear, curMonth - 1, 1, 12, 0, 0)).getUTCDay();
+
+    let maxMonthSessions = 1;
+    const monthDays = [];
+    for (let day = 1; day <= daysInCurMonth; day++) {
+      const dateStr = `${curYear}-${String(curMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayDoc = dailyByKey.get(dateStr);
+      const sessions = dayDoc?.totalSessions || 0;
+      if (sessions > maxMonthSessions) maxMonthSessions = sessions;
+      const dayOfWeek = new Date(Date.UTC(curYear, curMonth - 1, day, 12, 0, 0)).getUTCDay();
+      monthDays.push({
+        dateKey: dateStr,
+        day,
+        dayOfWeek,
+        sessions,
+        avgSeconds: dayDoc ? (dayDoc.completedSessions ? Math.round((dayDoc.totalActiveSeconds || 0) / dayDoc.completedSessions) : 0) : 0,
+        isDseTradingDay: dayOfWeek >= 0 && dayOfWeek <= 4,
+        isToday: dateStr === todayKey,
+      });
+    }
+
+    const monthlyCalendar = {
+      year: curYear,
+      month: curMonth,
+      monthName: new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'Asia/Dhaka' }).format(new Date(curYear, curMonth - 1, 1)),
+      firstDayOfWeek: firstDayOfMonthUtc,
+      totalDays: daysInCurMonth,
+      maxSessions: maxMonthSessions,
+      days: monthDays.map((d) => ({
+        ...d,
+        intensity:
+          d.sessions === 0
+            ? 0
+            : d.sessions >= maxMonthSessions * 0.75
+            ? 4
+            : d.sessions >= maxMonthSessions * 0.5
+            ? 3
+            : d.sessions >= maxMonthSessions * 0.25
+            ? 2
+            : 1,
+      })),
+    };
+
+    // ── Top pages (all-time running counter) — normalized aggregation ─────
+    // Normalizes case variations (e.g. /stocks/1JANATAMF vs /stocks/1janatamf)
+    // and trailing slashes so popular stock pages and blog posts are never duplicated or fragmented.
     const topPagesSnap = await db.collection('analytics_pages').orderBy('views', 'desc').limit(PAGES_SCAN_LIMIT).get();
-    const allPages = topPagesSnap.docs.map((doc) => ({
-      path: doc.data().path || doc.id,
-      views: doc.data().views || 0,
-    }));
-    const topLandingPages = allPages.slice(0, TOP_PAGES_LIMIT);
-    const topBlogPosts = allPages.filter((p) => p.path.startsWith('/blog/') && p.path !== '/blog/').slice(0, TOP_PAGES_LIMIT);
-    const topStockPages = allPages.filter((p) => p.path.startsWith('/stocks/') && p.path !== '/stocks/').slice(0, TOP_PAGES_LIMIT);
+
+    const landingMap = new Map<string, number>();
+    const stockMap = new Map<string, number>();
+    const blogMap = new Map<string, number>();
+
+    topPagesSnap.docs.forEach((doc) => {
+      const data = doc.data();
+      const rawPath: string = data.path || doc.id.replace(/^p_/, '/').replace(/_/g, '/');
+      const views: number = data.views || 0;
+      if (!rawPath || views <= 0) return;
+
+      const cleaned = rawPath.split('?')[0].split('#')[0].trim();
+      const noSlash = cleaned.length > 1 && cleaned.endsWith('/') ? cleaned.slice(0, -1) : cleaned;
+
+      if (/^\/stocks\/[^\/]+$/i.test(noSlash)) {
+        const symbol = noSlash.slice('/stocks/'.length).toUpperCase();
+        stockMap.set(symbol, (stockMap.get(symbol) || 0) + views);
+      } else if (/^\/blog\/[^\/]+$/i.test(noSlash)) {
+        const slug = noSlash.slice('/blog/'.length).toLowerCase();
+        blogMap.set(slug, (blogMap.get(slug) || 0) + views);
+      } else {
+        const pathKey = noSlash.toLowerCase();
+        landingMap.set(pathKey, (landingMap.get(pathKey) || 0) + views);
+      }
+    });
+
+    const topLandingPages = Array.from(landingMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, TOP_PAGES_LIMIT)
+      .map(([path, views]) => ({ path, views }));
+
+    const topBlogPosts = Array.from(blogMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, TOP_PAGES_LIMIT)
+      .map(([slug, views]) => ({ path: `/blog/${slug}`, views }));
+
+    const topStockPages = Array.from(stockMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, TOP_STOCKS_LIMIT)
+      .map(([symbol, views]) => ({ path: `/stocks/${symbol}`, views }));
 
     // ── Registrations ────────────────────────────────────────────────────
     // Sourced from Firebase Auth, NOT from `users` documents.
@@ -348,48 +473,130 @@ export async function GET(req: NextRequest) {
       }),
     };
 
-    // ── Most active registered users (visitCount rollup) ────────────────
-    const mostActiveSnap = await usersCol.orderBy('visitCount', 'desc').limit(10).get();
-    const mostActiveUsers = mostActiveSnap.docs.map((doc) => {
-      const data = doc.data();
+    // ── Most active registered users (Calculated based on 1 week's session data) ──
+    const weekCutoff = new Date(Date.now() - 7 * DAY_MS);
+    const weekSessionsSnap = await db
+      .collection('analytics_sessions')
+      .where('startedAt', '>=', weekCutoff)
+      .limit(3000)
+      .get();
+
+    const userWeekMap = new Map<string, { sessions: number; activeSeconds: number; lastPingMs: number }>();
+    for (const doc of weekSessionsSnap.docs) {
+      const s = doc.data();
+      if (!s.uid) continue;
+      const existing = userWeekMap.get(s.uid) || { sessions: 0, activeSeconds: 0, lastPingMs: 0 };
+      existing.sessions += 1;
+      existing.activeSeconds += s.activeSeconds || 0;
+      const pingMs = toMillis(s.lastPingAt || s.startedAt);
+      if (pingMs > existing.lastPingMs) existing.lastPingMs = pingMs;
+      userWeekMap.set(s.uid, existing);
+    }
+
+    const topActiveEntries = Array.from(userWeekMap.entries())
+      .sort((a, b) => b[1].sessions - a[1].sessions)
+      .slice(0, 10);
+
+    const topUserDocs = await Promise.all(
+      topActiveEntries.map(([uid]) => usersCol.doc(uid).get().catch(() => null))
+    );
+
+    let mostActiveUsers: Array<{
+      uid: string;
+      name: string;
+      email: string | null;
+      visitCount: number;
+      totalActiveSeconds: number;
+      lastVisitAt: string | null;
+      window: '7d' | 'all-time';
+    }> = topActiveEntries.map(([uid, stats], idx) => {
+      const snap = topUserDocs[idx];
+      const data = snap && snap.exists ? snap.data() : null;
       return {
-        uid: doc.id,
-        name: displayName(data),
-        email: data.email || null,
-        visitCount: data.visitCount || 0,
-        totalActiveSeconds: data.totalActiveSeconds || 0,
-        lastVisitAt: toIso(data.lastVisitAt),
+        uid,
+        name: data ? displayName(data) : 'Trader',
+        email: data?.email || null,
+        visitCount: stats.sessions, // 1-week visit count
+        totalActiveSeconds: stats.activeSeconds,
+        lastVisitAt: stats.lastPingMs ? new Date(stats.lastPingMs).toISOString() : toIso(data?.lastVisitAt),
+        window: '7d' as const,
       };
     });
 
-    // ── Least active registered users ────────────────────────────────────
-    // orderBy('visitCount') would silently exclude any account that has
-    // never had the field written (e.g. everyone who signed up before this
-    // feature shipped, or hasn't visited since) — exactly the accounts a
-    // "who's gone quiet" list most needs to surface. So instead: pull the
-    // oldest-registered accounts (the accounts that have had the most time
-    // to prove engagement) and rank *those* by visitCount/lastVisitAt in
-    // JS, where a missing visitCount correctly sorts as "0 visits".
-    const cutoffIso = dhakaDateKeyToUtcMidnightISO(getDhakaDateKey(MIN_ACCOUNT_AGE_DAYS_FOR_INACTIVE_LIST));
-    const oldestAccountsSnap = await usersCol.orderBy('createdAt', 'asc').limit(150).get();
-    const leastActiveUsers = oldestAccountsSnap.docs
+    // Graceful fallback to all-time visitCount if no 7d session data is logged yet
+    if (mostActiveUsers.length === 0) {
+      const fallbackSnap = await usersCol.orderBy('visitCount', 'desc').limit(10).get();
+      mostActiveUsers = fallbackSnap.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          uid: doc.id,
+          name: displayName(data),
+          email: data.email || null,
+          visitCount: data.visitCount || 0,
+          totalActiveSeconds: data.totalActiveSeconds || 0,
+          lastVisitAt: toIso(data.lastVisitAt),
+          window: 'all-time' as const,
+        };
+      });
+    }
+
+    // ── Going Quiet (Interactive & Realistic: Users who engaged before but are inactive recently) ──
+    // Targets users who have visitCount >= 1 (real engagement) whose last visit is older than 5 days.
+    // When a user visits today, their lastVisitAt updates and they automatically drop off this list.
+    const quietCutoffMs = Date.now() - 5 * DAY_MS;
+    const engagedUsersSnap = await usersCol.where('visitCount', '>=', 1).limit(300).get();
+
+    const quietCandidates = engagedUsersSnap.docs
       .map((doc) => ({ uid: doc.id, ...doc.data() } as any))
-      .filter((u) => u.createdAt && u.createdAt <= cutoffIso)
-      .sort((a, b) => {
-        const visitDiff = (a.visitCount || 0) - (b.visitCount || 0);
-        if (visitDiff !== 0) return visitDiff;
-        return toMillis(a.lastVisitAt) - toMillis(b.lastVisitAt);
+      .filter((u) => {
+        const lastMs = toMillis(u.lastVisitAt);
+        return lastMs > 0 && lastMs <= quietCutoffMs;
       })
-      .slice(0, 10)
-      .map((u) => ({
+      .sort((a, b) => {
+        // Sort by longest inactive duration (oldest lastVisitAt)
+        return toMillis(a.lastVisitAt) - toMillis(b.lastVisitAt);
+      });
+
+    let leastActiveUsers = quietCandidates.slice(0, 10).map((u) => {
+      const lastMs = toMillis(u.lastVisitAt);
+      const daysQuiet = lastMs > 0 ? Math.floor((Date.now() - lastMs) / DAY_MS) : 0;
+      return {
         uid: u.uid,
         name: displayName(u),
         email: u.email || null,
         visitCount: u.visitCount || 0,
         totalActiveSeconds: u.totalActiveSeconds || 0,
         lastVisitAt: toIso(u.lastVisitAt),
+        daysQuiet,
         createdAt: u.createdAt || null,
-      }));
+      };
+    });
+
+    // If fewer than 5 engaged users are quiet, complement with accounts at least 5 days old
+    if (leastActiveUsers.length < 5) {
+      const cutoffIso = dhakaDateKeyToUtcMidnightISO(getDhakaDateKey(MIN_ACCOUNT_AGE_DAYS_FOR_INACTIVE_LIST));
+      const oldestAccountsSnap = await usersCol.orderBy('createdAt', 'asc').limit(50).get();
+      const existingUids = new Set(leastActiveUsers.map((u) => u.uid));
+      const extraCandidates = oldestAccountsSnap.docs
+        .map((doc) => ({ uid: doc.id, ...doc.data() } as any))
+        .filter((u) => !existingUids.has(u.uid) && u.createdAt && u.createdAt <= cutoffIso)
+        .slice(0, 10 - leastActiveUsers.length)
+        .map((u) => {
+          const lastMs = toMillis(u.lastVisitAt);
+          const daysQuiet = lastMs > 0 ? Math.floor((Date.now() - lastMs) / DAY_MS) : 0;
+          return {
+            uid: u.uid,
+            name: displayName(u),
+            email: u.email || null,
+            visitCount: u.visitCount || 0,
+            totalActiveSeconds: u.totalActiveSeconds || 0,
+            lastVisitAt: toIso(u.lastVisitAt),
+            daysQuiet,
+            createdAt: u.createdAt || null,
+          };
+        });
+      leastActiveUsers = [...leastActiveUsers, ...extraCandidates];
+    }
 
     // ── Retention (D1/D7/D30) ─────────────────────────────────────────────
     // Only `createdAt` and `lastVisitAt` exist per user (no daily visit
@@ -708,6 +915,9 @@ export async function GET(req: NextRequest) {
         bounceRate,
         retention,
         peakHours,
+        hourlyActivity,
+        dayOfWeekActivity,
+        monthlyCalendar,
         topLandingPages,
         topBlogPosts,
         topStockPages,
