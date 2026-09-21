@@ -12,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
   // dynamic page, and repeated crawler hits on it churn ISR writes/revalidations
   // for zero SEO benefit. /api/, /admin/, /profile/, /auth/ etc. stay
   // disallowed too since they're non-content or login-gated.
-  const allow = ['/', '/about-us', '/blog/', '/stocks/', '/boss', '/policy'];
+  const allow = ['/', '/about-us', '/blog/', '/stocks/', '/boss', '/policy', '/llms.txt', '/llms-full.txt'];
   const disallow = ['/api/', '/admin/', '/profile/', '/coins/', '/_next/', '/auth/', '/trade'];
 
   return {

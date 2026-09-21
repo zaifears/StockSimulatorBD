@@ -29,6 +29,7 @@ import {
   type BlogPost,
 } from '@/lib/contentful-blog';
 import { SITE_URL } from '@/lib/siteUrl';
+import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 
 const baseUrl = SITE_URL;
 
@@ -177,9 +178,18 @@ export async function generateMetadata({
     };
   }
 
-  const title = post.seoTitle || post.title;
-  const description = post.seoDescription || post.excerpt;
+  const defaultTitle = post.seoTitle || post.title;
+  const defaultDescription = post.seoDescription || post.excerpt;
   const articleUrl = `${baseUrl}/blog/${post.slug}`;
+
+  // Check for safe Level 1 metadata override from the Change Management System
+  const resolved = await resolvePageMetadata(
+    `/blog/${post.slug.toLowerCase()}`,
+    defaultTitle,
+    defaultDescription
+  );
+  const title = resolved.title;
+  const description = resolved.description;
 
   return {
     title,

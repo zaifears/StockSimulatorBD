@@ -167,7 +167,50 @@ All client SDK writes are strictly validated:
 
 - **Stock Categories (A/B/G/N/Z)**: `api/category_sync.py` scrapes `dsebd.org/latest_share_price_scroll_group.php`. Gated by `CRON_SECRET` at `app/api/category-sync/route.ts`. Multi-thread parallel fetch with drop guard (`MAX_DROP_FRACTION = 0.15`).
 - **Industry Sectors (21 LankaBangla Sectors)**: `api/lanka_sector_sync.py` scrapes `lankabd.com/Home/DataMatrix`. Stored in `artifacts/{appId}/public/data/market_info/sectors` with changelog audit trail.
-- **Price Failsafe**: `api/lanka_price_sync.py` / `app/api/price-failsafe-sync/route.ts` activates if primary `market_info/latest` is older than 15 minutes during market hours. Dispatches Resend outage alerts to the admin.
+---
+
+## Search & GEO/LLM Intelligence Control Center (`/admin/seo`)
+
+A self-hosted Search Intelligence and Generative Engine Optimization (GEO) control center that operates with **$0 paid API spend** while keeping all SEO state isolated from the production database.
+
+### 1. Dual Firebase Project Architecture (`lib/firebaseSeoAdmin.ts`)
+- **Production Firebase**: Contains user accounts, auth, trading state, and balances.
+- **SEO Intelligence Firebase**: Strictly isolated database (`seo-intelligence` named app initialized via `SEO_FIREBASE_PROJECT_ID`, `SEO_FIREBASE_CLIENT_EMAIL`, and `SEO_FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')`).
+- **Zero Database Contamination**: The production database never stores SEO snapshots, audits, or crawl logs.
+- **Lockdown Security (`firestore-seo.rules`)**:
+  ```javascript
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /{document=**} {
+        allow read, write: if false; // All access server-only via Admin SDK
+      }
+    }
+  }
+  ```
+- **Health Verification**: `/api/admin/seo/health` tests end-to-end admin custom claim auth, Admin SDK initialization, and write/read confirmation on `seo_config/health_check`.
+
+### 2. Single Domain Source of Truth (`lib/siteUrl.ts`)
+- All canonicals, sitemaps, robots.txt, schema.org JSON-LD, OpenGraph tags, and `/llms.txt` derive **exclusively** from `SITE_URL` and `absoluteUrl()` in `lib/siteUrl.ts` (configured via `NEXT_PUBLIC_MAIN_DOMAIN`).
+- No conflicting or competing URL variables exist. During domain migration to `https://stocksimulator.shahoriar.bd`, changing `NEXT_PUBLIC_MAIN_DOMAIN` automatically updates every system.
+
+### 3. Dynamic Knowledge Layer (`/llms.txt` & `/llms-full.txt`)
+- Replaced static text files with dynamic route handlers:
+  - `app/llms.txt/route.ts`: Concise, entity-clear platform summary.
+  - `app/llms-full.txt/route.ts`: Comprehensive guide with selected stock directory, blog articles, and DSE trading rules.
+- Automatically injects Change-of-Address notes for retrieval-based AI engines during migration.
+
+### 4. Zero-Dollar API & Engine Stack (`lib/seo/`)
+- **Google Search Console**: OAuth connect (`/api/admin/seo/gsc/connect`), callback (`/api/admin/seo/gsc/callback`), and sync (`/api/admin/seo/gsc/sync`). Refresh tokens are encrypted with AES-256-GCM (`lib/seo/crypto.ts`) using `SEO_TOKEN_ENCRYPTION_KEY` before saving to Firestore. OAuth flow enforces RFC 6749 CSRF state verification via `httpOnly` secure cookies.
+- **Bing Webmaster Tools**: Official REST API client (`lib/seo/bing.ts`) tracking web, Bing chat traffic, queries, crawl health, and external backlinks. API keys are symmetrically encrypted at rest with AES-256-GCM.
+- **Resumable Crawler (`lib/seo/crawler.ts`)**: State machine backed by `seo_jobs/{jobId}` with cursor persistence. Crawls in chunks of 20 URLs to avoid Vercel serverless timeouts. Extracts headings, word counts, schema, and link graphs. All fetches are guarded with `AbortSignal.timeout(6000)`.
+- **Internal Link Authority (`lib/seo/authority.ts`)**: Evaluates inbound links, referring pages, click depth, and orphan page penalties without third-party APIs.
+- **Opportunity Engine (`lib/seo/opportunities.ts`)**: Derives high-impression/low-CTR opportunities, striking-distance positions (4–15), rising queries, and orphan links.
+- **Manual AI / GEO Lab (`lib/seo/aiLab.ts`)**: Generic domain and URL extraction for ChatGPT, Gemini, Perplexity, and Claude responses. Identifies arbitrary competitor citations and tracks empirical visibility without fake scores. Prompts persist in `ai_prompts`.
+- **Change Management & Runtime Resolver (`lib/seo/metadataResolver.ts` & `app/api/admin/seo/changes/route.ts`)**: Safe Level 1 metadata overrides (`seo_overrides`) seamlessly consumed by public pages (`app/stocks/[symbol]/page.tsx`, `app/blog/[slug]/page.tsx`, `app/page.tsx`). Includes canonical path normalization (`normalizeSeoPath`), surgical single-URL ISR revalidation (`revalidatePath(cleanPath)` strictly protecting Vercel Hobby 200k ISR write quotas), automated post-apply validation (HTTP 200 check), and clean 1-click rollback.
+- **True SEO Change-Impact Engine (`lib/seo/changeImpact.ts`)**: Real baseline tracking without synthetic multipliers; monitors 7d/14d/28d Search Console impact following applied overrides.
+- **Domain Migration Center (`lib/seo/migration.ts`)**: Preflight shadow mode tester comparing `stocksimulator.tech` vs `stocksimulator.shahoriar.bd` with strict path preservation (`/stocks/gp` -> `/stocks/gp`), bounded to 10 parallel paths with 4s timeouts.
+- **Automated Retention (`app/api/admin/seo/retention/route.ts`)**: Cleans up crawl jobs older than 30d, raw AI responses older than 60d, and audits older than 90d using Firestore `.count().get()` aggregations to ensure free Firestore tier limits are never exceeded.
 
 ---
 

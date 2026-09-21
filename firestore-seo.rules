@@ -1,0 +1,22 @@
+rules_version = '2';
+
+/**
+ * 🔒 StockSimulatorBD SEO Intelligence Database Security Rules
+ *
+ * This Firestore database is strictly server-only.
+ * It stores crawl snapshots, Search Console queries, AI observations,
+ * metadata overrides, and domain migration runbooks.
+ *
+ * ZERO direct client reads or writes are permitted.
+ * All access happens exclusively server-side via the Firebase Admin SDK
+ * in /app/api/admin/seo/*, protected by signed custom admin claims.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Completely deny all client-side read, write, update, and delete access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -8,6 +8,7 @@ import StockChart from '@/components/StockChart';
 import StockTradingSection from '@/components/StockTradingSection';
 import StockBackButton from '@/components/stocks/StockBackButton';
 import { SITE_URL } from '@/lib/siteUrl';
+import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 
 const getAllDseStocks = cache(fetchAllStocks);
 
@@ -119,21 +120,30 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
     158
   );
 
-  return {
+  // Check for safe Level 1 metadata override from the Change Management System
+  const resolved = await resolvePageMetadata(
+    `/stocks/${formattedSymbol.toLowerCase()}`,
     title,
-    description,
+    description
+  );
+  const finalTitle = resolved.title;
+  const finalDescription = resolved.description;
+
+  return {
+    title: finalTitle,
+    description: finalDescription,
     alternates: { canonical: pageUrl },
     openGraph: {
-      title,
-      description,
+      title: finalTitle,
+      description: finalDescription,
       url: pageUrl,
       siteName: 'StockSimulatorBD',
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
-      title,
-      description,
+      title: finalTitle,
+      description: finalDescription,
     },
   };
 }

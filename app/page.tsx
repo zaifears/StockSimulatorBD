@@ -1,11 +1,36 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Footer from '@/components/shared/Footer';
 import { OpenRemark } from '@/components/OpenRemark';
 import { SITE_URL } from '@/lib/siteUrl';
+import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 import { ArrowRight, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 
 const SITE = SITE_URL;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const defaultTitle = 'StockSimulatorBD: DSE Trading Simulator';
+  const defaultDescription =
+    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+1 rules and virtual money.';
+
+  const resolved = await resolvePageMetadata('/', defaultTitle, defaultDescription);
+
+  return {
+    title: resolved.title,
+    description: resolved.description,
+    alternates: {
+      canonical: SITE_URL,
+    },
+    openGraph: {
+      title: resolved.title,
+      description: resolved.description,
+      url: SITE_URL,
+      siteName: 'StockSimulatorBD',
+      type: 'website',
+    },
+  };
+}
 
 const floorRules = [
   { label: 'Trading hours', value: '10:00 to 14:15' },
