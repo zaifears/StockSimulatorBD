@@ -18,7 +18,7 @@ export async function getCitationTimeline(): Promise<{
   citationUrlDistribution: { path: string; count: number }[];
 }> {
   const db = getSeoDb();
-  const snap = await db.collection('seo_ai_observations').orderBy('observedAt', 'desc').get();
+  const snap = await db.collection('ai_visibility_results').orderBy('observedAt', 'desc').get();
   const observations = snap.docs.map((d) => d.data() as AiVisibilityObservation);
 
   const urlCountMap: Record<string, number> = {};

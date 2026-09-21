@@ -4,6 +4,7 @@ import { verifyAdminAccess } from '@/lib/utils/adminVerification';
 import { getSeoDb } from '@/lib/firebaseSeoAdmin';
 import { parseAiResponse, saveAiObservation, evaluateAiReadiness, getPersistentPrompts } from '@/lib/seo/aiLab';
 import { generateSeoOpportunities } from '@/lib/seo/opportunities';
+import { detectCitationEvent } from '@/lib/seo/citationHistory';
 import { AiVisibilityObservation, SeoPageProfile, AiPromptTemplate } from '@/lib/seo/types';
 
 export async function GET(req: NextRequest) {
@@ -75,8 +76,21 @@ export async function POST(req: NextRequest) {
     // Parse empirical facts using generic competitor extraction
     const observation = parseAiResponse(rawText, query, provider, model || 'Standard', category || 'dse_trading');
 
+    // Check for previous observation for delta comparison
+    const prevSnap = await db
+      .collection('ai_visibility_results')
+      .where('query', '==', query)
+      .where('provider', '==', provider)
+      .orderBy('observedAt', 'desc')
+      .limit(1)
+      .get();
+    const previousObservation = prevSnap.empty ? undefined : (prevSnap.docs[0].data() as AiVisibilityObservation);
+
     // Persist into SEO Firebase
     await saveAiObservation(observation);
+
+    // Record citation delta event in ledger
+    await detectCitationEvent(observation, previousObservation);
 
     // Trigger opportunity calculation
     await generateSeoOpportunities();

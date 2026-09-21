@@ -45,7 +45,7 @@ export default function AiGeoLabPage() {
   const fetchData = async () => {
     try {
       const [aiRes, refRes, evtRes, disRes] = await Promise.all([
-        fetchWithToken('/api/admin/seo/ai/analyze'),
+        fetchWithToken('/api/admin/seo/ai/analyze').catch(() => ({ json: () => ({ success: false }) })),
         fetchWithToken('/api/admin/seo/ai/referrals').catch(() => ({ json: () => ({ success: false }) })),
         fetchWithToken('/api/admin/seo/ai/events').catch(() => ({ json: () => ({ success: false }) })),
         fetchWithToken('/api/admin/seo/prompts/discover').catch(() => ({ json: () => ({ success: false }) })),
