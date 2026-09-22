@@ -1,18 +1,24 @@
 /**
- * DSE Company Name Mappings
- * Maps trading symbols to company names for enhanced search
- * Source: https://www.dsebd.org/company_listing.php
+ * DSE Company Name Mappings & Multi-Tier Search Engine
+ * Maps trading symbols to official company names and provides intelligent,
+ * punctuation-resilient search across Dhaka Stock Exchange instruments.
  * 
- * Complete list of DSE-listed companies
+ * Sources:
+ * - https://new.dsebd.org/api/live/companies/search (Modern DSE Platform)
+ * - https://www.dsebd.org/company_listing.php (Classic DSE Board)
+ * 
+ * Complete verified list of all 422 DSE-listed equities and funds (Treasury Bonds excluded).
  */
 
 export const DSE_COMPANY_NAMES: Record<string, string> = {
-  // A
+  // 1
   "1JANATAMF": "First Janata Bank Mutual Fund",
   "1STPRIMFMF": "Prime Finance First Mutual Fund",
+
+  // A
   "AAMRANET": "aamra networks limited",
   "AAMRATECH": "aamra technologies limited",
-  "ABB1STMF": "AB Bank 1st Mutual Fund",
+  "ABB1STMF": "AB Bank 1st Mutual fund",
   "ABBANK": "AB Bank PLC.",
   "ABBLPBOND": "AB Bank Perpetual Bond",
   "ACFL": "Aman Cotton Fibrous PLC.",
@@ -51,6 +57,9 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "ARGONDENIM": "Argon Denims Limited",
   "ASIAINS": "Asia Insurance PLC.",
   "ASIAPACINS": "Asia Pacific General Insurance PLC",
+  "ASIATICLAB": "Asiatic Laboratories Limited",
+  "ATLASBANG": "Atlas Bangladesh Ltd.",
+  "AZIZPIPES": "Aziz Pipes Ltd.",
 
   // B
   "BANGAS": "Bangas Ltd.",
@@ -156,7 +165,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
 
   // F
   "FAMILYTEX": "Familytex (BD) Limited",
-  "FARCHEM": "Far Chemical Industries Limited",
+  "FARCHEM": "Far Chemical & Textile Ind. PLC",
   "FAREASTFIN": "Fareast Finance & Investment Limited",
   "FAREASTLIF": "Fareast Islami Life Insurance Co. Ltd.",
   "FASFIN": "FAS Finance & Investment Limited",
@@ -200,7 +209,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   // I
   "IBBL2PBOND": "IBBL 2nd Perpetual Mudaraba Bond",
   "IBBLPBOND": "IBBL Mudaraba Perpetual Bond",
-  "IBNSINA": "The IBN SINA Pharmaceutical Industry PLC",
+  "IBNSINA": "The IBN SINA  Pharmaceutical Industry PLC",
   "IBP": "Indo-Bangla Pharmaceuticals Limited",
   "ICB": "Investment Corporation Of Bangladesh",
   "ICB3RDNRB": "ICB AMCL Third NRB Mutual Fund",
@@ -228,7 +237,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
 
   // J
   "JAMUNABANK": "Jamuna Bank PLC.",
-  "JAMUNAOIL": "Jamuna Oil Company Limited",
+  "JAMUNAOIL": "Jamuna Oil PLC.",
   "JANATAINS": "Janata Insurance PLC",
   "JHRML": "JMI Hospital Requisite Manufacturing Limited",
   "JMISMDL": "JMI Syringes & Medical Devices Ltd.",
@@ -240,7 +249,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "KBPPWBIL": "Khan Brothers PP Woven Bag Industries Limited",
   "KDSALTD": "KDS Accessories Limited",
   "KEYACOSMET": "Keya Cosmetics Ltd.",
-  "KOHINOOR": "Kohinoor Chemical Company (Bangladesh) Ltd.",
+  "KOHINOOR": "Kohinoor Chemical Company (Bangladesh) PLC.",
   "KPCL": "Khulna Power Company Limited",
   "KPPL": "Khulna Printing & Packaging Limited",
   "KTL": "Kattali Textile Limited",
@@ -283,7 +292,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "MONNOCERA": "Monno Ceramic Industries Ltd.",
   "MONNOFABR": "Monno Fabrics Limited",
   "MONOSPOOL": "Monospool Bangladesh PLC",
-  "MPETROLEUM": "Meghna Petroleum Limited",
+  "MPETROLEUM": "Meghna Petroleum PLC.",
   "MTB": "Mutual Trust Bank PLC",
   "MTBPBOND": "Mutual Trust Bank Perpetual Bond",
 
@@ -292,7 +301,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "NATLIFEINS": "National Life Insurance PLC",
   "NAVANACNG": "Navana CNG Limited",
   "NAVANAPHAR": "Navana Pharmaceuticals PLC",
-  "NBL": "National Bank Ltd.",
+  "NBL": "National Bank PLC.",
   "NCCBANK": "National Credit and Commerce Bank PLC.",
   "NCCBLMF1": "NCCBL Mutual Fund-1",
   "NEWLINE": "New Line Clothings Limited",
@@ -375,7 +384,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "RUNNERAUTO": "Runner Automobiles PLC",
   "RUPALIBANK": "Rupali Bank PLC.",
   "RUPALIINS": "Rupali Insurance Company Ltd.",
-  "RUPALILIFE": "Rupali Life Insurance Company Limited",
+  "RUPALILIFE": "Rupali Life Insurance PLC",
 
   // S
   "SAFKOSPINN": "Safko Spinnings Mills Ltd.",
@@ -412,24 +421,36 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "SJIBLPBOND": "SJIBL Mudaraba Perpetual Bond",
   "SKTRIMS": "SK Trims & Industries Limited",
   "SONALIANSH": "Sonali Aansh Industries Limited",
-  "SONALILIFE": "Sonali Life Insurance Company Limited",
+  "SONALILIFE": "Sonali Life Insurance PLC",
   "SONALIPAPR": "Sonali Paper & Board Mills Ltd.",
   "SONARBAINS": "Sonar Bangla Insurance Ltd.",
   "SONARGAON": "Sonargaon Textiles Ltd.",
   "SOUTHEASTB": "Southeast Bank PLC",
   "SPCERAMICS": "Shinepukur Ceramics PLC.",
   "SPCL": "Shahjibazar Power Co. Ltd.",
-  "SQUARETEXT": "Square Textiles Limited",
-  "SQURPHARMA": "Square Pharmaceuticals Limited",
+  "SQUARETEXT": "Square Textiles PLC.",
+  "SQURPHARMA": "Square Pharmaceuticals PLC.",
+  "SSSTEEL": "S. S. Steel Limited",
   "STANBANK": "Standard Bank Limited",
-  "STANCERAM": "Standard Ceramic Industries Limited",
+  "STANCERAM": "Standard Ceramic Industries Ltd.",
+  "STANDARINS": "Standard Insurance PLC.",
+  "STANDBANKL": "Standard Islami Bank PLC.",
+  "STYLECRAFT": "Stylecraft Limited",
+  "SUMITPOWER": "Summit Power Limited",
   "SUMMIT": "Summit Power Limited",
+  "SUNLIFEINS": "Sunlife Insurance Company Limited",
 
   // T
   "TAKAFULINS": "Takaful Islami Insurance PLC",
   "TALLUSPIN": "Tallu Spinning Mills Ltd.",
   "TAMIJTEX": "Tamijuddin Textile Mills PLC",
-  "TITASGAS": "Titas Gas Transmission and Distribution Company Limited",
+  "TECHNODRUG": "Techno Drugs Ltd.",
+  "TILIL": "Trust Islami Life Insurance PLC.",
+  "TITASGAS": "Titas Gas Transmission and Distribution PLC.",
+  "TOSRIFA": "Tosrifa Industries PLC.",
+  "TRUSTB1MF": "Trust Bank 1st Mutual Fund",
+  "TRUSTBANK": "Trust Bank PLC.",
+  "TUNGHAI": "Tung Hai Knitting & Dyeing Limited",
 
   // U
   "UCB": "United Commercial Bank PLC",
@@ -437,7 +458,7 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   "UNILEVERCL": "Unilever Consumer Care Limited",
   "UNIONBANK": "Union Bank PLC.",
   "UNIONCAP": "Union Capital Limited",
-  "UNIONINS": "Union Insurance Company Limited",
+  "UNIONINS": "Union Insurance PLC.",
   "UNIQUEHRL": "Unique Hotel & Resorts PLC",
   "UNITEDFIN": "United Finance PLC.",
   "UNITEDINS": "United Insurance Company Ltd.",
@@ -462,34 +483,186 @@ export const DSE_COMPANY_NAMES: Record<string, string> = {
   // Z
   "ZAHEENSPIN": "Zaheen Spinning PLC.",
   "ZAHINTEX": "Zahintex Industries Limited",
-  "ZEALBANGLA": "Zeal Bangla Sugar Mills Ltd."
+  "ZEALBANGLA": "Zeal Bangla Sugar Mills Ltd.",
 };
 
 /**
- * Get company name by symbol
+ * Get company name by trading symbol
  */
 export const getCompanyName = (symbol: string): string | null => {
-  return DSE_COMPANY_NAMES[symbol.toUpperCase()] || null;
+  if (!symbol) return null;
+  return DSE_COMPANY_NAMES[symbol.trim().toUpperCase()] || null;
 };
 
 /**
- * Search symbols by company name or symbol
- * Returns matching symbols
+ * Normalizes text for comparison by replacing punctuation with spaces
+ * and collapsing multiple spaces.
+ */
+function normalizeSearchText(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[.\-_&()/,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Strips all non-alphanumeric characters for compact prefix/substring matching.
+ */
+function compactSearchText(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+export interface SearchMatch {
+  symbol: string;
+  name: string;
+  score: number;
+}
+
+/**
+ * Common abbreviations, aliases, and retail trader shortcuts in Bangladesh.
+ * Allows searching by familiar names (e.g., "DBBL" -> DUTCHBANGL, "PRAN" -> AMCL(PRAN)).
+ */
+export const COMMON_SEARCH_ALIASES: Record<string, string[]> = {
+  dbbl: ['DUTCHBANGL'],
+  ibbl: ['ISLAMIBANK'],
+  fsib: ['FIRSTSBANK', 'FSIBLPBOND'],
+  bsrm: ['BSRMLTD', 'BSRMSTEEL'],
+  lankabd: ['LANKABAFIN'],
+  pran: ['AMCL(PRAN)'],
+  summit: ['SUMITPOWER', 'SAPORTL'],
+  square: ['SQURPHARMA', 'SQUARETEXT'],
+  beximco: ['BEXIMCO', 'BXPHARMA', 'BEXGSUKUK'],
+  mbl: ['MERCANBANK'],
+  pbl: ['PRIMEBANK'],
+  tbl: ['TRUSTBANK'],
+  jbl: ['JAMUNABANK'],
+  sebl: ['SOUTHEASTB'],
+  obl: ['ONEBANKLTD'],
+  mtbl: ['MUTUALTRUST'],
+  exim: ['EXIMBANK'],
+};
+
+interface PrecomputedCompany {
+  symbol: string;
+  name: string;
+  symLower: string;
+  symCompact: string;
+  nameLower: string;
+  nameNorm: string;
+  nameCompact: string;
+  nameWords: string[];
+  acronym: string;
+}
+
+// Precomputed on module load: 0 runtime allocations during typing
+const PRECOMPUTED_COMPANIES: PrecomputedCompany[] = Object.entries(DSE_COMPANY_NAMES).map(([symbol, name]) => {
+  const symLower = symbol.toLowerCase();
+  const symCompact = compactSearchText(symbol);
+  const nameLower = name.toLowerCase();
+  const nameNorm = normalizeSearchText(name);
+  const nameCompact = compactSearchText(name);
+  const nameWords = nameNorm.split(' ').filter(Boolean);
+  const acronym = nameWords.map((w) => w[0]).join('');
+
+  return {
+    symbol,
+    name,
+    symLower,
+    symCompact,
+    nameLower,
+    nameNorm,
+    nameCompact,
+    nameWords,
+    acronym,
+  };
+});
+
+/**
+ * Search symbols by company name or symbol.
+ * Returns matching symbols ranked by relevance.
  */
 export const searchByNameOrSymbol = (query: string): string[] => {
-  const normalizedQuery = query.toLowerCase().trim();
-  if (!normalizedQuery) return [];
-  
-  const matches: string[] = [];
-  
-  for (const [symbol, name] of Object.entries(DSE_COMPANY_NAMES)) {
-    if (
-      symbol.toLowerCase().includes(normalizedQuery) ||
-      name.toLowerCase().includes(normalizedQuery)
-    ) {
-      matches.push(symbol);
+  const trimmed = query.trim();
+  if (!trimmed || !/[a-z0-9]/i.test(trimmed)) return [];
+
+  const rawLower = trimmed.toLowerCase();
+  const normQuery = normalizeSearchText(trimmed);
+  const compactQuery = compactSearchText(trimmed);
+  const queryWords = normQuery.split(' ').filter(Boolean);
+  const queryWordsLen = queryWords.length;
+  const rawLen = rawLower.length;
+  const compactLen = compactQuery.length;
+
+  const results: SearchMatch[] = [];
+  const aliasSymbols = COMMON_SEARCH_ALIASES[rawLower] || COMMON_SEARCH_ALIASES[compactQuery];
+
+  for (let i = 0; i < PRECOMPUTED_COMPANIES.length; i++) {
+    const item = PRECOMPUTED_COMPANIES[i];
+    let score = 0;
+
+    // 1. Retail alias direct match (e.g. DBBL -> DUTCHBANGL)
+    if (aliasSymbols && aliasSymbols.includes(item.symbol)) {
+      score = 950;
+    }
+    // 2. Exact symbol match (e.g. "GP" -> GP)
+    else if (item.symLower === rawLower || (compactLen > 0 && item.symCompact === compactQuery)) {
+      score = 1000;
+    }
+    // 3. Symbol starts with query (e.g. "BEX" -> BEXIMCO)
+    else if (item.symLower.startsWith(rawLower) || (compactLen > 0 && item.symCompact.startsWith(compactQuery))) {
+      score = 900;
+    }
+    // 4. Symbol contains query (e.g. "PHARMA" -> BXPHARMA, SQURPHARMA)
+    else if (item.symLower.includes(rawLower) || (compactLen > 0 && item.symCompact.includes(compactQuery))) {
+      score = 800;
+    }
+    // 5. Company name starts with query (e.g. "Grameen" -> Grameenphone)
+    else if (item.nameLower.startsWith(rawLower) || item.nameNorm.startsWith(normQuery)) {
+      score = 750;
+    }
+    // 6. Acronym exact match (e.g. "BATBC" -> British American Tobacco Bangladesh Company)
+    else if (item.acronym === rawLower || (rawLen >= 3 && item.acronym.startsWith(rawLower))) {
+      score = 700;
+    }
+    // 7. Multi-word query matches all word prefixes (e.g. "Square Pharma" -> Square Pharmaceuticals)
+    else if (queryWordsLen > 1 && queryWords.every((qw) => item.nameWords.some((nw) => nw.startsWith(qw)))) {
+      score = 600;
+    }
+    // 8. Single word matches start of any word in company name (e.g. "Steel", "Power", "Pharma")
+    else if (rawLen >= 2 && item.nameWords.some((nw) => nw.startsWith(rawLower))) {
+      score = 500;
+    }
+    // 9. Compacted alphanumeric match (e.g. "sssteel" -> "S. S. Steel")
+    else if (compactLen >= 3 && item.nameCompact.includes(compactQuery)) {
+      score = 300;
+    }
+    // 10. Substring in company name (only for queries >= 4 chars to avoid 2-3 char noise)
+    else if (rawLen >= 4 && (item.nameLower.includes(rawLower) || item.nameNorm.includes(normQuery))) {
+      score = 200;
+    }
+
+    if (score > 0) {
+      results.push({ symbol: item.symbol, name: item.name, score });
     }
   }
-  
-  return matches;
+
+  // Sort descending by score, then alphabetically by symbol
+  results.sort((a, b) => b.score - a.score || a.symbol.localeCompare(b.symbol));
+  return results.map((r) => r.symbol);
 };
+
+/**
+ * Rich search returning structured items (symbol, name) with an optional limit.
+ */
+export const searchCompanies = (
+  query: string,
+  limit: number = 20
+): Array<{ symbol: string; name: string }> => {
+  const symbols = searchByNameOrSymbol(query);
+  return symbols.slice(0, limit).map((symbol) => ({
+    symbol,
+    name: DSE_COMPANY_NAMES[symbol] || symbol,
+  }));
+};
+

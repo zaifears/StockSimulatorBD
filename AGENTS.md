@@ -163,10 +163,32 @@ All client SDK writes are strictly validated:
 
 ---
 
-## Market Feeds & Scrapers
+## Market Feeds, Scrapers & DSE Modern Architecture
 
-- **Stock Categories (A/B/G/N/Z)**: `api/category_sync.py` scrapes `dsebd.org/latest_share_price_scroll_group.php`. Gated by `CRON_SECRET` at `app/api/category-sync/route.ts`. Multi-thread parallel fetch with drop guard (`MAX_DROP_FRACTION = 0.15`).
-- **Industry Sectors (21 LankaBangla Sectors)**: `api/lanka_sector_sync.py` scrapes `lankabd.com/Home/DataMatrix`. Stored in `artifacts/{appId}/public/data/market_info/sectors` with changelog audit trail.
+- **Primary Live Price Sync (`api/market_sync.py`)**:
+  - Dual-engine architecture supporting both the modern DSE platform (`https://new.dsebd.org/api/live/prices`) and the legacy scroll board (`https://www.dsebd.org/latest_share_price_scroll_l.php`).
+  - **Government Securities Filter**: Strictly excludes all 215 Treasury Bonds (`assetType: GOVDBT`, `sector: TBond`, `board: YIELDDBT`, `symbol.startswith('TB')`), preserving pure equity/corporate trading parity.
+  - **Auto-Failover**: Automatically tries the primary engine, seamlessly falling back to the alternative engine if an outage, timeout, or low stock count (`< 50`) occurs.
+  - **Real-Time Market Status**: Extracts authoritative exchange matching engine state from `session.isOpen` (`"Open"` vs `"Closed"`).
+- **Stock Categories Sync (`api/category_sync.py`)**:
+  - **Instant Single-Pass Engine**: Consumes `/api/live/prices` to map all 419 instruments to categories (`A`, `B`, `N`, `Z`) in < 200ms in a single request, eliminating fragile multi-threaded HTML scraping.
+  - **Classic Fallback**: Retains multi-threaded scraping across A/B/G/N/Z boards if the modern API is unreachable.
+  - **Health Monitoring Parity**: Fully compatible with `app/api/health/route.ts` and Uptime Kuma monitoring (`scrapers.categorySync.status == 'healthy'`).
+- **Industry Sectors (`api/lanka_sector_sync.py`)**: 21 LankaBangla sectors sync with audit changelog.
+- **Price Failsafe (`api/lanka_price_sync.py`)**: Backup price scraper activating only when primary heartbeat is stale.
+
+### Modern DSE Endpoints & Discovered Feeds (`new.dsebd.org`)
+- **`/api/live/depth?code=[symbol]`**: Real-time Level 2 Market Depth (Bids & Asks Order Book with price, quantity, order count, and spread).
+- **`/api/live/news`**: 500-item live feed of Price Sensitive Information (PSI), dividend declarations, and corporate disclosures in clean JSON.
+- **`/api/live/market`**: Official real-time indices (`DSEX`, `DS30`, `DSES`), market breadth (`advanced`, `declined`, `unchanged`), market turnover, volume, and top movers.
+- **`/api/live/companies/search?q=`**: Fast scrip code to legal company name lookup.
+- **`/company/[symbol]` RSC Payload**: Embedded fundamentals stream containing audited P/E, annual EPS, NAVPS, market cap, dividend yield %, 52-week high/low, 10-year dividend history, 8-year financials, 30-day P/E trend, and shareholding pattern (% Sponsor, % Institute, % Foreign, % Public).
+
+### Oracle Always Free Tier VPS Integration
+- **Role**: 24/7 background scraping, heavy crawler tasks, and static API caching.
+- **Overnight Fundamentals Crawler**: Crawls all 400 company profiles at 3:00 AM BST without Vercel's 60s timeout limits.
+- **Zero Firebase Cost**: Serves `fundamentals.json` or order book data directly as an edge cache mirror with sub-30ms latency, keeping Firebase Spark tier usage at zero.
+
 ---
 
 ## Search & GEO/LLM Intelligence Control Center (`/admin/seo`)

@@ -67,7 +67,7 @@ export default function StockRow({
         <td className="px-5 lg:px-6 py-3.5">
           <div className="flex flex-col">
             <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-500 transition-colors">{stock.symbol}</span>
-            {companyName && <span className="text-[10px] text-gray-400 truncate max-w-[180px] lg:max-w-xs xl:max-w-sm" title={companyName}>{companyName}</span>}
+            {companyName && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] lg:max-w-xs xl:max-w-sm" title={companyName}>{companyName}</span>}
           </div>
         </td>
         <td className="px-5 lg:px-6 py-3.5 text-right font-mono font-medium text-gray-700 dark:text-gray-300">
@@ -160,7 +160,7 @@ export default function StockRow({
       <td className="px-5 lg:px-6 py-3.5">
         <div className="flex flex-col">
           <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-500 transition-colors">{stock.symbol}</span>
-          {companyName && <span className="text-[10px] text-gray-400 truncate max-w-[180px] lg:max-w-xs xl:max-w-sm" title={companyName}>{companyName}</span>}
+          {companyName && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] lg:max-w-xs xl:max-w-sm" title={companyName}>{companyName}</span>}
         </div>
       </td>
       <td className="px-5 lg:px-6 py-3.5 text-right whitespace-nowrap">

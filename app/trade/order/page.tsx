@@ -69,8 +69,18 @@ function OrderScreen() {
     const q = symbolQuery.trim();
     if (q.length < 1) return stocks.slice(0, 30);
     const upper = q.toUpperCase();
-    const nameMatches = q.length >= 2 ? new Set(searchByNameOrSymbol(q)) : new Set<string>();
-    return stocks.filter((s) => s.symbol.includes(upper) || nameMatches.has(s.symbol)).slice(0, 30);
+    const rankedMatches = searchByNameOrSymbol(q);
+    const rankMap = new Map(rankedMatches.map((sym, idx) => [sym, idx]));
+
+    return stocks
+      .filter((s) => s.symbol.includes(upper) || rankMap.has(s.symbol))
+      .sort((a, b) => {
+        const rankA = rankMap.has(a.symbol) ? rankMap.get(a.symbol)! : 1000;
+        const rankB = rankMap.has(b.symbol) ? rankMap.get(b.symbol)! : 1000;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.symbol.localeCompare(b.symbol);
+      })
+      .slice(0, 30);
   }, [symbolQuery, stocks]);
 
   const saleable = holding ? getSaleableQuantity(holding) : 0;

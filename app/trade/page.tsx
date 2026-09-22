@@ -182,10 +182,11 @@ function MarketScreen() {
   );
 
   const normalizedQuery = searchQuery.trim();
-  const companyNameMatches = useMemo(
-    () => (normalizedQuery.length >= 2 ? new Set(searchByNameOrSymbol(normalizedQuery)) : new Set<string>()),
-    [normalizedQuery]
-  );
+  const rankedSearchResults = useMemo(() => {
+    if (!normalizedQuery) return null;
+    const matches = searchByNameOrSymbol(normalizedQuery);
+    return new Map(matches.map((sym, idx) => [sym, idx]));
+  }, [normalizedQuery]);
 
   // Sector counts always reflect the full board, not the search-narrowed
   // subset — the tab strip is a top-level facet, so it shouldn't shuffle or
@@ -240,10 +241,16 @@ function MarketScreen() {
   const filteredStocks = useMemo(() => {
     let all = marketInfo?.stocks || [];
     if (selectedSector !== 'All') all = all.filter((s) => s.sector === selectedSector);
-    if (!normalizedQuery) return all;
+    if (!normalizedQuery || !rankedSearchResults) return all;
     const upper = normalizedQuery.toUpperCase();
-    return all.filter((s) => s.symbol.includes(upper) || companyNameMatches.has(s.symbol));
-  }, [marketInfo?.stocks, selectedSector, normalizedQuery, companyNameMatches]);
+    const matched = all.filter((s) => s.symbol.includes(upper) || rankedSearchResults.has(s.symbol));
+    return matched.sort((a, b) => {
+      const rankA = rankedSearchResults.has(a.symbol) ? rankedSearchResults.get(a.symbol)! : 1000;
+      const rankB = rankedSearchResults.has(b.symbol) ? rankedSearchResults.get(b.symbol)! : 1000;
+      if (rankA !== rankB) return rankA - rankB;
+      return a.symbol.localeCompare(b.symbol);
+    });
+  }, [marketInfo?.stocks, selectedSector, normalizedQuery, rankedSearchResults]);
 
   const visibleStocks = useMemo(() => filteredStocks.slice(0, visibleCount), [filteredStocks, visibleCount]);
   const hasMore = filteredStocks.length > visibleCount;
@@ -380,12 +387,35 @@ function MarketScreen() {
         <StockSkeleton count={10} />
       ) : visibleStocks.length === 0 ? (
         <div className="mx-3.5 sm:mx-0 py-16 px-6 rounded-2xl bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col items-center text-center gap-2">
-          <Search className="w-8 h-8 opacity-20" />
-          <p className="text-sm text-gray-400 dark:text-gray-500">
+          <Search className="w-8 h-8 text-gray-400 opacity-40 mb-1" />
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             {searchQuery
               ? <>No stocks found matching &ldquo;{searchQuery}&rdquo;{selectedSector !== 'All' && ` in ${selectedSector}`}</>
               : `No stocks found in ${selectedSector}`}
           </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+            Try searching by official ticker (e.g. GP, SQURPHARMA) or company name.
+          </p>
+          <div className="flex items-center flex-wrap justify-center gap-2 mt-2">
+            {selectedSector !== 'All' && (
+              <button
+                type="button"
+                onClick={() => setSelectedSector('All')}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
+              >
+                Search all sectors
+              </button>
+            )}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange('')}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <>

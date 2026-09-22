@@ -121,8 +121,30 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
             <LineChart className="w-3.5 h-3.5" />
             <span>Chart</span>
           </Link>
-          <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs">Buy</button>
-          <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs">Sell</button>
+          <button
+            type="button"
+            onClick={() => onTrade(stock.symbol, 'buy')}
+            disabled={!marketOpen || !isTraded}
+            className={`flex-1 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs ${
+              marketOpen && isTraded
+                ? 'text-white bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Buy
+          </button>
+          <button
+            type="button"
+            onClick={() => onTrade(stock.symbol, 'sell')}
+            disabled={!marketOpen || !isTraded}
+            className={`flex-1 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs ${
+              marketOpen && isTraded
+                ? 'text-white bg-rose-600 hover:bg-rose-700'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Sell
+          </button>
         </div>
       </div>
     );
@@ -143,6 +165,7 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
               </span>
             )}
           </div>
+          {companyName && <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">{companyName}</p>}
           {/* Day H/L */}
           <div className="text-xs font-mono mt-0.5 flex items-center gap-2">
             <span className="text-teal-600 dark:text-teal-400 font-semibold">
@@ -198,8 +221,30 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
           <LineChart className="w-3.5 h-3.5" />
           <span>Chart</span>
         </Link>
-        <button onClick={() => onTrade(stock.symbol, 'buy')} disabled={!marketOpen || !isTraded} className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs">Buy</button>
-        <button onClick={() => onTrade(stock.symbol, 'sell')} disabled={!marketOpen || !isTraded} className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 active:scale-95 transition-all shadow-xs">Sell</button>
+        <button
+          type="button"
+          onClick={() => onTrade(stock.symbol, 'buy')}
+          disabled={!marketOpen || !isTraded}
+          className={`flex-1 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs ${
+            marketOpen && isTraded
+              ? 'text-white bg-emerald-600 hover:bg-emerald-700'
+              : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          Buy
+        </button>
+        <button
+          type="button"
+          onClick={() => onTrade(stock.symbol, 'sell')}
+          disabled={!marketOpen || !isTraded}
+          className={`flex-1 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-xs ${
+            marketOpen && isTraded
+              ? 'text-white bg-rose-600 hover:bg-rose-700'
+              : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          Sell
+        </button>
       </div>
     </div>
   );

@@ -101,9 +101,16 @@ export default function MarketRow({
             )}
           </div>
 
-          {/* Row 2: High / Low */}
-          <div className="text-xs font-mono mt-1 flex items-center gap-2">
-            <span className="text-teal-600 dark:text-teal-400 font-semibold">
+          {/* Row 2: Company Legal Name */}
+          {companyName && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[220px] sm:max-w-xs mt-0.5" title={companyName}>
+              {companyName}
+            </p>
+          )}
+
+          {/* Row 3: High / Low */}
+          <div className="text-xs font-mono mt-1 flex items-center gap-2 tabular-nums">
+            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
               H:{stock.high ? fmtPrice(stock.high) : '—'}
             </span>
             <span className="text-rose-600 dark:text-rose-400 font-semibold">
@@ -111,26 +118,17 @@ export default function MarketRow({
             </span>
           </div>
 
-          {/* Row 3: Turnover & Volume */}
-          <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-2.5">
+          {/* Row 4: Turnover & Volume & Trades */}
+          <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-2.5 tabular-nums">
             <span>
               TK: {typeof stock.value === 'number' && stock.value > 0 ? fmtCompact(stock.value) : '—'}
             </span>
             <span>
               V: {typeof stock.volume === 'number' && stock.volume > 0 ? fmtCompact(stock.volume) : '—'}
             </span>
-          </div>
-
-          {/* Row 4: Trade count & optional company name preview */}
-          <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
             <span>
               TRD: {typeof stock.trade === 'number' && stock.trade > 0 ? stock.trade.toLocaleString() : '—'}
             </span>
-            {companyName && (
-              <span className="text-[10px] font-sans text-gray-400 dark:text-gray-500 truncate max-w-[140px] sm:max-w-[200px]" title={companyName}>
-                · {companyName}
-              </span>
-            )}
           </div>
         </div>
 
@@ -154,7 +152,7 @@ export default function MarketRow({
               !isTraded
                 ? 'bg-gray-400 dark:bg-gray-600'
                 : isUp
-                  ? 'bg-teal-600 dark:bg-teal-500'
+                  ? 'bg-emerald-600 dark:bg-emerald-500'
                   : isDown
                     ? 'bg-rose-600 dark:bg-rose-500'
                     : 'bg-gray-600 dark:bg-gray-600'
@@ -168,7 +166,7 @@ export default function MarketRow({
             <div
               className={`font-mono text-xs font-semibold tabular-nums mt-0.5 ${
                 isUp
-                  ? 'text-teal-600 dark:text-teal-400'
+                  ? 'text-emerald-600 dark:text-emerald-400'
                   : isDown
                     ? 'text-rose-600 dark:text-rose-400'
                     : 'text-gray-500 dark:text-gray-400'
