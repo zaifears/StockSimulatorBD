@@ -1,0 +1,19 @@
+[Unit]
+Description=StockSimulatorBD Overnight Fundamentals Crawler
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/stocksimulator-vps
+EnvironmentFile=-/home/ubuntu/stocksimulator-vps/.env
+ExecStart=/home/ubuntu/stocksimulator-vps/venv/bin/python3 crawl_fundamentals.py
+TimeoutSec=3600
+
+# Sandboxing
+NoNewPrivileges=yes
+ProtectSystem=full
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stocksimulator-crawler

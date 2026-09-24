@@ -4,11 +4,19 @@ import { getAdminDb } from '@/lib/firebaseAdmin';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-function buildBaseUrl(request: Request): string {
-  if (process.env.PYTHON_API_URL) return process.env.PYTHON_API_URL;
+function buildChartScrapeUrl(request: Request, symbol: string): string {
+  const envUrl = process.env.PYTHON_API_URL?.trim();
+  if (envUrl) {
+    if (envUrl.includes('/dse_chart')) {
+      return `${envUrl}?symbol=${symbol}`;
+    }
+    const cleanBase = envUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    return `${cleanBase}/api/dse_chart?symbol=${symbol}`;
+  }
   const host = request.headers.get('host') || 'localhost:3000';
   const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('[::1]');
-  return isLocal ? `http://${host}` : `https://${host}`;
+  const base = isLocal ? `http://${host}` : `https://${host}`;
+  return `${base}/api/dse_chart?symbol=${symbol}`;
 }
 
 const THREE_MIN_MS = 3 * 60 * 1000;
@@ -44,10 +52,7 @@ export async function GET(request: Request) {
     await docRef.set({ isScraping: true, lockTime: now }, { merge: true });
 
     try {
-      const isPythonDirect = !!process.env.PYTHON_API_URL;
-      const scrapeUrl = isPythonDirect
-        ? `${buildBaseUrl(request)}?symbol=${symbol}`
-        : `${buildBaseUrl(request)}/api/dse_chart?symbol=${symbol}`;
+      const scrapeUrl = buildChartScrapeUrl(request, symbol);
 
       console.log(`[Gatekeeper] Scraping: ${scrapeUrl}`);
 

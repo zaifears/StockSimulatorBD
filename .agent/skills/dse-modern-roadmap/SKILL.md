@@ -41,6 +41,39 @@ To stay strictly within free-tier quotas and maintain sub-50ms latency across th
    - **Task 2 (Static Cache Mirror)**: Serves `https://api-mirror.stocksimulator.tech/fundamentals.json` or order book proxy via Caddy/Nginx with Brotli compression and sub-30ms response times.
    - **Task 3 (High-Frequency Trading Poller)**: Polls `/api/live/market` and `/api/live/prices` every 10–15 seconds during trading hours (10:00 to 14:30 BST), eliminating Vercel Hobby cron limitations.
 
+### Vercel Deployment & Functions Storage Architecture (Solving the 10 GB Hobby Limit)
+Under Vercel Hobby, total Deployment Storage is capped at 10 GB and Vercel automatically retains the **3 most recent production deployments**.
+A single unoptimized deployment consumes ~2.89 GB across 539 functions (5 Python scrapers at 13.3 MB each + 422 stock ISR lambda wrappers at 5.01 MB each + ~112 app/API routes). Multiplied by 3 retained production builds, this consumes 8.67 GB (~97.4% full). Simply deleting preview deployments fails because the 3 production builds alone consume almost the entire 10 GB ceiling.
+
+To permanently keep single deployments under ~850 MB (leaving ~7.5 GB free headroom across 3 retained builds), execute the following 3 optimization steps:
+
+#### Step 2: Prune `generateStaticParams` for Stocks (`/stocks/[symbol]`)
+- **Root Cause**: `generateStaticParams` in `app/stocks/[symbol]/page.tsx` pre-rendered all 422 DSE stock routes at build time. On Vercel, every pre-rendered ISR route creates a separate 5.01 MB lambda bundle ($422 \times 5.01\text{ MB} = 2.11\text{ GB}$).
+- **Solution**: Prune `generateStaticParams` to return only the Top 30-50 most actively traded DSE tickers (e.g. `GP`, `BATBC`, `SQURPHARMA`, `BEXIMCO`, `BRACBANK`, etc.).
+- **On-Demand Fallback**: `dynamicParams = true` remains active. The other ~390 stocks will be generated on-demand upon first visit and cached on Vercel's Edge CDN via ISR (`revalidate = 86400`).
+- **SEO & Search Engines**: Fully preserved. `app/sitemap.ts` continues to list all 422 stock URLs, and Googlebot receives identical statically-cached HTML.
+- **Storage Savings**: Drops ~390 functions ($390 \times 5.01\text{ MB} = \mathbf{1.95\text{ GB saved per deployment}}$).
+
+#### Step 3: Offload 5 Python Scrapers to Oracle Always Free VPS
+- **Root Cause**: Root `api/` contains 5 Python serverless functions (`category_sync.py`, `dse_chart.py`, `lanka_price_sync.py`, `lanka_sector_sync.py`, `market_sync.py`). Each is packaged as a 13.3 MB lambda bundle (66.5 MB total) and is subject to Vercel's 60s timeout limit.
+- **Solution**: Migrate scraper execution to the Oracle VPS (running via systemd timer or cron with 0 timeout restrictions and direct Firestore Admin SDK credentials). Remove or exclude the Python functions from Vercel deployments.
+- **Storage Savings**: Saves **66.5 MB per deployment** (~200 MB across 3 deployments) and completely eliminates Vercel serverless execution limits.
+
+#### Step 4: Add `outputFileTracingExcludes` in `next.config.mjs`
+- **Root Cause**: Next.js serverless output file tracing can pull build-time binaries, platform-specific native addons, and compiler dependencies into function wrappers.
+- **Solution**: Add explicit tracing exclusion rules in `next.config.mjs`:
+  ```javascript
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/@swc/core-win32-x64-msvc',
+      'node_modules/@esbuild',
+      'node_modules/webpack',
+      'node_modules/terser',
+    ],
+  },
+  ```
+- **Storage Savings**: Ensures zero extraneous node_modules bloat in serverless trace artifacts.
+
 ---
 
 ## 3. Prioritized Implementation Roadmap (Least-Impacted to Deepest)

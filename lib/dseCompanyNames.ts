@@ -666,3 +666,18 @@ export const searchCompanies = (
   }));
 };
 
+/**
+ * Strips formal corporate suffixes (e.g. PLC, Ltd, Limited, Company Limited)
+ * to produce a punchy, readable brand name optimized for search engine meta titles,
+ * SERP knowledge graphs, and LLM entity prompts.
+ */
+export function getCleanBrandName(fullName: string): string {
+  if (!fullName) return '';
+  return fullName
+    .replace(/\s+(PLC\.?|Limited|Ltd\.?|Company Limited|Corp\.?|Corporation)\s*$/i, '')
+    .replace(/\s+(PLC\.?|Limited|Ltd\.?|Company Limited)\b/gi, '')
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim();
+}
+
+

@@ -14,6 +14,22 @@ import { DSE_COMPANY_NAMES, getCompanyName } from './dseCompanyNames';
 const APP_ID = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
 
 /**
+ * Top actively traded & benchmark DSE equity symbols pre-rendered at build time.
+ * Keeping this list pruned to ~45 high-volume scrips strictly adheres to Vercel's
+ * 10 GB Hobby deployment storage ceiling by avoiding 400+ redundant serverless lambda bundles.
+ * All other DSE equities render on-demand via ISR (dynamicParams = true) upon first visit.
+ */
+export const TOP_STATIC_DSE_SYMBOLS = [
+  'GP', 'BATBC', 'SQURPHARMA', 'BEXIMCO', 'BRACBANK', 'RENATA', 'LHBL', 'ISLAMIBANK',
+  'BXPHARMA', 'UPGDCL', 'BERGERPBL', 'MARICO', 'EBL', 'OLYMPIC', 'CITYBANK',
+  'WALTONHIL', 'IDLC', 'PUBALIBANK', 'PRIMEBANK', 'ALARABANK', 'DUTCHBANGL',
+  'SUMITPOWER', 'TITASGAS', 'JAMUNAOIL', 'MPETROLEUM', 'PADMAOIL', 'HEIDELBCEM',
+  'LAFSURCEML', 'MEGHNACEM', 'PREMIERBAN', 'DHAKABANK', 'EXIMBANK', 'FIRSTSBANK',
+  'GPHISPAT', 'BSRMSTEEL', 'BSRMLTD', 'ACI', 'ACIFORMULA', 'BEACONPHAR', 'IBNSINA',
+  'ROBI', 'UNILEVERCL', 'LINDEBD', 'KOHINOOR', 'ORIONPHARM', 'BBSCABLES'
+];
+
+/**
  * Curated roster shipped in the repo. Always available, needs a commit to change,
  * and remains the source of company names.
  */

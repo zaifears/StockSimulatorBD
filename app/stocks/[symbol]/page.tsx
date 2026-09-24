@@ -2,13 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { getAllDseStocks as fetchAllStocks, type DseStock } from '@/lib/dseStocks';
+import { getAllDseStocks as fetchAllStocks, TOP_STATIC_DSE_SYMBOLS, type DseStock } from '@/lib/dseStocks';
 import { classifyInstrument, getInstrumentProfile, pickFitting } from '@/lib/dseInstrumentTypes';
 import StockChart from '@/components/StockChart';
 import StockTradingSection from '@/components/StockTradingSection';
 import StockBackButton from '@/components/stocks/StockBackButton';
+import CompanyFundamentalsCard from '@/components/stocks/CompanyFundamentalsCard';
+import StockNewsSection from '@/components/stocks/StockNewsSection';
 import { SITE_URL } from '@/lib/siteUrl';
 import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
+import { getCleanBrandName } from '@/lib/dseCompanyNames';
 
 const getAllDseStocks = cache(fetchAllStocks);
 
@@ -63,9 +66,10 @@ function getRelatedStocks(current: DseStock, all: DseStock[], limit = 6): DseSto
 }
 
 export async function generateStaticParams(): Promise<RouteParams[]> {
-  const stocks = await getAllDseStocks();
-  return stocks.map((stock) => ({
-    symbol: encodeURIComponent(stock.symbol.toLowerCase()),
+  // Pruned to top active scrips to prevent Vercel Hobby 10 GB storage overflow.
+  // The remaining 370+ DSE equities generate on-demand on first visit and cache via ISR.
+  return TOP_STATIC_DSE_SYMBOLS.map((symbol) => ({
+    symbol: encodeURIComponent(symbol.toLowerCase()),
   }));
 }
 
@@ -91,31 +95,43 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
   // roster with no name entry yet skips the name-bearing variants entirely, so it
   // never renders as "GPX (GPX) Share Price".
   const named = stock.nameKnown;
+  const brand = named ? getCleanBrandName(stock.name) : '';
+  const shortBrand = brand.length > 20 ? brand.split(' ').slice(0, 2).join(' ') : brand;
 
+  // Optimized for Google, Bing, and AI Search (Perplexity, ChatGPT, Gemini).
+  // Strictly bounded to 55-60 characters to prevent SERP truncation while
+  // incorporating high-value financial search tokens (Share Price, P/E, Chart, DSE).
   const title = pickFitting(
     [
       ...(named
         ? [
-            `${stock.name} (${stock.symbol}) Share Price | StockSimulatorBD`,
-            `${stock.name} (${stock.symbol}) DSE Share Price`,
+            `${stock.symbol} Share Price, P/E, EPS & Chart | ${brand}`,
+            `${stock.symbol} Share Price, P/E & Chart | ${shortBrand}`,
+            `${stock.symbol} DSE Share Price, Chart & News | ${shortBrand}`,
+            `${brand} (${stock.symbol}) DSE Share Price & Chart`,
+            `${stock.name} (${stock.symbol}) Share Price`,
           ]
         : []),
-      `${stock.symbol} Share Price & Chart | StockSimulatorBD`,
-      `${stock.symbol} DSE Share Price`,
+      `${stock.symbol} Share Price, P/E Ratio & Chart | DSE`,
+      `${stock.symbol} DSE Share Price & Chart`,
+      `${stock.symbol} Share Price | DSE`,
     ],
     60
   );
 
+  // High-CTR search snippet incorporating live price, audited P/E, EPS, dividend yield,
+  // 52-week trading bounds, and the risk-free practice simulator (strictly <= 158 chars).
   const description = pickFitting(
     [
       ...(named
         ? [
-            `${stock.name} (${stock.symbol}) on the Dhaka Stock Exchange. View the price chart and practice trading ${stock.symbol} with virtual money, free.`,
-            `${stock.name} (${stock.symbol}) on the DSE. View the chart and practice trading ${stock.symbol} with virtual money, free.`,
+            `Live ${stock.symbol} (${brand}) share price on DSE. View candlestick chart, audited P/E, EPS, dividend history, 52W range & practice trading risk-free.`,
+            `Live ${stock.symbol} share price on DSE. View ${brand} chart, audited P/E, EPS, dividend yield, 52W range & practice trading risk-free on StockSimulatorBD.`,
+            `${brand} (${stock.symbol}) DSE share price, candlestick chart, audited P/E, EPS, dividends & risk-free trading simulator on StockSimulatorBD.`,
           ]
         : []),
-      `${stock.symbol} on the Dhaka Stock Exchange. View the price chart and practice trading it risk-free with virtual money.`,
-      `${stock.symbol} DSE share price chart and risk-free practice trading with virtual money.`,
+      `Live ${stock.symbol} share price on Dhaka Stock Exchange. View candlestick chart, audited valuation ratios, 52W range & practice trading risk-free with virtual BDT.`,
+      `${stock.symbol} DSE share price, candlestick chart, valuation metrics & risk-free paper trading simulator on StockSimulatorBD.`,
     ],
     158
   );
@@ -164,6 +180,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
   const pageUrl = `${BASE_URL}${stockHref(stock.symbol)}`;
 
   const named = stock.nameKnown;
+  const brand = named ? getCleanBrandName(stock.name) : '';
 
   const faqs = [
     named
@@ -176,16 +193,20 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
           a: `${stock.symbol} is a security listed on the Dhaka Stock Exchange. You use that ticker to look it up on the exchange, with a broker, or inside the StockSimulatorBD practice terminal.`,
         },
     {
-      q: `Can I practice trading ${stock.symbol} without real money?`,
-      a: `Yes. StockSimulatorBD lets you buy and sell ${stock.symbol} using a virtual balance. Orders follow the same rules the real market applies, including DSE trading hours, T+1 settlement and a 0.40% commission, but no real money is ever involved and the balance cannot be withdrawn.`,
+      q: `Where can I view ${stock.symbol}'s audited P/E ratio, EPS, and dividend history?`,
+      a: `Audited valuation metrics for ${stock.symbol}—including Price-to-Earnings (P/E) ratio, Annual EPS, Net Asset Value Per Share (NAVPS), and historical dividend declarations—are published directly on this StockSimulatorBD page derived from official Dhaka Stock Exchange company filings.`,
     },
     {
-      q: `Do I need a BO account to buy ${stock.symbol} here?`,
-      a: `No. A BO account with a licensed broker is required to buy ${stock.symbol} for real on the Dhaka Stock Exchange, but not to practice on StockSimulatorBD. Many people rehearse here first and open a BO account afterwards.`,
+      q: `Can I practice trading ${stock.symbol} without real money?`,
+      a: `Yes. StockSimulatorBD lets you buy and sell ${stock.symbol} using a virtual balance. Orders follow the same rules the real market applies, including authentic DSE trading hours (10:00 to 14:15 BST), T+1 settlement lots and a 0.40% commission, but no real money is ever involved and the balance cannot be withdrawn.`,
+    },
+    {
+      q: `Do I need a BO account to analyze or trade ${stock.symbol} here?`,
+      a: `No. A BO (Beneficiary Owner) account with a licensed broker is required to buy ${stock.symbol} for real on the Dhaka Stock Exchange, but not to practice on StockSimulatorBD. Many investors audit company fundamentals and rehearse trades here before opening a broker account.`,
     },
     {
       q: `When can I trade ${stock.symbol}?`,
-      a: `The Dhaka Stock Exchange trades Sunday to Thursday from 10:00 to 14:15 Bangladesh time and is closed on Friday, Saturday and public holidays. The simulator enforces the same schedule, so ${stock.symbol} orders are only accepted while the real market is open.`,
+      a: `The Dhaka Stock Exchange trades Sunday to Thursday from 10:00 to 14:15 Bangladesh Standard Time (BST) and is closed on Friday, Saturday and public holidays. The simulator enforces the same schedule, so ${stock.symbol} orders are only accepted while the real market is open.`,
     },
   ];
 
@@ -197,17 +218,48 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
           { '@type': 'ListItem', position: 2, name: 'DSE stocks', item: `${BASE_URL}/stocks` },
-          { '@type': 'ListItem', position: 3, name: `${stock.symbol}`, item: pageUrl },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: named ? `${stock.symbol} - ${brand}` : stock.symbol,
+            item: pageUrl,
+          },
         ],
       },
       {
         '@type': 'FinancialProduct',
-        name: stock.name,
+        '@id': `${pageUrl}#security`,
+        name: named ? `${stock.name} (${stock.symbol})` : stock.symbol,
         alternateName: stock.symbol,
+        tickerSymbol: stock.symbol,
+        exchange: 'Dhaka Stock Exchange',
+        exchangeSymbol: 'DSE',
+        currency: 'BDT',
         url: pageUrl,
         category: profile.badge,
-        provider: { '@type': 'Organization', name: 'StockSimulatorBD', url: BASE_URL },
+        description: named
+          ? `${stock.name} (${stock.symbol}) equity security listed on the Dhaka Stock Exchange. View live candlestick price chart, audited P/E ratio, annual EPS, dividend history, and practice paper trading risk-free.`
+          : `${stock.symbol} equity security listed on the Dhaka Stock Exchange.`,
+        provider: {
+          '@type': 'Organization',
+          name: 'StockSimulatorBD',
+          url: BASE_URL,
+          logo: `${BASE_URL}/favicon.svg`,
+        },
       },
+      ...(named
+        ? [
+            {
+              '@type': 'Corporation',
+              '@id': `${pageUrl}#corporation`,
+              name: stock.name,
+              alternateName: brand,
+              tickerSymbol: `DSE:${stock.symbol}`,
+              url: pageUrl,
+              description: `${stock.name} (${stock.symbol}) is a publicly traded corporation on the Dhaka Stock Exchange.`,
+            },
+          ]
+        : []),
       {
         '@type': 'FAQPage',
         mainEntity: faqs.map((f) => ({
@@ -262,7 +314,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
             </span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight !leading-[1.1]">
-            {named ? stock.name : stock.symbol} share price and chart
+            {named ? `${stock.name} (${stock.symbol}) Share Price, Chart & Fundamentals` : `${stock.symbol} DSE Share Price, Chart & Fundamentals`}
           </h1>
           <p className="mt-4 max-w-3xl text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
             {named ? (
@@ -311,6 +363,12 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
               </p>
             </section>
 
+            {/* Audited Company Fundamentals & Valuation */}
+            <CompanyFundamentalsCard symbol={stock.symbol} />
+
+            {/* Official DSE Corporate Disclosures & News */}
+            <StockNewsSection symbol={stock.symbol} />
+
             {/* Trading rules for this symbol */}
             <section
               aria-labelledby="rules-heading"
@@ -357,11 +415,10 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
 
               <div className="mt-5 rounded-xl bg-gray-50 dark:bg-[#111418] p-4 sm:p-5 border border-gray-200 dark:border-gray-800">
                 <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-1.5">
-                  Looking for {stock.symbol} fundamentals?
+                  External Market Tools for {stock.symbol}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  StockSimulatorBD does not publish P/E ratios, EPS, NAV or financial statements.
-                  For that level of company data, check a dedicated market data provider.
+                  Audited financial ratios, annual EPS, NAVPS, 52-week price range and dividend history for {stock.symbol} are published above. For external community discussions or alternative screener tools, you can also inspect {stock.symbol} on third-party market sites.
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 italic mb-4 border-l-2 border-gray-300 dark:border-gray-700 pl-2">
                   We do not use StockNow data, and this link is neither sponsored nor affiliated.

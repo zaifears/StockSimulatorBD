@@ -14,6 +14,7 @@ import { getUpcomingHolidays } from '@/lib/bangladeshHolidays';
 import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import AppShell, { useRegisterSearchFocus } from '@/components/app/AppShell';
 import MarketRow from '@/components/market/MarketRow';
+import MarketOverviewBanner from '@/components/market/MarketOverviewBanner';
 import StockRow from '@/components/simulator/trade/StockRow';
 import StockSkeleton from '@/components/simulator/trade/StockSkeleton';
 import TradeModal from '@/components/simulator/trade/TradeModal';
@@ -277,7 +278,10 @@ function MarketScreen() {
 
   return (
     <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8">
-      <div className="px-3.5 sm:px-0 pt-4 pb-3">
+      {/* ── Official Real-time DSE Indices, Breadth & Liquidity Strip ── */}
+      <MarketOverviewBanner onSelectStock={(sym) => handleSearchChange(sym)} />
+
+      <div className="px-3.5 sm:px-0 pt-2 pb-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input

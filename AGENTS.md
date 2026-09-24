@@ -236,6 +236,29 @@ A self-hosted Search Intelligence and Generative Engine Optimization (GEO) contr
 
 ---
 
+## Vercel Deployment & Functions Storage Architecture (10 GB Hobby Limit)
+
+Under Vercel Hobby, total Deployment Storage is capped at 10 GB and Vercel unconditionally protects and retains the **3 most recent production deployments**.
+A single unoptimized deployment consumes ~2.89 GB across 539 functions (5 Python scrapers at 13.3 MB each + 422 stock ISR lambda wrappers at 5.01 MB each + ~112 app/API routes). Multiplied by 3 retained production builds, this consumes 8.67 GB (~97.4% full). Simply deleting preview deployments or adjusting preview retention does not solve this because the 3 production builds alone consume almost the entire 10 GB ceiling.
+
+To permanently keep single deployments under ~850 MB (leaving ~7.5 GB free headroom across 3 retained builds), execute the following 3 optimization steps:
+
+1. **Step 2: Prune `generateStaticParams` for Stocks (`app/stocks/[symbol]/page.tsx`)**:
+   - `generateStaticParams` pre-renders all 422 DSE stock routes at build time. On Vercel, every pre-rendered ISR route creates a separate 5.01 MB lambda bundle ($422 \times 5.01\text{ MB} = 2.11\text{ GB}$).
+   - Pruning `generateStaticParams` to return only the Top 30-50 most actively traded tickers (e.g. `GP`, `BATBC`, `SQURPHARMA`, `BEXIMCO`, `BRACBANK`, etc.) preserves instant pre-rendering for core traffic.
+   - `dynamicParams = true` remains active: the other ~390 stocks generate on-demand upon first visit and cache on Vercel's Edge CDN via ISR (`revalidate = 86400`).
+   - SEO is 100% preserved (`app/sitemap.ts` continues to list all 422 stock URLs).
+   - Drops ~390 functions, saving **1.95 GB per deployment**.
+2. **Step 3: Offload 5 Python Scrapers to Oracle Always Free VPS**:
+   - Root `api/` contains 5 Python serverless functions (`category_sync.py`, `dse_chart.py`, `lanka_price_sync.py`, `lanka_sector_sync.py`, `market_sync.py`). Each is packaged as a 13.3 MB lambda bundle (66.5 MB total) and is subject to Vercel's 60s timeout limit.
+   - Migrate scraper execution to the Oracle VPS (running via systemd timer or cron with 0 timeout restrictions and direct Firestore Admin SDK credentials). Remove or exclude the Python functions from Vercel deployments.
+   - Saves **66.5 MB per deployment** (~200 MB across 3 deployments) and eliminates Vercel serverless execution timeouts.
+3. **Step 4: Add `outputFileTracingExcludes` in `next.config.mjs`**:
+   - Add explicit tracing exclusion rules in `next.config.mjs` for unused compiler binaries, dev-only packages, and heavy build artifacts (e.g. `@swc/core-win32-x64-msvc`, `@esbuild`, `webpack`, `terser`).
+   - Keeps serverless trace artifacts strictly minimal.
+
+---
+
 ## Verification & Build Standards
 
 - **Cross-File Type Checking**:

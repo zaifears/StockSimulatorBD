@@ -1,0 +1,29 @@
+[Unit]
+Description=StockSimulatorBD VPS Background Daemon & Scraper Engine
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/stocksimulator-vps
+EnvironmentFile=-/home/ubuntu/stocksimulator-vps/.env
+ExecStart=/home/ubuntu/stocksimulator-vps/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8005 --workers 2
+Restart=always
+RestartSec=5s
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# Resource fencing to protect co-located containers (Immich, Paperless)
+MemoryMax=2G
+CPUQuota=100%
+
+# Sandboxing
+NoNewPrivileges=yes
+ProtectSystem=full
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stocksimulator-daemon
+
+[Install]
+WantedBy=multi-user.target
