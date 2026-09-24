@@ -13,10 +13,7 @@ function buildChartScrapeUrl(request: Request, symbol: string): string {
     const cleanBase = envUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
     return `${cleanBase}/api/dse_chart?symbol=${symbol}`;
   }
-  const host = request.headers.get('host') || 'localhost:3000';
-  const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('[::1]');
-  const base = isLocal ? `http://${host}` : `https://${host}`;
-  return `${base}/api/dse_chart?symbol=${symbol}`;
+  return `https://dse.shahoriar.bd/api/dse_chart?symbol=${symbol}`;
 }
 
 const THREE_MIN_MS = 3 * 60 * 1000;
@@ -56,7 +53,9 @@ export async function GET(request: Request) {
 
       console.log(`[Gatekeeper] Scraping: ${scrapeUrl}`);
 
-      const pythonRes = await fetch(scrapeUrl);
+      const pythonRes = await fetch(scrapeUrl, {
+        signal: AbortSignal.timeout(15000),
+      });
 
       if (!pythonRes.ok) {
         throw new Error(`Python scraper HTTP ${pythonRes.status}`);

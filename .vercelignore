@@ -10,11 +10,13 @@ LICENSE
 .vscode/
 
 # Local utility scripts & tests
-scripts/
-tests/
+/scripts/
+/tests/
 
 # Python serverless scrapers offloaded to Oracle Always Free VPS (dse.shahoriar.bd)
-api/
+/api/
+!app/api/
+!app/api/**
 
 # Local test & audit logs
 lighthouse-report.html

@@ -17,6 +17,7 @@ export async function GET() {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' },
       next: { revalidate: 15 },
+      signal: AbortSignal.timeout(6000),
     });
 
     if (res.ok) {
@@ -36,6 +37,7 @@ export async function GET() {
     const directRes = await fetch('https://new.dsebd.org/api/live/market', {
       headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' },
       next: { revalidate: 15 },
+      signal: AbortSignal.timeout(6000),
     });
     if (directRes.ok) {
       const data = await directRes.json();

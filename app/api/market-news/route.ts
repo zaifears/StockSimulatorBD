@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' },
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(6000),
     });
 
     if (res.ok) {
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
     const directRes = await fetch('https://new.dsebd.org/api/live/news', {
       headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' },
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(6000),
     });
 
     if (directRes.ok) {

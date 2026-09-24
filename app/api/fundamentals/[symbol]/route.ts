@@ -25,6 +25,7 @@ export async function GET(
     const res = await fetch(url, {
       headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(6000),
     });
 
     if (res.ok) {
