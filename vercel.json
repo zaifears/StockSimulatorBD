@@ -1,21 +1,4 @@
 {
-  "functions": {
-    "api/dse_chart.py": {
-      "maxDuration": 10
-    },
-    "api/market_sync.py": {
-      "maxDuration": 60
-    },
-    "api/category_sync.py": {
-      "maxDuration": 60
-    },
-    "api/lanka_sector_sync.py": {
-      "maxDuration": 60
-    },
-    "api/lanka_price_sync.py": {
-      "maxDuration": 60
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
