@@ -70,7 +70,8 @@ export default function MarketStrip({ onSearchClick }: Props) {
   const dayPnl = totals.dayPnl;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 pt-safe bg-white/95 dark:bg-[#0D131D]/95 backdrop-blur-xl border-b border-gray-200/80 dark:border-gray-800">
+    <>
+      <header className="fixed top-0 left-0 right-0 z-40 pt-safe bg-white/95 dark:bg-[#0D131D]/95 backdrop-blur-xl border-b border-gray-200/80 dark:border-gray-800">
       {/* Row 1 — identity, market state, utilities */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 h-12">
@@ -186,13 +187,14 @@ export default function MarketStrip({ onSearchClick }: Props) {
           </dl>
         </div>
       </div>
-
-      <MarketClosedModal
-        isOpen={calendarModalOpen}
-        onClose={() => setCalendarModalOpen(false)}
-        source="market_strip"
-      />
     </header>
+
+    <MarketClosedModal
+      isOpen={calendarModalOpen}
+      onClose={() => setCalendarModalOpen(false)}
+      source="market_strip"
+    />
+  </>
   );
 }
 

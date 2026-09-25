@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Clock,
@@ -35,12 +36,17 @@ export default function MarketClosedModal({
   source = 'unknown',
 }: MarketClosedModalProps) {
   const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
   // Default to At Market Open (10:00 AM)
   const [leadMinutes, setLeadMinutes] = useState<0 | 15>(0);
   const [copiedStatus, setCopiedStatus] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [pendingGCalReturn, setPendingGCalReturn] = useState<boolean>(false);
   const gcalOpenedAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Reset internal state when modal opens
   useEffect(() => {
@@ -188,22 +194,22 @@ export default function MarketClosedModal({
     setTimeout(() => setCopiedStatus(null), 4000);
   }, [nextSession, leadMinutes, trackReminder]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="market-closed-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs transition-opacity"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs transition-opacity"
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-md bg-white dark:bg-[#161B22] border-t sm:border border-gray-200 dark:border-gray-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 sm:zoom-in-95 duration-200 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5"
+        className="w-full sm:max-w-md bg-white dark:bg-[#161B22] border-t sm:border border-gray-200 dark:border-gray-800 rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88dvh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 sm:p-6 pb-4 border-b border-gray-100 dark:border-gray-800/80 flex items-start justify-between gap-3">
+        <div className="p-5 sm:p-6 pb-4 border-b border-gray-100 dark:border-gray-800/80 flex items-start justify-between gap-3 shrink-0">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
               <Clock className="w-5 h-5" />
@@ -230,7 +236,7 @@ export default function MarketClosedModal({
           </button>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-4">
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
           {/* Next Session Highlight Card */}
           <div className="p-4 rounded-2xl bg-gray-50 dark:bg-[#0E1520] border border-gray-200/70 dark:border-gray-800/70 text-left">
             <div className="flex items-center justify-between mb-1.5">
@@ -395,6 +401,7 @@ export default function MarketClosedModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
