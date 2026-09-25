@@ -62,18 +62,45 @@ export default function AppShell({ children, redirectPath, redirectMessage }: Pr
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user && !isRedirecting) {
-      setIsRedirecting(true);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('redirectAfterLogin', redirectPath);
-        sessionStorage.setItem(
-          'redirectMessage',
-          redirectMessage || 'Please sign in to access the trading simulator'
-        );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (!authLoading && !user && !isRedirecting) {
+      // Check if user session was cached in localStorage (e.g. returning after idle/sleep)
+      const hasCachedSession = typeof window !== 'undefined' && !!localStorage.getItem('stocksimulatorbd_user_cache');
+
+      if (hasCachedSession) {
+        // Give Firebase Auth a brief grace window (1500ms) to re-hydrate from IndexedDB
+        // or complete background token refresh before kicking to /auth
+        timer = setTimeout(() => {
+          setIsRedirecting(true);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('redirectAfterLogin', redirectPath);
+            sessionStorage.setItem(
+              'redirectMessage',
+              redirectMessage || 'Please sign in to access the trading simulator'
+            );
+          }
+          router.push('/auth');
+        }, 1500);
+      } else {
+        // No session ever existed on this device, redirect immediately
+        setIsRedirecting(true);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('redirectAfterLogin', redirectPath);
+          sessionStorage.setItem(
+            'redirectMessage',
+            redirectMessage || 'Please sign in to access the trading simulator'
+          );
+        }
+        router.push('/auth');
       }
-      router.push('/auth');
     }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [user, authLoading, router, isRedirecting, redirectPath, redirectMessage]);
 
   if (authLoading || isRedirecting || !user) {

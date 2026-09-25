@@ -19,7 +19,9 @@ import {
     updateProfile,
     reauthenticateWithCredential,
     EmailAuthProvider,
-    updatePassword
+    updatePassword,
+    setPersistence,
+    browserLocalPersistence
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -77,6 +79,11 @@ if (firebaseConfig.apiKey) {
       app = apps.find(a => a.name === '[DEFAULT]') || initializeApp(firebaseConfig);
     }
     auth = getAuth(app);
+    if (typeof window !== 'undefined') {
+      setPersistence(auth, browserLocalPersistence).catch((err) => {
+        console.warn('⚠️ Could not set Firebase Auth persistence to browserLocalPersistence:', err);
+      });
+    }
     db = getFirestore(app);
     
     // Initialize providers after app is ready

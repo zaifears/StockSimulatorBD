@@ -198,12 +198,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const now = Date.now();
           const cacheAge = now - cachedData.lastSync;
           
-          // Use cache if less than 1 hour old
-          if (cacheAge < 60 * 60 * 1000) {
+          // Retain cache across desktop idle/sleep sessions (up to 30 days)
+          // Previously wiped at 1 hour, which destroyed session metadata when waking from sleep
+          if (cacheAge < 30 * 24 * 60 * 60 * 1000) {
             setIsEmailVerified(cachedData.emailVerified);
             console.log('✅ Loaded user from localStorage cache');
           } else {
-            // Cache expired
+            // Cache truly expired after 30 days
             localStorage.removeItem('stocksimulatorbd_user_cache');
           }
         }
@@ -216,135 +217,149 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      
-      // ✅ BLOCK ANONYMOUS USERS (Guest login disabled)
-      if (user?.isAnonymous) {
-        console.warn('⚠️ Anonymous users are disabled. Signing out...');
-        // Clean up anonymous user's Firestore document to prevent orphan data
-        try {
-          const anonDocRef = doc(db, 'users', user.uid);
-          const anonDoc = await getDoc(anonDocRef);
-          if (anonDoc.exists()) {
-            await deleteDoc(anonDocRef);
-            console.log('🗑️ Cleaned up anonymous user document');
+      try {
+        // ✅ BLOCK ANONYMOUS USERS (Guest login disabled)
+        if (user?.isAnonymous) {
+          console.warn('⚠️ Anonymous users are disabled. Signing out...');
+          // Clean up anonymous user's Firestore document to prevent orphan data
+          try {
+            const anonDocRef = doc(db, 'users', user.uid);
+            const anonDoc = await getDoc(anonDocRef);
+            if (anonDoc.exists()) {
+              await deleteDoc(anonDocRef);
+              console.log('🗑️ Cleaned up anonymous user document');
+            }
+          } catch (cleanupErr) {
+            console.warn('Failed to clean up anonymous user document:', cleanupErr);
           }
-        } catch (cleanupErr) {
-          console.warn('Failed to clean up anonymous user document:', cleanupErr);
-        }
-        await signOut(auth);
-        setUser(null);
-        setIsEmailVerified(false);
-        setUserCountUpdated(false);
-        userCountUpdatedRef.current = false;
-        setLoading(false);
-        return;
-      }
-      
-      setUser(user);
-      
-      if (user) {
-        // ✅ Cache user to localStorage for instant reload
-        const cachedData: CachedUserData = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified,
-          isAnonymous: user.isAnonymous,
-          lastSync: Date.now()
-        };
-        
-        try {
-          localStorage.setItem('stocksimulatorbd_user_cache', JSON.stringify(cachedData));
-        } catch (error) {
-          console.warn('Failed to cache user to localStorage:', error);
+          await signOut(auth);
+          setUser(null);
+          setIsEmailVerified(false);
+          setUserCountUpdated(false);
+          userCountUpdatedRef.current = false;
+          return;
         }
         
-        // 🔧 CHECK EMAIL VERIFICATION STATUS
-        await user.reload();
-        const nowVerified = user.emailVerified;
-        setIsEmailVerified(nowVerified);
+        setUser(user);
         
-        console.log(`📧 [Email Status] User: ${user.uid}, Verified: ${nowVerified}, Provider: ${user.providerData[0]?.providerId || 'unknown'}`);
+        if (user) {
+          // Immediately establish email verification status from in-memory user object
+          // so UI doesn't hang waiting for remote network calls on wake-up
+          setIsEmailVerified(user.emailVerified);
 
-        // 🪙 GRANT WELCOME BONUS for verified users
-        // grantWelcomeBonus has multi-layer dedup (session ref → Firestore flag → server checks)
-        if (nowVerified) {
-          await grantWelcomeBonus(user);
-        }
-        
-        // ✅ AUTOMATIC USER DOCUMENT CREATION & COUNT UPDATE
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          const userData = userDoc.exists() ? userDoc.data() : null;
+          // ✅ Cache user to localStorage for instant reload & sleep recovery
+          const cachedData: CachedUserData = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            emailVerified: user.emailVerified,
+            isAnonymous: user.isAnonymous,
+            lastSync: Date.now()
+          };
           
-          // Existence alone isn't proof of a profile: the disclaimer-consent
-          // route (app/api/disclaimer/agree) can create this doc first with
-          // nothing but a timestamp on it. Treat a doc with no createdAt as
-          // still needing its profile, or the account stays nameless forever
-          // and never shows up in registration analytics.
-          if (!userDoc.exists() || !userData?.createdAt) {
-            // ✅ NEW USER: Create document (merge:true to avoid overwriting if race with handleSocialSignInResult)
-            console.log('🆕 New user detected, creating document...');
-            
-            // Determine provider
-            const provider = user.providerData[0]?.providerId || 'email';
-            const isGoogleUser = provider === 'google.com';
-            const isGitHubUser = provider === 'github.com';
-            
-            await setDoc(userDocRef, {
-              name: user.displayName || user.email?.split('@')[0] || 'User',
-              email: user.email,
-              displayName: user.displayName || null,
-              photoURL: user.photoURL || null,
-              status: 'Other',
-              provider: provider,
-              accountTier: 'Bro',
-              createdAt: new Date().toISOString(),
-            }, { merge: true });
-            
-            setAccountTier('Bro');
-            setIsBoss(false);
-            console.log('✅ User document created with Bro tier');
-            
-            // ✅ FIXED: Pass user.uid to updateUserCount
-            if (!userCountUpdatedRef.current) {
-              userCountUpdatedRef.current = true;
-              setUserCountUpdated(true);
-              updateUserCount(user.uid).catch(err => 
-                console.error('Failed to update user count:', err)
-              );
-            }
-          } else {
-            // Existing user: check tier and backfill accountTier if missing
-            const activeBoss = (userData?.accountTier === 'Boss') || (typeof userData?.bossUntil === 'number' && userData.bossUntil > Date.now());
-            const currentTier = activeBoss ? 'Boss' : 'Bro';
-            setAccountTier(currentTier);
-            setIsBoss(activeBoss);
-
-            if (!userData.accountTier) {
-              await setDoc(userDocRef, { accountTier: currentTier }, { merge: true });
-            }
+          try {
+            localStorage.setItem('stocksimulatorbd_user_cache', JSON.stringify(cachedData));
+          } catch (error) {
+            console.warn('Failed to cache user to localStorage:', error);
           }
           
-        } catch (error) {
-          console.error('❌ Failed to create or load user document:', error);
+          // 🔧 CHECK EMAIL VERIFICATION STATUS SAFELY
+          // Wrap in try-catch so network reconnection lag after computer sleep / idle
+          // NEVER throws an unhandled rejection that freezes auth state or forces logout.
+          let nowVerified = user.emailVerified;
+          try {
+            await user.reload();
+            nowVerified = user.emailVerified;
+            setIsEmailVerified(nowVerified);
+          } catch (reloadErr) {
+            console.warn('⚠️ Non-fatal user reload error during auth init (retaining active session):', reloadErr);
+          }
+          
+          console.log(`📧 [Email Status] User: ${user.uid}, Verified: ${nowVerified}, Provider: ${user.providerData[0]?.providerId || 'unknown'}`);
+
+          // 🪙 GRANT WELCOME BONUS for verified users
+          // grantWelcomeBonus has multi-layer dedup (session ref → Firestore flag → server checks)
+          if (nowVerified) {
+            await grantWelcomeBonus(user);
+          }
+          
+          // ✅ AUTOMATIC USER DOCUMENT CREATION & COUNT UPDATE
+          try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            const userData = userDoc.exists() ? userDoc.data() : null;
+            
+            // Existence alone isn't proof of a profile: the disclaimer-consent
+            // route (app/api/disclaimer/agree) can create this doc first with
+            // nothing but a timestamp on it. Treat a doc with no createdAt as
+            // still needing its profile, or the account stays nameless forever
+            // and never shows up in registration analytics.
+            if (!userDoc.exists() || !userData?.createdAt) {
+              // ✅ NEW USER: Create document (merge:true to avoid overwriting if race with handleSocialSignInResult)
+              console.log('🆕 New user detected, creating document...');
+              
+              // Determine provider
+              const provider = user.providerData[0]?.providerId || 'email';
+              const isGoogleUser = provider === 'google.com';
+              const isGitHubUser = provider === 'github.com';
+              
+              await setDoc(userDocRef, {
+                name: user.displayName || user.email?.split('@')[0] || 'User',
+                email: user.email,
+                displayName: user.displayName || null,
+                photoURL: user.photoURL || null,
+                status: 'Other',
+                provider: provider,
+                accountTier: 'Bro',
+                createdAt: new Date().toISOString(),
+              }, { merge: true });
+              
+              setAccountTier('Bro');
+              setIsBoss(false);
+              console.log('✅ User document created with Bro tier');
+              
+              // ✅ FIXED: Pass user.uid to updateUserCount
+              if (!userCountUpdatedRef.current) {
+                userCountUpdatedRef.current = true;
+                setUserCountUpdated(true);
+                updateUserCount(user.uid).catch(err => 
+                  console.error('Failed to update user count:', err)
+                );
+              }
+            } else {
+              // Existing user: check tier and backfill accountTier if missing
+              const activeBoss = (userData?.accountTier === 'Boss') || (typeof userData?.bossUntil === 'number' && userData.bossUntil > Date.now());
+              const currentTier = activeBoss ? 'Boss' : 'Bro';
+              setAccountTier(currentTier);
+              setIsBoss(activeBoss);
+
+              if (!userData.accountTier) {
+                await setDoc(userDocRef, { accountTier: currentTier }, { merge: true });
+              }
+            }
+            
+          } catch (error) {
+            console.error('❌ Failed to create or load user document:', error);
+          }
+          
+          console.log('🔍 User email verified:', nowVerified);
+        } else {
+          setIsEmailVerified(false);
+          setUserCountUpdated(false);
+          userCountUpdatedRef.current = false;
+          setAccountTier('Bro');
+          setIsBoss(false);
         }
-        
-        console.log('🔍 User email verified:', nowVerified);
-      } else {
-        setIsEmailVerified(false);
-        setUserCountUpdated(false);
-        userCountUpdatedRef.current = false;
-        setAccountTier('Bro');
-        setIsBoss(false);
+      } catch (fatalErr) {
+        console.error('❌ Unhandled error in onAuthStateChanged:', fatalErr);
+      } finally {
+        // Don't set loading to false here directly — we gate it below
+        // via the `authResolved` effect so we wait for BOTH
+        // onAuthStateChanged AND getRedirectResult to finish.
+        // Putting in finally guarantees loading is NEVER permanently stuck.
+        setAuthStateResolved(true);
       }
-      
-      // Don't set loading to false here directly — we gate it below
-      // via the `authResolved` effect so we wait for BOTH
-      // onAuthStateChanged AND getRedirectResult to finish.
-      setAuthStateResolved(true);
     });
 
     return () => unsubscribe();
@@ -395,6 +410,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
     return () => unsub();
+  }, [user]);
+
+  // 🔄 Proactive token refresh when returning to tab after sleep / idle
+  // Validates the token in background as soon as user returns to tab,
+  // before they submit a trade or view sensitive data.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && user) {
+        try {
+          // getIdToken(false) checks expiration and refreshes transparently if expired (>60m during sleep)
+          await user.getIdToken(false);
+          console.log('🔄 Proactively validated auth token on tab visibility');
+        } catch (err) {
+          console.warn('⚠️ Tab visibility token check (non-fatal):', err);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [user]);
 
 

@@ -30,12 +30,38 @@ export async function fetchWithToken(url: string, options: FetchOptions = {}) {
 
   while (retryCount <= maxRetryAttempts) {
     try {
+      // 🔒 Sleep / Wake-up Grace: If auth.currentUser is temporarily restoring after computer sleep or tab throttle,
+      // wait briefly if we know an authenticated session exists in localStorage.
+      if (!auth.currentUser && typeof window !== 'undefined' && localStorage.getItem('stocksimulatorbd_user_cache')) {
+        for (let i = 0; i < 4 && !auth.currentUser; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
       // Get fresh token before API call
       // Force refresh if this is a retry (token may have expired)
-      const shouldForcRefresh = forceTokenRefresh || retryCount > 0;
-      const token = await auth.currentUser?.getIdToken(shouldForcRefresh);
+      const shouldForceRefresh = forceTokenRefresh || retryCount > 0;
+      let token: string | undefined;
+
+      try {
+        token = await auth.currentUser?.getIdToken(shouldForceRefresh);
+      } catch (tokenErr: any) {
+        console.warn(`⚠️ Token retrieval attempt ${retryCount + 1} failed (network reconnection):`, tokenErr?.message || tokenErr);
+        if (retryCount < maxRetryAttempts) {
+          retryCount++;
+          const waitMs = 400 * Math.pow(2, retryCount - 1);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          continue;
+        }
+        throw new Error(`Token retrieval failed: ${tokenErr?.message || 'Network error'}`);
+      }
 
       if (!token) {
+        if (retryCount < maxRetryAttempts) {
+          retryCount++;
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          continue;
+        }
         throw new Error('User not authenticated - no valid token available');
       }
 
@@ -64,6 +90,7 @@ export async function fetchWithToken(url: string, options: FetchOptions = {}) {
         if (response.status === 401 && retryCount < maxRetryAttempts) {
           console.warn(`⚠️ Token expired (401). Retrying with fresh token... (Attempt ${retryCount + 1}/${maxRetryAttempts})`);
           retryCount++;
+          await new Promise((resolve) => setTimeout(resolve, 300));
           continue; // Retry the loop with forced refresh
         }
 
@@ -84,9 +111,11 @@ export async function fetchWithToken(url: string, options: FetchOptions = {}) {
     } catch (error) {
       console.error(`❌ API request failed (Attempt ${retryCount + 1}):`, error);
       
-      // If we haven't exhausted retries, try again
+      // If we haven't exhausted retries, try again with backoff
       if (retryCount < maxRetryAttempts) {
         retryCount++;
+        const waitMs = 400 * Math.pow(2, retryCount - 1);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;
       }
       
@@ -123,6 +152,11 @@ export async function fetchWithFreshToken(url: string, options: FetchOptions = {
  */
 export async function getSafeAuthToken(forceRefresh: boolean = true): Promise<string> {
   try {
+    if (!auth.currentUser && typeof window !== 'undefined' && localStorage.getItem('stocksimulatorbd_user_cache')) {
+      for (let i = 0; i < 4 && !auth.currentUser; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
     const token = await auth.currentUser?.getIdToken(forceRefresh);
     if (!token) {
       throw new Error('No authenticated user or token available');
