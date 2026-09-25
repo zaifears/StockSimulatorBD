@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import BossBadge from '@/components/ui/BossBadge';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 
 type TierTab = 'pending' | 'active' | 'approved' | 'rejected' | 'expired' | 'manual';
 
@@ -692,7 +693,15 @@ export default function TierList() {
       </div>
 
       {/* Tab Navigation — smooth touch scroll on mobile */}
-      <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-gray-800 pb-3 overflow-x-auto no-scrollbar flex-nowrap">
+      <ScrollableHorizontal
+        scrollAmount={160}
+        scrollClassName="gap-2 pb-3 flex-nowrap"
+        className="mb-6 border-b border-gray-200 dark:border-gray-800"
+        gradientFrom="from-[#F8F9FA] dark:from-[#0B0F17]"
+        arrowSize="sm"
+        clearancePadding="pr-8 sm:pr-0"
+        ariaLabel="Boss tier admin tabs"
+      >
         <button
           type="button"
           onClick={() => setActiveTab('pending')}
@@ -791,7 +800,7 @@ export default function TierList() {
           <Search className="w-3.5 h-3.5" />
           <span>Search Email / UID & Grant</span>
         </button>
-      </div>
+      </ScrollableHorizontal>
 
       {/* Tab: Manual User Grant */}
       {activeTab === 'manual' && (

@@ -9,6 +9,7 @@ import {
   Search, CheckCircle2, LayoutDashboard, Home, Clock, Inbox, Check, X, Loader2,
   ArrowLeft, Copy,
 } from 'lucide-react';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -344,7 +345,15 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
           </div>
 
           {/* Filter Tabs as Links — horizontal touch swipe */}
-          <div className="flex bg-gray-100/70 dark:bg-[#111418] p-1.5 rounded-xl border border-gray-100 dark:border-gray-800 whitespace-nowrap overflow-x-auto no-scrollbar flex-nowrap items-center gap-1">
+          <ScrollableHorizontal
+            scrollAmount={140}
+            scrollClassName="gap-1 p-1.5 flex-nowrap"
+            className="bg-gray-100/70 dark:bg-[#111418] rounded-xl border border-gray-100 dark:border-gray-800"
+            gradientFrom="from-gray-100 dark:from-[#111418]"
+            arrowSize="xs"
+            clearancePadding="pr-6 sm:pr-0"
+            ariaLabel="Recharge queue filter tabs"
+          >
             {NAV_ITEMS.map((item) => {
               const isActive = statusFilter === item.filter;
               return (
@@ -368,7 +377,7 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                 </Link>
               );
             })}
-          </div>
+          </ScrollableHorizontal>
         </div>
 
         {/* Requests List */}

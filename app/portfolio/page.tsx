@@ -15,9 +15,10 @@ import PortfolioInsights from '@/components/portfolio/PortfolioInsights';
 import PortfolioNewsRadar from '@/components/portfolio/PortfolioNewsRadar';
 import PdfStatementButton from '@/components/portfolio/PdfStatementButton';
 import BossBadge from '@/components/ui/BossBadge';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 import HoldingRow from '@/components/portfolio/HoldingRow';
 import TradeModal from '@/components/simulator/trade/TradeModal';
-import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight, Crown, Radio, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight, Crown, Radio } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import BossPortfolioBar from '@/components/boss/BossPortfolioBar';
@@ -101,35 +102,6 @@ function PortfolioScreen() {
     [isBoss, totals, simulatorState.realizedGainLoss, trades, simulatorState.balance]
   );
 
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 6);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 6);
-  }, []);
-
-  const scrollTabs = useCallback((direction: 'left' | 'right') => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    const amount = 140;
-    el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    window.addEventListener('resize', checkScroll);
-    const timeout = setTimeout(checkScroll, 200);
-    return () => {
-      window.removeEventListener('resize', checkScroll);
-      clearTimeout(timeout);
-    };
-  }, [checkScroll]);
-
   return (
     <div className="max-w-3xl mx-auto px-0 sm:px-4">
       <div className="px-3.5 sm:px-0 pt-4 pb-3 flex items-center justify-between gap-3">
@@ -157,79 +129,42 @@ function PortfolioScreen() {
       <BossPortfolioBar isBoss={isBoss} />
 
       {/* Tabs with Mobile Scroll Affordance */}
-      <div className="relative mb-3 px-3.5 sm:px-0">
-        {/* Left scroll arrow on mobile with edge fade */}
-        {canScrollLeft && (
-          <div className="sm:hidden absolute left-0 top-0 bottom-0 z-20 flex items-center pl-1 pr-4 bg-gradient-to-r from-[#F8F9FA] dark:from-[#0B0F17] via-[#F8F9FA]/90 dark:via-[#0B0F17]/90 to-transparent pointer-events-none">
-            <button
-              type="button"
-              onClick={() => scrollTabs('left')}
-              aria-label="Scroll tabs left"
-              className="pointer-events-auto w-7 h-7 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        <div
-          ref={tabsContainerRef}
-          onScroll={checkScroll}
-          className="flex items-center gap-1.5 overflow-x-auto scrollbar-none scroll-smooth py-0.5 pr-8 sm:pr-0"
+      <div className="mb-3 px-3.5 sm:px-0">
+        <ScrollableHorizontal
+          scrollAmount={140}
+          scrollClassName="gap-1.5 py-0.5"
+          gradientFrom="from-[#F8F9FA] dark:from-[#0B0F17]"
+          arrowSize="md"
+          clearancePadding="pr-8 sm:pr-0"
+          ariaLabel="Portfolio navigation tabs"
         >
           <TabButton
             active={tab === 'holdings'}
-            onClick={() => {
-              setTab('holdings');
-              setTimeout(checkScroll, 50);
-            }}
+            onClick={() => setTab('holdings')}
             icon={Briefcase}
             label="Holdings"
           />
           <TabButton
             active={tab === 'insights'}
-            onClick={() => {
-              setTab('insights');
-              setTimeout(checkScroll, 50);
-            }}
+            onClick={() => setTab('insights')}
             icon={BarChart3}
             label="Insights"
             badge={<BossBadge size="xs" interactive={false} />}
           />
           <TabButton
             active={tab === 'news'}
-            onClick={() => {
-              setTab('news');
-              setTimeout(checkScroll, 50);
-            }}
+            onClick={() => setTab('news')}
             icon={Radio}
             label="News Radar"
             badge={<BossBadge size="xs" interactive={false} />}
           />
           <TabButton
             active={tab === 'orders'}
-            onClick={() => {
-              setTab('orders');
-              setTimeout(checkScroll, 50);
-            }}
+            onClick={() => setTab('orders')}
             icon={Receipt}
             label="Orders"
           />
-        </div>
-
-        {/* Right scroll arrow on mobile with edge fade */}
-        {canScrollRight && (
-          <div className="sm:hidden absolute right-0 top-0 bottom-0 z-20 flex items-center pr-1 pl-4 bg-gradient-to-l from-[#F8F9FA] dark:from-[#0B0F17] via-[#F8F9FA]/90 dark:via-[#0B0F17]/90 to-transparent pointer-events-none">
-            <button
-              type="button"
-              onClick={() => scrollTabs('right')}
-              aria-label="Scroll tabs right"
-              className="pointer-events-auto w-7 h-7 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all animate-pulse"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        </ScrollableHorizontal>
       </div>
 
       {tab === 'holdings' && (

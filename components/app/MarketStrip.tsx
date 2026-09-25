@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getPortfolioTotals, getMarketBreadth } from '@/lib/utils/portfolio';
 import { formatDhakaClock } from '@/lib/utils/dhakaTime';
 import MarketClosedModal from '@/components/market/MarketClosedModal';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 
 const fmtMoney = (n: number, dp = 2) =>
   n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -167,7 +168,16 @@ export default function MarketStrip({ onSearchClick }: Props) {
           worse than one the user has to nudge into view. */}
       <div className="border-t border-gray-200/60 dark:border-gray-800/60 bg-gray-50/90 dark:bg-black/25">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <dl className="flex items-center gap-4 sm:gap-6 h-9 overflow-x-auto scrollbar-none">
+          <ScrollableHorizontal
+            as="dl"
+            scrollAmount={140}
+            scrollClassName="gap-4 sm:gap-6 h-9"
+            gradientFrom="from-gray-50 dark:from-[#0B0F17]"
+            arrowSize="xs"
+            clearancePadding="pr-6 sm:pr-0"
+            showOn="mobile-only"
+            ariaLabel="Live account summary figures"
+          >
             <Figure label="Cash" value={`৳${fmtMoney(simulatorState.balance, 0)}`} />
             <Figure
               label="UnRe Gain"
@@ -184,7 +194,7 @@ export default function MarketStrip({ onSearchClick }: Props) {
               label="Turnover"
               value={`৳${fmtCompact((marketInfo?.stocks || []).reduce((s, x) => s + (x.value || 0), 0))}`}
             />
-          </dl>
+          </ScrollableHorizontal>
         </div>
       </div>
     </header>

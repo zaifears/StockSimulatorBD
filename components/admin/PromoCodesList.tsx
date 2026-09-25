@@ -15,6 +15,7 @@ import {
   Coins, ArrowLeft, Users, Clock, Mail, Trash2, X, ExternalLink,
   ChevronRight, Sparkles, Filter
 } from 'lucide-react';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
 export interface PromoRedemptionEntry {
@@ -176,7 +177,15 @@ export default function PromoCodesList() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900/50 p-1 rounded-xl mb-4 overflow-x-auto no-scrollbar flex-nowrap">
+        <ScrollableHorizontal
+          scrollAmount={140}
+          scrollClassName="gap-1.5 p-1 flex-nowrap"
+          className="bg-gray-100 dark:bg-gray-900/50 rounded-xl mb-4"
+          gradientFrom="from-gray-100 dark:from-gray-900"
+          arrowSize="xs"
+          clearancePadding="pr-6 sm:pr-0"
+          ariaLabel="Promo code filter tabs"
+        >
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -190,7 +199,7 @@ export default function PromoCodesList() {
               {t.label} <span className="opacity-60 font-mono">({counts[t.key]})</span>
             </button>
           ))}
-        </div>
+        </ScrollableHorizontal>
 
         {/* Search */}
         <div className="relative mb-4">

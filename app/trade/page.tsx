@@ -11,7 +11,8 @@ import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import { useTradeModal } from '@/hooks/useTradeModal';
 import { searchByNameOrSymbol } from '@/lib/dseCompanyNames';
 import { getUpcomingHolidays } from '@/lib/bangladeshHolidays';
-import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 import AppShell, { useRegisterSearchFocus } from '@/components/app/AppShell';
 import MarketRow from '@/components/market/MarketRow';
 import MarketOverviewBanner from '@/components/market/MarketOverviewBanner';
@@ -210,34 +211,6 @@ function MarketScreen() {
     setVisibleCount(50);
   }, []);
 
-  // Desktop/laptop has no touch swipe, so the sector strip is otherwise
-  // unreachable past the viewport edge with a mouse — these arrows are the
-  // only way to get to it there. Hidden on phones (sm:flex) since swipe
-  // already works and the strip's own width should carry the arrows'
-  // absence gracefully. `hasOverflow` hides the whole pair when everything
-  // already fits, so they never sit there doing nothing.
-  const sectorScrollRef = useRef<HTMLDivElement>(null);
-  const [sectorScroll, setSectorScroll] = useState({ canLeft: false, canRight: false, hasOverflow: false });
-
-  const updateSectorScroll = useCallback(() => {
-    const el = sectorScrollRef.current;
-    if (!el) return;
-    setSectorScroll({
-      hasOverflow: el.scrollWidth > el.clientWidth + 1,
-      canLeft: el.scrollLeft > 4,
-      canRight: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
-    });
-  }, []);
-
-  useEffect(() => {
-    updateSectorScroll();
-    window.addEventListener('resize', updateSectorScroll);
-    return () => window.removeEventListener('resize', updateSectorScroll);
-  }, [sortedSectors, updateSectorScroll]);
-
-  const scrollSectors = useCallback((direction: 1 | -1) => {
-    sectorScrollRef.current?.scrollBy({ left: direction * 220, behavior: 'smooth' });
-  }, []);
 
   const filteredStocks = useMemo(() => {
     let all = marketInfo?.stocks || [];
@@ -308,24 +281,15 @@ function MarketScreen() {
       </div>
 
       {sortedSectors.length > 0 && (
-        <div className="pb-3 -mt-1 flex items-center gap-1 px-3.5 sm:px-0">
-          {sectorScroll.hasOverflow && (
-            <button
-              type="button"
-              onClick={() => scrollSectors(-1)}
-              disabled={!sectorScroll.canLeft}
-              aria-label="Scroll industries left"
-              className="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 shadow-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-          <div
-            ref={sectorScrollRef}
-            onScroll={updateSectorScroll}
+        <div className="pb-3 -mt-1 px-3.5 sm:px-0">
+          <ScrollableHorizontal
+            scrollAmount={200}
+            scrollClassName="gap-2 min-w-0"
+            gradientFrom="from-[#F8F9FA] dark:from-[#0B0F17]"
+            arrowSize="sm"
             role="tablist"
-            aria-label="Filter by industry"
-            className="flex gap-2 overflow-x-auto scrollbar-none min-w-0"
+            ariaLabel="Filter by industry sector"
+            clearancePadding="pr-8 sm:pr-0"
           >
             <button
               type="button"
@@ -356,18 +320,7 @@ function MarketScreen() {
                 {sector} <span className="opacity-60">{sectorCounts.get(sector)}</span>
               </button>
             ))}
-          </div>
-          {sectorScroll.hasOverflow && (
-            <button
-              type="button"
-              onClick={() => scrollSectors(1)}
-              disabled={!sectorScroll.canRight}
-              aria-label="Scroll industries right"
-              className="hidden sm:flex shrink-0 w-7 h-7 items-center justify-center rounded-full bg-white dark:bg-[#161B22] border border-gray-200/80 dark:border-gray-800 shadow-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
+          </ScrollableHorizontal>
         </div>
       )}
 

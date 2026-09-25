@@ -33,6 +33,7 @@ import {
   Search,
 } from 'lucide-react';
 import BossBadge from '@/components/ui/BossBadge';
+import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 import type { PortfolioItem, Stock } from '@/hooks/useSimulator';
 import { DSE_COMPANY_NAMES } from '@/lib/dseCompanyNames';
 
@@ -460,11 +461,18 @@ function BossActiveNewsRadar({
       {/* Filter Bar: Stock Selector & Category Pills */}
       <div className="space-y-2">
         {/* Stock Selector Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+        <ScrollableHorizontal
+          scrollAmount={140}
+          scrollClassName="gap-1.5 py-1"
+          gradientFrom="from-[#F8F9FA] dark:from-[#0B0F17]"
+          arrowSize="xs"
+          clearancePadding="pr-6 sm:pr-0"
+          ariaLabel="Filter news by stock holding"
+        >
           <button
             type="button"
             onClick={() => setSelectedHolding('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               selectedHolding === 'all'
                 ? 'bg-amber-500 text-gray-950 shadow-xs'
                 : 'bg-white dark:bg-[#161B22] border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -482,7 +490,7 @@ function BossActiveNewsRadar({
                 key={sym}
                 type="button"
                 onClick={() => setSelectedHolding(sym)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold font-mono whitespace-nowrap transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold font-mono whitespace-nowrap transition-all ${
                   selectedHolding === sym
                     ? 'bg-amber-500 text-gray-950 shadow-xs'
                     : 'bg-white dark:bg-[#161B22] border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -492,10 +500,17 @@ function BossActiveNewsRadar({
               </button>
             );
           })}
-        </div>
+        </ScrollableHorizontal>
 
         {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+        <ScrollableHorizontal
+          scrollAmount={140}
+          scrollClassName="gap-1.5 pb-1"
+          gradientFrom="from-[#F8F9FA] dark:from-[#0B0F17]"
+          arrowSize="xs"
+          clearancePadding="pr-6 sm:pr-0"
+          ariaLabel="Filter news by category"
+        >
           {(
             [
               { key: 'all', label: 'All Disclosures' },
@@ -509,7 +524,7 @@ function BossActiveNewsRadar({
               key={c.key}
               type="button"
               onClick={() => setCategoryFilter(c.key)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+              className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
                 categoryFilter === c.key
                   ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-2xs'
                   : 'bg-gray-100 dark:bg-[#1A2230] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -518,7 +533,7 @@ function BossActiveNewsRadar({
               {c.label}
             </button>
           ))}
-        </div>
+        </ScrollableHorizontal>
       </div>
 
       {/* Disclosures Feed List */}
