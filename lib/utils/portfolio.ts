@@ -188,6 +188,34 @@ export function getPortfolioTotals(
   };
 }
 
+export interface HealthScore {
+  overall: number; // 0 - 100
+  grade: 'Institutional AAA' | 'Solid Prime' | 'Moderate Speculative' | 'High Risk Alert';
+  diversificationScore: number; // 0 - 25
+  governanceScore: number; // 0 - 25
+  liquidityScore: number; // 0 - 25
+  concentrationScore: number; // 0 - 25
+  summary: string;
+}
+
+export interface DividendRadar {
+  estimatedYield: number; // e.g. 5.4%
+  projectedAnnualCash: number; // e.g. ৳14,200
+  sanchayapatraComparison: {
+    sanchayapatraRate: number; // 11.04%
+    verdict: string;
+  };
+  highYieldCount: number;
+}
+
+export interface DefensiveAllocation {
+  defensivePercent: number; // Pharmaceuticals, Power, Bank, Telecom, Food
+  cyclicalPercent: number; // Engineering, Textiles, Tannery, IT, etc.
+  defensiveValue: number;
+  cyclicalValue: number;
+  balanceLabel: 'Defensive Anchor' | 'Balanced Growth' | 'Aggressive Cyclical';
+}
+
 export interface PortfolioInsights {
   /** Realized + unrealized — the true lifetime trading result, cash-in-hand aside. */
   totalPnl: number;
@@ -204,6 +232,12 @@ export interface PortfolioInsights {
   worstMoverToday: { symbol: string; dayPnl: number } | null;
 
   // ===== INSTITUTIONAL BROKER-GRADE ANALYTICS =====
+  /** Overall Institutional Health Rating (0 to 100) */
+  healthScore: HealthScore;
+  /** Passive Income & Dividend Yield Projection */
+  dividendRadar: DividendRadar;
+  /** Defensive Bluechips vs Cyclical Volatility Balance */
+  defensiveAllocation: DefensiveAllocation;
   /** Cash vs equity allocation (Dry Powder) */
   allocation: {
     cash: number;
@@ -221,7 +255,7 @@ export interface PortfolioInsights {
     nExposurePercent: number;
     riskLevel: 'Prime' | 'Moderate' | 'High';
   };
-  /** Trading discipline, win rate and fee drag */
+  /** Trading discipline, win rate, profit factor and fee drag */
   tradingDiscipline: {
     totalTrades: number;
     buyCount: number;
@@ -230,6 +264,11 @@ export interface PortfolioInsights {
     lossSells: number;
     winRate: number | null; // null if no closed positions yet
     feeDragPercent: number; // percentage of gross profits eaten by 0.4% brokerage
+    profitFactor: number | null; // gross profits / gross losses
+    avgWinAmount: number;
+    avgLossAmount: number;
+    riskRewardRatio: number | null;
+    expectancy: number;
   };
   /** T+1 overnight clearing vs instant saleable capital */
   liquidityRadar: {
@@ -330,38 +369,59 @@ export function getPortfolioInsights(
   const grossGain = Math.max(0, totals.unrealisedPnl) + Math.max(0, realizedGainLoss) + lifetimeCommission;
   const feeDragPercent = grossGain > 0 ? roundMoney((lifetimeCommission / grossGain) * 100) : 0;
 
-  // 5. Trading Discipline (Win Rate)
+  // 5. Trading Discipline (Win Rate, Profit Factor, Expectancy)
   let buyCount = 0;
   let sellCount = 0;
   let profitableSells = 0;
   let lossSells = 0;
+  let grossProfits = 0;
+  let grossLosses = 0;
 
   const buyCostBySymbol = new Map<string, { totalCost: number; quantity: number }>();
   const chronoTrades = [...trades].reverse();
   for (const t of chronoTrades) {
     const sym = t.symbol || '';
-    if (t.type === 'BUY' && sym && t.price && t.quantity) {
+    const price = t.price || 0;
+    const qty = t.quantity || 0;
+
+    if (t.type === 'BUY' && sym && price && qty) {
       buyCount++;
       const cur = buyCostBySymbol.get(sym) || { totalCost: 0, quantity: 0 };
       buyCostBySymbol.set(sym, {
-        totalCost: cur.totalCost + t.price * t.quantity,
-        quantity: cur.quantity + t.quantity,
+        totalCost: cur.totalCost + price * qty,
+        quantity: cur.quantity + qty,
       });
-    } else if (t.type === 'SELL' && sym && t.price) {
+    } else if (t.type === 'SELL' && sym && price && qty) {
       sellCount++;
       const cur = buyCostBySymbol.get(sym);
       const avgBuy = cur && cur.quantity > 0 ? cur.totalCost / cur.quantity : 0;
       if (avgBuy > 0) {
-        if (t.price >= avgBuy) profitableSells++;
-        else lossSells++;
+        const tradePnl = (price - avgBuy) * qty;
+        if (tradePnl >= 0) {
+          profitableSells++;
+          grossProfits += tradePnl;
+        } else {
+          lossSells++;
+          grossLosses += Math.abs(tradePnl);
+        }
       } else {
-        if (realizedGainLoss > 0) profitableSells++;
-        else lossSells++;
+        if (realizedGainLoss > 0) {
+          profitableSells++;
+          grossProfits += Math.abs(realizedGainLoss);
+        } else {
+          lossSells++;
+          grossLosses += Math.abs(realizedGainLoss);
+        }
       }
     }
   }
 
   const winRate = sellCount > 0 ? roundMoney((profitableSells / sellCount) * 100) : null;
+  const profitFactor = grossLosses > 0 ? roundMoney(grossProfits / grossLosses) : grossProfits > 0 ? 9.9 : null;
+  const avgWinAmount = profitableSells > 0 ? roundMoney(grossProfits / profitableSells) : 0;
+  const avgLossAmount = lossSells > 0 ? roundMoney(grossLosses / lossSells) : 0;
+  const riskRewardRatio = avgLossAmount > 0 ? roundMoney(avgWinAmount / avgLossAmount) : avgWinAmount > 0 ? 9.9 : null;
+  const expectancy = sellCount > 0 ? roundMoney((grossProfits - grossLosses) / sellCount) : 0;
 
   // 6. Cash vs Equity Allocation (Dry Powder)
   const safeCash = Math.max(0, cashBalance);
@@ -381,7 +441,79 @@ export function getPortfolioInsights(
   const saleablePercent = currentValue > 0 ? roundMoney((saleableValue / currentValue) * 100) : 0;
   const lockedPercent = currentValue > 0 ? roundMoney((lockedValue / currentValue) * 100) : 0;
 
-  // 8. Best / Worst Movers Today
+  // 8. Defensive vs Cyclical Asset Allocation (Market Crash Protection)
+  const DEFENSIVE_SECTORS = new Set([
+    'Pharmaceuticals & Chemicals',
+    'Telecommunication',
+    'Bank',
+    'Fuel & Power',
+    'Food & Allied',
+  ]);
+
+  let defensiveValue = 0;
+  for (const h of holdings) {
+    if (h.sector && DEFENSIVE_SECTORS.has(h.sector)) {
+      defensiveValue = moneyAdd(defensiveValue, h.marketValue);
+    }
+  }
+  defensiveValue = roundMoney(defensiveValue);
+  const cyclicalValue = roundMoney(Math.max(0, currentValue - defensiveValue));
+  const defensivePercent = currentValue > 0 ? roundMoney((defensiveValue / currentValue) * 100) : 0;
+  const cyclicalPercent = currentValue > 0 ? roundMoney(100 - defensivePercent) : 0;
+  const balanceLabel: DefensiveAllocation['balanceLabel'] =
+    defensivePercent >= 60 ? 'Defensive Anchor' : defensivePercent >= 35 ? 'Balanced Growth' : 'Aggressive Cyclical';
+
+  // 9. Dividend & Passive Income Radar
+  let weightedYieldSum = 0;
+  let highYieldCount = 0;
+  for (const h of holdings) {
+    const baseYield = h.category === 'A' ? 5.6 : h.category === 'B' ? 3.2 : h.category === 'N' ? 2.0 : 0.0;
+    const sectorBonus = (h.sector === 'Bank' || h.sector === 'Telecommunication' || h.sector === 'Fuel & Power') ? 1.5 : 0;
+    const estYield = baseYield + sectorBonus;
+    if (estYield >= 6.0) highYieldCount++;
+    weightedYieldSum += estYield * h.marketValue;
+  }
+  const estimatedYield = currentValue > 0 ? roundMoney(weightedYieldSum / currentValue) : 0;
+  const projectedAnnualCash = roundMoney(currentValue * (estimatedYield / 100));
+  const dividendVerdict =
+    estimatedYield >= 7.0
+      ? 'High-Yield Dividend Cashflow (Outperforms typical Bank FDR)'
+      : estimatedYield >= 4.0
+      ? 'Balanced Yield + Capital Growth Potential'
+      : 'Capital Growth Oriented (Low immediate dividend cashflow)';
+
+  // 10. Multi-Factor Institutional Health Score (0 - 100)
+  const sectorCount = sectorBreakdown.length;
+  const diversificationScore = holdings.length === 0 ? 0 : Math.min(25, sectorCount >= 5 ? 25 : sectorCount * 5);
+  const governanceScore = Math.max(0, Math.min(25, Math.round(25 * (aExposurePercent / 100) - (zExposurePercent * 1.5))));
+  const cashScore = cashPercent >= 10 && cashPercent <= 40 ? 12.5 : cashPercent > 0 ? 8 : 4;
+  const saleableScore = saleablePercent >= 60 ? 12.5 : (saleablePercent / 60) * 12.5;
+  const liquidityScore = Math.round(cashScore + saleableScore);
+  const topPct = topHolding?.percent || 0;
+  const concentrationScore = topPct === 0 ? 0 : topPct <= 25 ? 25 : topPct <= 35 ? 20 : topPct <= 50 ? 12 : 5;
+
+  const overallScore = Math.min(100, Math.max(0, diversificationScore + governanceScore + liquidityScore + concentrationScore));
+  const healthGrade: HealthScore['grade'] =
+    overallScore >= 85
+      ? 'Institutional AAA'
+      : overallScore >= 70
+      ? 'Solid Prime'
+      : overallScore >= 50
+      ? 'Moderate Speculative'
+      : 'High Risk Alert';
+
+  let healthSummary = 'Healthy portfolio structure balanced across governance, liquidity, and diversification.';
+  if (zExposurePercent >= 15) {
+    healthSummary = `High speculative risk: ${zExposurePercent.toFixed(1)}% in Z-Category stocks. Rebalance into Category A bluechips.`;
+  } else if (topPct > 40) {
+    healthSummary = `High single-stock concentration: ${topHolding?.symbol} holds ${topPct.toFixed(0)}% of equity. Consider diversifying gains.`;
+  } else if (sectorCount < 3 && holdings.length >= 2) {
+    healthSummary = 'Low sector diversity. Adding non-correlated sectors (Pharma, Power, or Banking) will reduce downside volatility.';
+  } else if (cashPercent < 5 && currentValue > 50000) {
+    healthSummary = 'Minimal cash reserves. Keeping 10-20% dry powder allows buying prime stocks at a discount during DSE market dips.';
+  }
+
+  // 11. Best / Worst Movers Today
   let bestMoverToday: PortfolioInsights['bestMoverToday'] = null;
   let worstMoverToday: PortfolioInsights['worstMoverToday'] = null;
   for (const h of holdings) {
@@ -402,6 +534,31 @@ export function getPortfolioInsights(
     lifetimeCommission,
     bestMoverToday,
     worstMoverToday,
+    healthScore: {
+      overall: overallScore,
+      grade: healthGrade,
+      diversificationScore,
+      governanceScore,
+      liquidityScore,
+      concentrationScore,
+      summary: healthSummary,
+    },
+    dividendRadar: {
+      estimatedYield,
+      projectedAnnualCash,
+      sanchayapatraComparison: {
+        sanchayapatraRate: 11.04,
+        verdict: dividendVerdict,
+      },
+      highYieldCount,
+    },
+    defensiveAllocation: {
+      defensivePercent,
+      cyclicalPercent,
+      defensiveValue,
+      cyclicalValue,
+      balanceLabel,
+    },
     allocation: {
       cash: safeCash,
       equity: currentValue,
@@ -425,6 +582,11 @@ export function getPortfolioInsights(
       lossSells,
       winRate,
       feeDragPercent,
+      profitFactor,
+      avgWinAmount,
+      avgLossAmount,
+      riskRewardRatio,
+      expectancy,
     },
     liquidityRadar: {
       saleableValue,

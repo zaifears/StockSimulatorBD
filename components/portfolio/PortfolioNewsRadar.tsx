@@ -673,7 +673,7 @@ function BossActiveNewsRadar({
                 )}
 
                 {/* Footer Quick Actions */}
-                <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60 flex items-center justify-between gap-2">
+                <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {stock?.ltp ? (
                       <span className="font-mono text-xs font-bold text-gray-900 dark:text-white">
@@ -696,7 +696,7 @@ function BossActiveNewsRadar({
                     ) : null}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
                     <Link
                       href={`/stocks/${code.toLowerCase()}`}
                       className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-[#1E2633] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"

@@ -160,14 +160,14 @@ function PortfolioScreen() {
       <div className="relative mb-3 px-3.5 sm:px-0">
         {/* Left scroll arrow on mobile with edge fade */}
         {canScrollLeft && (
-          <div className="sm:hidden absolute left-0 top-0 bottom-0 z-20 flex items-center pl-1 pr-3 bg-gradient-to-r from-gray-50 dark:from-[#0B0F17] via-gray-50/80 dark:via-[#0B0F17]/80 to-transparent pointer-events-none">
+          <div className="sm:hidden absolute left-0 top-0 bottom-0 z-20 flex items-center pl-1 pr-4 bg-gradient-to-r from-[#F8F9FA] dark:from-[#0B0F17] via-[#F8F9FA]/90 dark:via-[#0B0F17]/90 to-transparent pointer-events-none">
             <button
               type="button"
               onClick={() => scrollTabs('left')}
               aria-label="Scroll tabs left"
-              className="pointer-events-auto w-6 h-6 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all"
+              className="pointer-events-auto w-7 h-7 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -175,7 +175,7 @@ function PortfolioScreen() {
         <div
           ref={tabsContainerRef}
           onScroll={checkScroll}
-          className="flex items-center gap-1.5 overflow-x-auto scrollbar-none scroll-smooth py-0.5"
+          className="flex items-center gap-1.5 overflow-x-auto scrollbar-none scroll-smooth py-0.5 pr-8 sm:pr-0"
         >
           <TabButton
             active={tab === 'holdings'}
@@ -219,14 +219,14 @@ function PortfolioScreen() {
 
         {/* Right scroll arrow on mobile with edge fade */}
         {canScrollRight && (
-          <div className="sm:hidden absolute right-0 top-0 bottom-0 z-20 flex items-center pr-1 pl-3 bg-gradient-to-l from-gray-50 dark:from-[#0B0F17] via-gray-50/80 dark:via-[#0B0F17]/80 to-transparent pointer-events-none">
+          <div className="sm:hidden absolute right-0 top-0 bottom-0 z-20 flex items-center pr-1 pl-4 bg-gradient-to-l from-[#F8F9FA] dark:from-[#0B0F17] via-[#F8F9FA]/90 dark:via-[#0B0F17]/90 to-transparent pointer-events-none">
             <button
               type="button"
               onClick={() => scrollTabs('right')}
               aria-label="Scroll tabs right"
-              className="pointer-events-auto w-6 h-6 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all animate-pulse"
+              className="pointer-events-auto w-7 h-7 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all animate-pulse"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}

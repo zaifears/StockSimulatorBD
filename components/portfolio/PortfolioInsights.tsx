@@ -35,6 +35,10 @@ import {
   Wallet,
   Clock,
   Sparkles,
+  Coins,
+  Shield,
+  Activity,
+  Award,
 } from 'lucide-react';
 import type { PortfolioInsights as Insights } from '@/lib/utils/portfolio';
 import BossBadge from '@/components/ui/BossBadge';
@@ -149,7 +153,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
                 </span>
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                Here are the 8 broker-grade portfolio analytics Boss Tier unlocks for your account:
+                Here are the 12 broker-grade portfolio analytics Boss Tier unlocks for your account:
               </p>
             </div>
           </div>
@@ -485,6 +489,170 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
                 </div>
               </div>
             </div>
+
+            {/* 9. Institutional Health Score & Portfolio Diagnosis */}
+            <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                      9. Institutional Health Rating (0–100)
+                    </h4>
+                    <p className="text-[10px] text-gray-400">
+                      Multi-factor portfolio grade across governance, diversity & liquidity
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Boss Pro
+                </span>
+              </div>
+
+              {/* Static Frosted Preview */}
+              <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-[#121720] border border-dashed border-gray-200 dark:border-gray-800 p-3 select-none pointer-events-none">
+                <div className="filter blur-sm opacity-40 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-400">Health Score</div>
+                    <div className="font-mono font-bold text-sm text-emerald-600">88/100 · Prime</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold text-gray-400">Diagnosis</div>
+                    <div className="font-mono text-xs font-bold text-sky-600">Balanced Structure</div>
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/10 dark:bg-black/20">
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-[#1A2230]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/40 shadow-sm flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Upgrade to Reveal Health Score
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 10. Dividend & Passive Income Radar */}
+            <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                      10. Dividend Yield & Passive Income Radar
+                    </h4>
+                    <p className="text-[10px] text-gray-400">
+                      Annual cashflow projection vs 11.04% Sanchayapatra benchmark
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Boss Pro
+                </span>
+              </div>
+
+              {/* Static Frosted Preview */}
+              <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-[#121720] border border-dashed border-gray-200 dark:border-gray-800 p-3 select-none pointer-events-none">
+                <div className="filter blur-sm opacity-40 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-400">Estimated Yield</div>
+                    <div className="font-mono font-bold text-sm text-emerald-600">5.8% / year</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold text-gray-400">Projected Cash</div>
+                    <div className="font-mono text-xs font-bold text-emerald-600">৳24,500 / yr</div>
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/10 dark:bg-black/20">
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-[#1A2230]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/40 shadow-sm flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Upgrade to Reveal Dividend Radar
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 11. Crash Protection & Defensive Cyclical Balance */}
+            <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                      11. Crash Protection & Defensive Balance
+                    </h4>
+                    <p className="text-[10px] text-gray-400">
+                      Defensive shields (Pharma/Power/Bank) vs Cyclical high-beta stocks
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Boss Pro
+                </span>
+              </div>
+
+              {/* Static Frosted Preview */}
+              <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-[#121720] border border-dashed border-gray-200 dark:border-gray-800 p-3 select-none pointer-events-none">
+                <div className="filter blur-sm opacity-40 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-400">Defensive Shield</div>
+                    <div className="font-mono font-bold text-sm text-sky-600">68% Allocation</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold text-gray-400">Downside Buffer</div>
+                    <div className="font-mono text-xs font-bold text-sky-600">High Protection</div>
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/10 dark:bg-black/20">
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-[#1A2230]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/40 shadow-sm flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Upgrade to Reveal Crash Radar
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 12. Profit Factor & Trade Expectancy Audit */}
+            <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                      12. Profit Factor & Trade Expectancy
+                    </h4>
+                    <p className="text-[10px] text-gray-400">
+                      Audit whether you cut losses fast and let winners run
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Boss Pro
+                </span>
+              </div>
+
+              {/* Static Frosted Preview */}
+              <div className="relative rounded-xl overflow-hidden bg-gray-50 dark:bg-[#121720] border border-dashed border-gray-200 dark:border-gray-800 p-3 select-none pointer-events-none">
+                <div className="filter blur-sm opacity-40 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-400">Profit Factor</div>
+                    <div className="font-mono font-bold text-sm text-purple-600">2.6x Edge</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold text-gray-400">Expectancy</div>
+                    <div className="font-mono text-xs font-bold text-purple-600">+৳1,450 / trade</div>
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/10 dark:bg-black/20">
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-[#1A2230]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/40 shadow-sm flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Upgrade to Reveal Profit Factor
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -503,6 +671,9 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
     lifetimeCommission,
     bestMoverToday,
     worstMoverToday,
+    healthScore,
+    dividendRadar,
+    defensiveAllocation,
     allocation,
     categoryRisk,
     tradingDiscipline,
@@ -521,8 +692,63 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
           </span>
         </div>
         <span className="text-[11px] font-mono text-gray-400 dark:text-gray-500">
-          8 Broker Analytics Live
+          12 Broker Analytics Live
         </span>
+      </div>
+
+      {/* Institutional Health Score Hero Banner */}
+      <div className="rounded-2xl border-2 border-amber-400/50 dark:border-amber-500/30 bg-gradient-to-br from-amber-500/[0.08] via-white to-amber-500/[0.04] dark:from-amber-500/[0.12] dark:via-[#161D27] dark:to-[#111620] p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-200/50 dark:border-amber-800/40">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black font-mono text-lg shrink-0">
+              {healthScore.overall}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-sm sm:text-base text-gray-900 dark:text-white">
+                  Institutional Health Rating
+                </h3>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                  healthScore.overall >= 85
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : healthScore.overall >= 70
+                    ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                    : healthScore.overall >= 50
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                }`}>
+                  {healthScore.grade}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                {healthScore.summary}
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0 hidden sm:block">
+            <BossBadge size="xs" interactive={false} />
+          </div>
+        </div>
+
+        {/* 4 Factor Sub-scores Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3">
+          <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#1A2230]/80 border border-gray-200/60 dark:border-gray-800">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Governance</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-white">{healthScore.governanceScore}/25</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#1A2230]/80 border border-gray-200/60 dark:border-gray-800">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Diversity</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-white">{healthScore.diversificationScore}/25</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#1A2230]/80 border border-gray-200/60 dark:border-gray-800">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Liquidity & Cash</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-white">{healthScore.liquidityScore}/25</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#1A2230]/80 border border-gray-200/60 dark:border-gray-800">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Concentration</span>
+            <span className="text-sm font-mono font-bold text-gray-900 dark:text-white">{healthScore.concentrationScore}/25</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -593,20 +819,43 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
               <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
                 {tradingDiscipline.profitableSells} Trades
               </div>
-              <p className="text-[10px] text-gray-400">Sold above avg buy price</p>
+              <p className="text-[10px] text-gray-400">Avg +৳{fmt(tradingDiscipline.avgWinAmount, 0)}</p>
             </div>
             <div className="text-right">
               <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500">Losing Sells</div>
               <div className="font-mono font-bold text-sm text-rose-600 dark:text-rose-400">
                 {tradingDiscipline.lossSells} Trades
               </div>
-              <p className="text-[10px] text-gray-400">Cut at loss</p>
+              <p className="text-[10px] text-gray-400">Avg −৳{fmt(tradingDiscipline.avgLossAmount, 0)}</p>
             </div>
           </div>
 
-          {tradingDiscipline.sellCount === 0 && (
+          {tradingDiscipline.sellCount > 0 ? (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-800/60 mt-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase text-gray-400">Profit Factor:</span>
+                <span className={`font-mono font-bold ${
+                  tradingDiscipline.profitFactor && tradingDiscipline.profitFactor >= 1.5
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  {tradingDiscipline.profitFactor ? `${tradingDiscipline.profitFactor}x` : 'N/A'}
+                </span>
+              </div>
+              <div className="flex items-center justify-end gap-1.5 text-right">
+                <span className="text-[10px] font-bold uppercase text-gray-400">Expectancy:</span>
+                <span className={`font-mono font-bold ${
+                  tradingDiscipline.expectancy >= 0
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-600 dark:text-rose-400'
+                }`}>
+                  {tradingDiscipline.expectancy >= 0 ? '+' : ''}৳{fmt(tradingDiscipline.expectancy, 0)}/tr
+                </span>
+              </div>
+            </div>
+          ) : (
             <p className="text-[11px] text-gray-400 mt-2 bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2 text-center">
-              No closed positions yet — your win rate will appear after your first sell order.
+              No closed positions yet — your win rate & profit factor will appear after your first sell order.
             </p>
           )}
         </div>
@@ -874,6 +1123,119 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
               <span>Healthy diversification: Capital is well balanced across holdings.</span>
             </p>
           )}
+        </div>
+
+        {/* 9. Dividend & Passive Income Radar */}
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Coins className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                  Dividend Yield & Passive Income Radar
+                </h4>
+                <p className="text-[10px] text-gray-400">Cashflow projection vs 11.04% Sanchayapatra</p>
+              </div>
+            </div>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              dividendRadar.estimatedYield >= 6.0
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                : dividendRadar.estimatedYield >= 3.5
+                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+            }`}>
+              {dividendRadar.estimatedYield >= 6.0 ? 'High Yield' : dividendRadar.estimatedYield >= 3.5 ? 'Moderate Yield' : 'Growth Focus'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <div className="text-[10px] font-bold text-gray-400">Weighted Div Yield</div>
+              <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                {dividendRadar.estimatedYield.toFixed(1)}% / yr
+              </div>
+              <p className="text-[10px] text-gray-400">{dividendRadar.highYieldCount} high-yield scrips (≥6%)</p>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] font-bold text-gray-400">Projected Annual Cash</div>
+              <div className="font-mono font-bold text-sm text-gray-900 dark:text-white">
+                ৳{fmt(dividendRadar.projectedAnnualCash)}
+              </div>
+              <p className="text-[10px] text-gray-400">Est. cash dividend stream</p>
+            </div>
+          </div>
+
+          <div className="mt-3 p-2.5 rounded-xl bg-gray-50 dark:bg-[#121720] border border-gray-100 dark:border-gray-800/80 text-[11px] text-gray-600 dark:text-gray-400">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-medium">vs 5Y Sanchayapatra (11.04%):</span>
+              <span className="font-mono text-gray-500 dark:text-gray-400">
+                {dividendRadar.estimatedYield >= 11.04 ? 'Surpasses Risk-Free' : `${(11.04 - dividendRadar.estimatedYield).toFixed(1)}% spread + capital upside`}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">
+              {dividendRadar.sanchayapatraComparison.verdict}
+            </p>
+          </div>
+        </div>
+
+        {/* 10. Crash Protection & Defensive Cyclical Balance */}
+        <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                <Shield className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                  Crash Protection & Defensive Balance
+                </h4>
+                <p className="text-[10px] text-gray-400">Defensive shields vs Cyclical high-beta scrips</p>
+              </div>
+            </div>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              defensiveAllocation.balanceLabel === 'Defensive Anchor'
+                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                : defensiveAllocation.balanceLabel === 'Balanced Growth'
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+            }`}>
+              {defensiveAllocation.balanceLabel}
+            </span>
+          </div>
+
+          <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2.5">
+            <span className="bg-sky-500" style={{ width: `${defensiveAllocation.defensivePercent}%` }} />
+            <span className="bg-orange-500" style={{ width: `${defensiveAllocation.cyclicalPercent}%` }} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
+                <span>Defensive Shield</span>
+              </div>
+              <div className="font-mono font-bold text-sm text-sky-600 dark:text-sky-400">
+                {defensiveAllocation.defensivePercent.toFixed(1)}%
+              </div>
+              <p className="text-[10px] text-gray-400 font-mono">৳{fmt(defensiveAllocation.defensiveValue)}</p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                <span>Cyclical / High-Beta</span>
+              </div>
+              <div className="font-mono font-bold text-sm text-orange-600 dark:text-orange-400">
+                {defensiveAllocation.cyclicalPercent.toFixed(1)}%
+              </div>
+              <p className="text-[10px] text-gray-400 font-mono">৳{fmt(defensiveAllocation.cyclicalValue)}</p>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-gray-400 mt-2.5 bg-gray-50 dark:bg-[#121720] border border-gray-100 dark:border-gray-800/80 rounded-lg p-2">
+            Defensive: Pharma, Power, Bank, Telecom, Food. Cyclicals: Engineering, Textiles, Tannery, IT, Ceramics.
+          </p>
         </div>
       </div>
 
