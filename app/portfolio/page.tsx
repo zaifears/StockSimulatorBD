@@ -4,7 +4,7 @@
 // The Portfolio screen: holdings, order history, and account overview — the
 // broker-app surface that lets a user see what they actually own without
 // digging through a market table filtered by "in portfolio".
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import AppShell from '@/components/app/AppShell';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import { useTradeModal } from '@/hooks/useTradeModal';
@@ -12,16 +12,17 @@ import { useTradeHistory } from '@/hooks/useTradeHistory';
 import { getPortfolioTotals, getPortfolioInsights } from '@/lib/utils/portfolio';
 import PortfolioSummary from '@/components/portfolio/PortfolioSummary';
 import PortfolioInsights from '@/components/portfolio/PortfolioInsights';
+import PortfolioNewsRadar from '@/components/portfolio/PortfolioNewsRadar';
 import PdfStatementButton from '@/components/portfolio/PdfStatementButton';
 import BossBadge from '@/components/ui/BossBadge';
 import HoldingRow from '@/components/portfolio/HoldingRow';
 import TradeModal from '@/components/simulator/trade/TradeModal';
-import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight, Crown } from 'lucide-react';
+import { Briefcase, BarChart3, Receipt, ArrowUpRight, ArrowDownRight, Crown, Radio, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import BossPortfolioBar from '@/components/boss/BossPortfolioBar';
 
-type ViewTab = 'holdings' | 'insights' | 'orders';
+type ViewTab = 'holdings' | 'insights' | 'news' | 'orders';
 
 export default function PortfolioPage() {
   return (
@@ -100,6 +101,35 @@ function PortfolioScreen() {
     [isBoss, totals, simulatorState.realizedGainLoss, trades, simulatorState.balance]
   );
 
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 6);
+  }, []);
+
+  const scrollTabs = useCallback((direction: 'left' | 'right') => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    const amount = 140;
+    el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    const timeout = setTimeout(checkScroll, 200);
+    return () => {
+      window.removeEventListener('resize', checkScroll);
+      clearTimeout(timeout);
+    };
+  }, [checkScroll]);
+
   return (
     <div className="max-w-3xl mx-auto px-0 sm:px-4">
       <div className="px-3.5 sm:px-0 pt-4 pb-3 flex items-center justify-between gap-3">
@@ -126,17 +156,80 @@ function PortfolioScreen() {
       {/* Boss Portfolio Risk Radar bar — only shown to Bro users */}
       <BossPortfolioBar isBoss={isBoss} />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1.5 px-3.5 sm:px-0 mb-3 overflow-x-auto scrollbar-none">
-        <TabButton active={tab === 'holdings'} onClick={() => setTab('holdings')} icon={Briefcase} label="Holdings" />
-        <TabButton
-          active={tab === 'insights'}
-          onClick={() => setTab('insights')}
-          icon={BarChart3}
-          label="Insights"
-          badge={<BossBadge size="xs" interactive={false} />}
-        />
-        <TabButton active={tab === 'orders'} onClick={() => setTab('orders')} icon={Receipt} label="Orders" />
+      {/* Tabs with Mobile Scroll Affordance */}
+      <div className="relative mb-3 px-3.5 sm:px-0">
+        {/* Left scroll arrow on mobile with edge fade */}
+        {canScrollLeft && (
+          <div className="sm:hidden absolute left-0 top-0 bottom-0 z-20 flex items-center pl-1 pr-3 bg-gradient-to-r from-gray-50 dark:from-[#0B0F17] via-gray-50/80 dark:via-[#0B0F17]/80 to-transparent pointer-events-none">
+            <button
+              type="button"
+              onClick={() => scrollTabs('left')}
+              aria-label="Scroll tabs left"
+              className="pointer-events-auto w-6 h-6 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        <div
+          ref={tabsContainerRef}
+          onScroll={checkScroll}
+          className="flex items-center gap-1.5 overflow-x-auto scrollbar-none scroll-smooth py-0.5"
+        >
+          <TabButton
+            active={tab === 'holdings'}
+            onClick={() => {
+              setTab('holdings');
+              setTimeout(checkScroll, 50);
+            }}
+            icon={Briefcase}
+            label="Holdings"
+          />
+          <TabButton
+            active={tab === 'insights'}
+            onClick={() => {
+              setTab('insights');
+              setTimeout(checkScroll, 50);
+            }}
+            icon={BarChart3}
+            label="Insights"
+            badge={<BossBadge size="xs" interactive={false} />}
+          />
+          <TabButton
+            active={tab === 'news'}
+            onClick={() => {
+              setTab('news');
+              setTimeout(checkScroll, 50);
+            }}
+            icon={Radio}
+            label="News Radar"
+            badge={<BossBadge size="xs" interactive={false} />}
+          />
+          <TabButton
+            active={tab === 'orders'}
+            onClick={() => {
+              setTab('orders');
+              setTimeout(checkScroll, 50);
+            }}
+            icon={Receipt}
+            label="Orders"
+          />
+        </div>
+
+        {/* Right scroll arrow on mobile with edge fade */}
+        {canScrollRight && (
+          <div className="sm:hidden absolute right-0 top-0 bottom-0 z-20 flex items-center pr-1 pl-3 bg-gradient-to-l from-gray-50 dark:from-[#0B0F17] via-gray-50/80 dark:via-[#0B0F17]/80 to-transparent pointer-events-none">
+            <button
+              type="button"
+              onClick={() => scrollTabs('right')}
+              aria-label="Scroll tabs right"
+              className="pointer-events-auto w-6 h-6 rounded-full bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-700 shadow-md flex items-center justify-center text-gray-700 dark:text-gray-200 active:scale-90 transition-all animate-pulse"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {tab === 'holdings' && (
@@ -150,6 +243,16 @@ function PortfolioScreen() {
       {tab === 'insights' && (
         <div className="px-3.5 sm:px-0">
           <PortfolioInsights insights={insights} isBoss={isBoss} />
+        </div>
+      )}
+      {tab === 'news' && (
+        <div className="px-3.5 sm:px-0">
+          <PortfolioNewsRadar
+            portfolio={simulatorState.portfolio}
+            stockBySymbol={stockBySymbol}
+            isBoss={isBoss}
+            onTrade={(sym, type) => modal.openTradeModal(sym, type, resetTransaction)}
+          />
         </div>
       )}
       {tab === 'orders' && <OrdersList trades={trades} loading={tradesLoading} error={tradesError} isBoss={isBoss} />}
@@ -194,7 +297,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 transition-all ${
         active
           ? 'bg-blue-600 text-white shadow-xs'
           : 'bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-2xs'
