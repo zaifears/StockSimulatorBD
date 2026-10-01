@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
     // 3. Sectors Sync (Bi-weekly)
     let secStatus: 'healthy' | 'stale' | 'missing' = 'healthy';
     let secAgeDays: number | null = null;
-    const secUpdated = secData?.lastChanged || secData?.lastChecked;
+    const secUpdated = secData?.lastChecked || secData?.lastChanged || secData?.lastUpdated;
     if (secUpdated) {
       secAgeDays = Math.round((nowMs - new Date(secUpdated).getTime()) / 86400000);
       if (secAgeDays > 30) secStatus = 'stale';
