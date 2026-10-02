@@ -1,27 +1,34 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
+import { DSE_COMPANY_NAMES } from '@/lib/dseCompanyNames';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 function buildChartScrapeUrl(request: Request, symbol: string): string {
+  const encoded = encodeURIComponent(symbol);
   const envUrl = process.env.PYTHON_API_URL?.trim();
   if (envUrl) {
     if (envUrl.includes('/dse_chart')) {
-      return `${envUrl}?symbol=${symbol}`;
+      return `${envUrl}?symbol=${encoded}`;
     }
     const cleanBase = envUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
-    return `${cleanBase}/api/dse_chart?symbol=${symbol}`;
+    return `${cleanBase}/api/dse_chart?symbol=${encoded}`;
   }
-  return `https://dse.shahoriar.bd/api/dse_chart?symbol=${symbol}`;
+  return `https://dse.shahoriar.bd/api/dse_chart?symbol=${encoded}`;
 }
 
 const THREE_MIN_MS = 3 * 60 * 1000;
 const DEADLOCK_MS  = 15 * 1000;
 
 export async function GET(request: Request) {
-  const symbol = new URL(request.url).searchParams.get('symbol')?.toUpperCase();
+  const symbol = new URL(request.url).searchParams.get('symbol')?.trim().toUpperCase();
   if (!symbol) return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
+
+  // 🔒 SEC-004: Strictly validate ticker format and verify presence in authoritative DSE roster
+  if (!/^[A-Z0-9-]{1,20}$/.test(symbol) || !(symbol in DSE_COMPANY_NAMES)) {
+    return NextResponse.json({ error: 'Invalid or unrecognized DSE stock symbol' }, { status: 400 });
+  }
 
   let db, docRef;
   try {

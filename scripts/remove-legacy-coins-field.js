@@ -3,7 +3,7 @@
 /**
  * One-off cleanup: removes the legacy `coins` field from every `users/{uid}`
  * document in Firestore. That field belonged to the old, unused
- * users.coins gating currency (see CLAUDE.md's "One currency" section) —
+ * users.coins gating currency (see AGENTS.md's "One currency" section) —
  * the app's only real currency now is `simulator/state.balance`, which this
  * script never touches.
  *

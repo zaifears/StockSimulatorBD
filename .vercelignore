@@ -3,9 +3,8 @@
 LICENSE
 
 # Agent tooling directories
+.agent/
 .agents/
-.claude/
-.codex/
 .impeccable/
 .vscode/
 

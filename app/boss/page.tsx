@@ -39,6 +39,8 @@ import {
   LogIn,
   Ticket,
   XCircle,
+  QrCode,
+  PhoneCall,
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import PaymentMethodTabs, { PaymentTabId, PAYMENT_DETAILS } from '@/components/shared/PaymentMethodTabs';
@@ -98,7 +100,7 @@ interface AuditCategory {
 const COMPLETE_AUDIT_DATA: AuditCategory[] = [
   {
     category: '1. DSE Core Trading Engine',
-    description: 'The authentic Dhaka Stock Exchange market simulation — 100% free forever for every Bro.',
+    description: 'The authentic Dhaka Stock Exchange market simulation - 100% free forever for every Bro.',
     features: [
       {
         name: 'DSE Live Market Board',
@@ -249,11 +251,12 @@ export default function BossPage() {
   const { user, accountTier, isBoss } = useAuth();
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'semester'>('semester');
-  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('bkash_send');
-  const [paymentMethodLabel, setPaymentMethodLabel] = useState('bKash Send Money');
+  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('banglaqr');
+  const [paymentMethodLabel, setPaymentMethodLabel] = useState('BanglaQR');
   const [selectedBank, setSelectedBank] = useState('');
   const [copied, setCopied] = useState(false);
   const [trxId, setTrxId] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState<{
@@ -341,36 +344,60 @@ export default function BossPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedTrxId = trxId.trim().toUpperCase();
+    const trimmedPhone = whatsappNumber.trim();
 
     if (!user) {
-      router.push('/auth?redirect=/boss');
+      router.push('/auth?redirect=/boss#payment');
       return;
     }
 
-    if (!trimmedTrxId) {
-      setSubmitError('Please enter your Transaction ID or Bank Reference Number');
-      return;
-    }
+    // BanglaQR: Phone/WhatsApp number is MANDATORY
+    if (activePaymentTab === 'banglaqr') {
+      if (!trimmedPhone) {
+        setSubmitError('Please enter your Phone / WhatsApp Number. This is required so we can communicate with you if any issue arises.');
+        return;
+      }
+      if (!/^(\+8801|8801|01)[3-9]\d{8}$/.test(trimmedPhone.replace(/[\s-]/g, ''))) {
+        setSubmitError('Please enter a valid Bangladesh mobile number (e.g. 01712345678).');
+        return;
+      }
+      if (trimmedTrxId && !/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
+        setSubmitError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
+        return;
+      }
+    } else {
+      // bKash or Other: Transaction ID is MANDATORY
+      if (!trimmedTrxId) {
+        setSubmitError('Please enter your Transaction ID or Bank Reference Number');
+        return;
+      }
 
-    if (paymentMethodLabel.includes('Bank') && !selectedBank) {
-      setSubmitError('Please select your sending bank account from the dropdown list.');
-      return;
-    }
+      if (paymentMethodLabel.includes('Bank') && !selectedBank) {
+        setSubmitError('Please select your sending bank account from the dropdown list.');
+        return;
+      }
 
-    if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
-      setSubmitError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
-      return;
+      if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
+        setSubmitError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
+        return;
+      }
     }
 
     setIsSubmitting(true);
     setSubmitError('');
 
     try {
-      const targetNumber = paymentMethodLabel.includes('Bank')
-        ? PAYMENT_DETAILS.bank.accountNumber
-        : activePaymentTab === 'bkash_pay'
-        ? PAYMENT_DETAILS.bkashPayment.number
-        : BKASH_NUMBER;
+      // If TrxID is empty for BanglaQR, generate compliant fallback ID so Firestore rules pass
+      const finalTrxId = trimmedTrxId || `BQR-${trimmedPhone.replace(/[^0-9]/g, '')}`;
+
+      const targetNumber =
+        activePaymentTab === 'banglaqr'
+          ? 'BanglaQR'
+          : paymentMethodLabel.includes('Bank')
+          ? PAYMENT_DETAILS.bank.accountNumber
+          : activePaymentTab === 'bkash_pay' || paymentMethodLabel.includes('Payment')
+          ? PAYMENT_DETAILS.bkashPayment.number
+          : BKASH_NUMBER;
 
       const finalPaymentMethod = paymentMethodLabel.includes('Bank') && selectedBank
         ? `Bank Transfer (${selectedBank})`
@@ -388,8 +415,10 @@ export default function BossPage() {
         paymentMethod: finalPaymentMethod,
         paymentTab: activePaymentTab,
         bankName: paymentMethodLabel.includes('Bank') ? selectedBank : null,
-        transactionId: trimmedTrxId,
+        transactionId: finalTrxId,
         bkashNumber: targetNumber,
+        senderPhone: trimmedPhone || null,
+        whatsappNumber: trimmedPhone || null,
         status: 'pending',
         createdAt: new Date(),
         processedAt: null,
@@ -398,7 +427,7 @@ export default function BossPage() {
 
       // Dispatch admin alert email in background
       try {
-        fetch('/api/boss/send-request-email', {
+        fetchWithFreshToken('/api/boss/send-request-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -413,8 +442,10 @@ export default function BossPage() {
               paymentMethod: finalPaymentMethod,
               paymentTab: activePaymentTab,
               bankName: paymentMethodLabel.includes('Bank') ? selectedBank : undefined,
-              transactionId: trimmedTrxId,
+              transactionId: finalTrxId,
               bkashNumber: targetNumber,
+              senderPhone: trimmedPhone || undefined,
+              whatsappNumber: trimmedPhone || undefined,
               createdAt: new Date().toISOString(),
             },
           }),
@@ -426,9 +457,10 @@ export default function BossPage() {
         planName: activePlan.name,
         amount: activePlan.priceBdt,
         durationDays: activePlan.durationDays,
-        trxId: trimmedTrxId,
+        trxId: finalTrxId,
       });
       setTrxId('');
+      setWhatsappNumber('');
       setSelectedBank('');
     } catch (err: any) {
       console.error('Boss request submission failed:', err);
@@ -512,7 +544,7 @@ export default function BossPage() {
                   href="/trade"
                   className="w-full block text-center py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold text-xs transition-colors"
                 >
-                  Trade as Bro (Current Tier)
+                  {isBoss || accountTier === 'Boss' ? 'Trade as Free (Bro)' : 'Trade as Bro (Current Tier)'}
                 </Link>
               </div>
             </div>
@@ -529,9 +561,15 @@ export default function BossPage() {
                     <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-amber-500 text-gray-950 flex items-center gap-1.5 shadow-sm">
                       <Crown className="w-3.5 h-3.5 fill-current" /> Boss Tier (Pro)
                     </span>
-                    <span className="text-[11px] sm:text-xs font-extrabold text-amber-600 dark:text-amber-400">
-                      Choose 1 Month or 6 Months
-                    </span>
+                    {(isBoss || accountTier === 'Boss') ? (
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-500 text-gray-950 shadow-sm flex items-center gap-1">
+                        <Check className="w-3 h-3 stroke-[3]" /> Active (Current Tier)
+                      </span>
+                    ) : (
+                      <span className="text-[11px] sm:text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                        Choose 1 Month or 6 Months
+                      </span>
+                    )}
                   </div>
                   <div className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                     <Check className="w-3 h-3" />
@@ -603,7 +641,7 @@ export default function BossPage() {
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-amber-500 hover:text-gray-950'
                       }`}
                     >
-                      <span>Select 1 Month (৳20)</span>
+                      <span>{isBoss || accountTier === 'Boss' ? 'Extend Monthly (৳20)' : 'Get Boss Tier (৳20)'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -652,13 +690,383 @@ export default function BossPage() {
                       }}
                       className="mt-3 w-full py-2.5 px-3 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-95"
                     >
-                      <span>Activate Semester (৳99)</span>
+                      <span>{isBoss || accountTier === 'Boss' ? 'Extend Semester (৳99)' : 'Get Boss Tier (৳99)'}</span>
                       <Flame className="w-3.5 h-3.5 fill-current" />
                     </button>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* Payment Instructions Section (Directly below Tier Selection)               */}
+      {/* ========================================================================= */}
+      <section
+        id="payment"
+        className="scroll-mt-20 sm:scroll-mt-24 py-10 sm:py-16 bg-slate-100/70 dark:bg-[#0c1017] border-b border-gray-200 dark:border-gray-800"
+      >
+        <div className="max-w-2xl sm:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-6 sm:mb-10">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Direct Instant Activation
+            </span>
+            <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+              How to Activate Boss Access
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-lg mx-auto">
+              Scan via BanglaQR (Any Bank or MFS app), bKash (Make Payment or Send Money), Other MFS, or direct Bank Transfer.
+            </p>
+          </div>
+
+          {/* Promo Code Instant Activation Card */}
+          <div className="bg-white dark:bg-[#131822] border border-amber-300 dark:border-amber-500/30 rounded-3xl p-4 sm:p-6 mb-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>Have a Boss Promo Code?</span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
+                    Instant
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Got a promo code from an event or campaign? Enter it here to activate Boss tier immediately without payment.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRedeemPromo} className="flex flex-col sm:flex-row gap-2.5 mt-3">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => {
+                  setPromoCode(e.target.value.toUpperCase());
+                  if (promoError) setPromoError('');
+                }}
+                placeholder="Enter promo code (e.g. BOSS-PROMO)"
+                className="flex-1 min-h-[48px] px-4 py-3 sm:py-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-sm font-mono uppercase font-bold tracking-wider text-gray-900 dark:text-white placeholder-gray-400 placeholder:normal-case placeholder:font-sans placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
+              />
+              <button
+                type="submit"
+                disabled={promoSubmitting || !promoCode.trim()}
+                className="w-full sm:w-auto min-h-[48px] px-6 py-3 sm:py-3.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-95 disabled:opacity-50 shrink-0"
+              >
+                {promoSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4 fill-current" />}
+                <span>Redeem Code</span>
+              </button>
+            </form>
+
+            {promoError && (
+              <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{promoError}</span>
+              </div>
+            )}
+
+            {promoSuccess && (
+              <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{promoSuccess}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-10 shadow-sm">
+            {/* Step 1: Select Plan */}
+            <div className="mb-6">
+              <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2.5">
+                1. Selected Membership Plan
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {PLANS.map((plan) => {
+                  const isSelected = selectedPlan === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all relative flex items-center justify-between active:scale-[0.99] ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-500/10 text-gray-900 dark:text-white shadow-sm ring-2 ring-amber-500/20'
+                          : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#161c28] text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-900 dark:text-white">
+                            {plan.name}
+                          </span>
+                          {plan.badge && (
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
+                              {plan.badge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                            ৳{plan.priceBdt}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            / {plan.durationLabel}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected
+                            ? 'border-amber-500 bg-amber-500 text-gray-950'
+                            : 'border-gray-300 dark:border-gray-700'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Step 2: Payment Method */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  2. Select Payment Method & Transfer Amount
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-xs font-black tracking-wide shadow-sm">
+                  Amount: ৳{activePlan.priceBdt}
+                </span>
+              </div>
+
+              <PaymentMethodTabs
+                amount={activePlan.priceBdt}
+                referenceCode="BOSS"
+                activeTab={activePaymentTab}
+                onTabChange={(tab, label) => {
+                  setActivePaymentTab(tab);
+                  setPaymentMethodLabel(label);
+                }}
+              />
+            </div>
+
+            {/* Step 3: Transaction ID & Contact Verification */}
+            {!user ? (
+              <div className="text-center p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+                <Crown className="w-8 h-8 text-amber-500 mx-auto mb-2 fill-current" />
+                <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
+                  Sign In Required to Upgrade
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mb-4 max-w-md mx-auto">
+                  Please sign in or create an account so we can link your Boss subscription to your profile.
+                </p>
+                <Link
+                  href="/auth?redirect=/boss#payment"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs shadow-md transition-all active:scale-95"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In to Continue</span>
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Bank Selector Dropdown with Search */}
+                {paymentMethodLabel.includes('Bank') && (
+                  <BankSelector
+                    selectedBank={selectedBank}
+                    onSelectBank={(bank) => {
+                      setSelectedBank(bank);
+                      if (submitError) setSubmitError('');
+                    }}
+                    required
+                  />
+                )}
+
+                {/* Conditional Inputs based on BanglaQR vs bKash / Other */}
+                {activePaymentTab === 'banglaqr' ? (
+                  <>
+                    {/* BanglaQR: Phone / WhatsApp Number is MANDATORY */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          3. Enter Your Phone / WhatsApp Number * (Mandatory)
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                          Required
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          value={whatsappNumber}
+                          onChange={(e) => {
+                            setWhatsappNumber(e.target.value);
+                            if (submitError) setSubmitError('');
+                          }}
+                          placeholder="e.g. 01712345678 (WhatsApp preferred)"
+                          maxLength={20}
+                          disabled={isSubmitting}
+                          className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-emerald-300 dark:border-emerald-700/60 text-base sm:text-lg font-mono tracking-wider text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                        />
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Mandatory for BanglaQR: If any verification issue arises, we will communicate directly through this number (WhatsApp preferred).
+                      </p>
+                    </div>
+
+                    {/* BanglaQR: Transaction ID / Reference (Optional / If available) */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>4. Enter Transaction ID or Reference (If Available)</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">Optional</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={trxId}
+                          onChange={(e) => {
+                            setTrxId(e.target.value.toUpperCase());
+                            if (submitError) setSubmitError('');
+                          }}
+                          placeholder="e.g. TrxID or Bank Reference code (Optional)"
+                          maxLength={60}
+                          disabled={isSubmitting}
+                          className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base sm:text-lg font-mono tracking-wider uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                        />
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        If your banking or MFS app displayed a TrxID / Reference, paste it here for instant matching.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* bKash & Other: Transaction ID is MANDATORY */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>
+                          {paymentMethodLabel.includes('Bank')
+                            ? '3. Enter Bank Transaction / Reference ID (TrxID) *'
+                            : activePaymentTab === 'other'
+                            ? '3. Enter Transaction ID / Reference (TrxID) *'
+                            : '3. Enter bKash Transaction ID (TrxID) *'}
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300">
+                          Mandatory
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={trxId}
+                          onChange={(e) => {
+                            setTrxId(e.target.value.toUpperCase());
+                            if (submitError) setSubmitError('');
+                          }}
+                          placeholder={
+                            paymentMethodLabel.includes('Bank')
+                              ? 'e.g. FT24091234 or Ref#12345678'
+                              : activePaymentTab === 'other'
+                              ? 'e.g. Nagad/Rocket TrxID or Ref Code'
+                              : 'e.g. BL95K87J9'
+                          }
+                          maxLength={60}
+                          disabled={isSubmitting}
+                          className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base sm:text-lg font-mono tracking-wider uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                        />
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        You will find this code in your{' '}
+                        {paymentMethodLabel.includes('Bank')
+                          ? `${selectedBank || 'Bank'} transfer receipt / SMS`
+                          : activePaymentTab === 'other'
+                          ? 'MFS confirmation SMS or app statement'
+                          : 'bKash confirmation SMS or statement'}
+                        .
+                      </p>
+                    </div>
+
+                    {/* WhatsApp Number (Optional for bKash / Other) */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>4. WhatsApp Number (Optional - For Ease & Support)</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">Optional</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          value={whatsappNumber}
+                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                          placeholder="e.g. 01712345678 (Optional WhatsApp number)"
+                          maxLength={20}
+                          disabled={isSubmitting}
+                          className="w-full px-4 py-3 sm:py-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-sm font-mono tracking-wider text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                        />
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Optional: Add your WhatsApp number so we can notify you directly upon verification.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {submitError && (
+                  <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span>{submitError}</span>
+                  </div>
+                )}
+
+                {submitSuccess && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-sm text-emerald-900 dark:text-emerald-200">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span>Boss Upgrade Request Submitted!</span>
+                    </div>
+                    <p className="text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                      Thank you! Your request for <strong>{submitSuccess.planName}</strong> (৳{submitSuccess.amount}) with TrxID <code>{submitSuccess.trxId}</code> has been received.
+                      Our admin has been notified via email and will approve your transaction shortly.
+                    </p>
+                    <div className="pt-2 flex items-center gap-3 border-t border-emerald-200 dark:border-emerald-800/60 font-medium">
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                        Request ID: <code>{submitSuccess.requestId}</code>
+                      </span>
+                      <Link
+                        href="/coins"
+                        className="ml-auto text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
+                      >
+                        View Coins & Funds →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 px-6 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Submitting Request…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="w-4 h-4 fill-current" />
+                      <span>Submit {activePlan.name} Request (৳{activePlan.priceBdt})</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </section>
@@ -1006,278 +1414,6 @@ export default function BossPage() {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* Payment Instructions Section */}
-      <section
-        id="payment"
-        className="scroll-mt-20 sm:scroll-mt-24 py-12 sm:py-20 bg-slate-100/70 dark:bg-[#0c1017] border-t border-gray-200 dark:border-gray-800"
-      >
-        <div className="max-w-2xl sm:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-12">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 text-xs font-bold uppercase tracking-wider text-pink-600 dark:text-pink-400 mb-2">
-              <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-              Quick & Easy Local Payment
-            </span>
-            <h2 className="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
-              How to Activate Boss Access
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-lg mx-auto">
-              Send the selected amount via bKash Personal and provide your Transaction ID below.
-            </p>
-          </div>
-
-          {/* Promo Code Instant Activation Card */}
-          <div className="bg-white dark:bg-[#131822] border border-amber-300 dark:border-amber-500/30 rounded-3xl p-5 sm:p-6 mb-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                <Ticket className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>Have a Boss Promo Code?</span>
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
-                    Instant
-                  </span>
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Got a promo code from an event or campaign? Enter it here to activate Boss tier immediately without payment.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleRedeemPromo} className="flex flex-col sm:flex-row gap-2 mt-3">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => {
-                  setPromoCode(e.target.value.toUpperCase());
-                  if (promoError) setPromoError('');
-                }}
-                placeholder="Enter promo code (e.g. BOSS-PROMO)"
-                className="flex-1 h-11 px-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-sm font-mono uppercase font-bold tracking-wider text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-              <button
-                type="submit"
-                disabled={promoSubmitting || !promoCode.trim()}
-                className="h-11 px-5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-sm hover:brightness-105 active:scale-95 disabled:opacity-50 shrink-0"
-              >
-                {promoSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4 fill-current" />}
-                <span>Redeem Code</span>
-              </button>
-            </form>
-
-            {promoError && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
-                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{promoError}</span>
-              </div>
-            )}
-
-            {promoSuccess && (
-              <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{promoSuccess}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white dark:bg-[#131822] border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-8 lg:p-10 shadow-sm">
-            {/* Step 1: Select Plan */}
-            <div className="mb-6">
-              <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2.5">
-                1. Selected Membership Plan
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PLANS.map((plan) => {
-                  const isSelected = selectedPlan === plan.id;
-                  return (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => setSelectedPlan(plan.id)}
-                      className={`p-4 rounded-2xl border-2 text-left transition-all relative flex items-center justify-between active:scale-[0.99] ${
-                        isSelected
-                          ? 'border-amber-500 bg-amber-500/10 text-gray-900 dark:text-white shadow-sm ring-2 ring-amber-500/20'
-                          : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#161c28] text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-900 dark:text-white">
-                            {plan.name}
-                          </span>
-                          {plan.badge && (
-                            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-gray-950">
-                              {plan.badge}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
-                            ৳{plan.priceBdt}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            / {plan.durationLabel}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected
-                            ? 'border-amber-500 bg-amber-500 text-gray-950'
-                            : 'border-gray-300 dark:border-gray-700'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Step 2: Payment Method */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  2. Select Payment Method & Transfer Amount
-                </span>
-                <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-gray-950 text-xs font-black tracking-wide shadow-sm">
-                  Amount: ৳{activePlan.priceBdt}
-                </span>
-              </div>
-
-              <PaymentMethodTabs
-                amount={activePlan.priceBdt}
-                referenceCode="BOSS"
-                activeTab={activePaymentTab}
-                onTabChange={(tab, label) => {
-                  setActivePaymentTab(tab);
-                  setPaymentMethodLabel(label);
-                }}
-              />
-            </div>
-
-            {/* Step 3: Transaction ID Entry */}
-            {!user ? (
-              <div className="text-center p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30">
-                <Crown className="w-8 h-8 text-amber-500 mx-auto mb-2 fill-current" />
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
-                  Sign In Required to Upgrade
-                </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-300 mb-4 max-w-md mx-auto">
-                  Please sign in or create an account so we can link your Boss subscription to your profile.
-                </p>
-                <Link
-                  href="/auth?redirect=/boss#payment"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs shadow-md transition-all active:scale-95"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In to Continue</span>
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Bank Selector Dropdown with Search */}
-                {paymentMethodLabel.includes('Bank') && (
-                  <BankSelector
-                    selectedBank={selectedBank}
-                    onSelectBank={(bank) => {
-                      setSelectedBank(bank);
-                      if (submitError) setSubmitError('');
-                    }}
-                    required
-                  />
-                )}
-
-                <div>
-                  <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
-                    {paymentMethodLabel.includes('Bank')
-                      ? '3. Enter Bank Transaction / Reference ID (TrxID)'
-                      : activePaymentTab === 'other'
-                      ? '3. Enter Transaction ID / Reference (TrxID)'
-                      : '3. Enter bKash Transaction ID (TrxID)'}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={trxId}
-                      onChange={(e) => {
-                        setTrxId(e.target.value.toUpperCase());
-                        if (submitError) setSubmitError('');
-                      }}
-                      placeholder={
-                        paymentMethodLabel.includes('Bank')
-                          ? 'e.g. FT24091234 or Ref#12345678'
-                          : activePaymentTab === 'other'
-                          ? 'e.g. Nagad/Rocket TrxID or Ref Code'
-                          : 'e.g. BL95K87J9'
-                      }
-                      maxLength={60}
-                      disabled={isSubmitting}
-                      className="w-full px-4 py-3.5 sm:py-4 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-700 text-base sm:text-lg font-mono tracking-wider uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
-                    />
-                  </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                    You will find this code in your {paymentMethodLabel.includes('Bank') ? `${selectedBank || 'Bank'} transfer receipt / SMS` : activePaymentTab === 'other' ? 'MFS confirmation SMS or app statement' : 'bKash confirmation SMS or statement'}.
-                  </p>
-                </div>
-
-                {submitError && (
-                  <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    <span>{submitError}</span>
-                  </div>
-                )}
-
-                {submitSuccess && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 space-y-2">
-                    <div className="flex items-center gap-2 font-bold text-sm text-emerald-900 dark:text-emerald-200">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                      <span>Boss Upgrade Request Submitted!</span>
-                    </div>
-                    <p className="text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                      Thank you! Your request for <strong>{submitSuccess.planName}</strong> (৳{submitSuccess.amount}) with TrxID <code>{submitSuccess.trxId}</code> has been received.
-                      Our admin has been notified via email and will approve your transaction shortly.
-                    </p>
-                    <div className="pt-2 flex items-center gap-3 border-t border-emerald-200 dark:border-emerald-800/60 font-medium">
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                        Request ID: <code>{submitSuccess.requestId}</code>
-                      </span>
-                      <Link
-                        href="/coins"
-                        className="ml-auto text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
-                      >
-                        View Coins & Funds →
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !trxId.trim()}
-                  className="w-full py-4 px-6 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-gray-950 shadow-md hover:brightness-105 active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Submitting Request…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-4 h-4 fill-current" />
-                      <span>Submit {activePlan.name} Request (৳{activePlan.priceBdt})</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
         </div>
       </section>
 

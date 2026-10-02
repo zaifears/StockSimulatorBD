@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Project context for AI coding assistants (Antigravity, Claude, Gemini, or any LLM agent) working in this repo. Read this before making changes — it'll save you from re-discovering things the hard way.
+Project context for AI coding agents (Antigravity, Gemini, or any LLM agent) working in this repo. Read this before making changes — it'll save you from re-discovering things the hard way.
 
 ## What this is
 

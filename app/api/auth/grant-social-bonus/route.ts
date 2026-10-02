@@ -32,66 +32,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const provider = body.provider || 'unknown';
 
-    // 🔒 DEDUP CHECK 1: welcomeBonusGranted flag on user doc
-    const userRef = db.collection('users').doc(userId);
-    const userSnap = await userRef.get();
-
-    if (userSnap.exists) {
-      const userData = (userSnap.data() || {}) as Record<string, any>;
-      if (userData.welcomeBonusGranted === true) {
-        const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
-        const stateRef = db.doc(`artifacts/${appId}/users/${userId}/simulator/state`);
-        const stateSnap = await stateRef.get();
-        const currentBalance = stateSnap.exists ? (stateSnap.data()?.balance || 0) : 0;
-
-        console.log(`ℹ️ Welcome bonus already granted for user ${userId}`);
-        return NextResponse.json({
-          success: true,
-          message: 'Welcome bonus already granted',
-          newBalance: currentBalance,
-          alreadyGranted: true,
-        });
-      }
+    // 🔒 Rate-limit: 5 requests per user per minute to prevent flooding
+    const { checkPersistentRateLimit } = await import('@/lib/utils/persistentRateLimit');
+    const isRateAllowed = await checkPersistentRateLimit(`welcome-bonus:${userId}`, {
+      maxRequests: 5,
+      windowMs: 60_000,
+    });
+    if (!isRateAllowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many attempts. Please slow down.' },
+        { status: 429 }
+      );
     }
 
-    // 🔒 DEDUP CHECK 2: coinTransactions collection
-    const previousBonus = await db.collection('coinTransactions')
-      .where('userId', '==', userId)
-      .where('reason', '==', 'welcome_bonus')
-      .where('success', '==', true)
-      .limit(1)
-      .get();
-
-    if (!previousBonus.empty) {
-      console.log(`ℹ️ Welcome bonus transaction exists for user ${userId}`);
-      await userRef.set({ welcomeBonusGranted: true }, { merge: true });
-
-      const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
-      const stateRef = db.doc(`artifacts/${appId}/users/${userId}/simulator/state`);
-      const stateSnap = await stateRef.get();
-      const currentBalance = stateSnap.exists ? (stateSnap.data()?.balance || 0) : 0;
-
-      return NextResponse.json({
-        success: true,
-        message: 'Welcome bonus already granted',
-        newBalance: currentBalance,
-        alreadyGranted: true,
-      });
-    }
-
-    // 💎 Grant 10,000 to simulator/state.balance (the REAL user balance)
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
+    const userRef = db.collection('users').doc(userId);
     const simulatorStateRef = db.doc(`artifacts/${appId}/users/${userId}/simulator/state`);
     const timestamp = new Date();
 
+    // 🔒 ATOMIC TRANSACTION: Check user doc AND credit balance in a single atomic transaction.
+    // This eliminates the TOCTOU concurrency race condition where concurrent requests could multiply bonuses.
     const result = await db.runTransaction(async (transaction) => {
-      const stateDoc = await transaction.get(simulatorStateRef);
-      let beforeBalance = 0;
-      let newBalance = 10000;
+      const [userDoc, stateDoc] = await Promise.all([
+        transaction.get(userRef),
+        transaction.get(simulatorStateRef),
+      ]);
+
+      const currentBalance = stateDoc.exists ? (stateDoc.data()?.balance || 0) : 0;
+
+      if (userDoc.exists && userDoc.data()?.welcomeBonusGranted === true) {
+        return {
+          alreadyGranted: true,
+          beforeBalance: currentBalance,
+          newBalance: currentBalance,
+        };
+      }
+
+      let beforeBalance = currentBalance;
+      let newBalance = beforeBalance + 10000;
 
       if (stateDoc.exists) {
-        beforeBalance = stateDoc.data()?.balance || 0;
-        newBalance = beforeBalance + 10000;
         transaction.update(simulatorStateRef, {
           balance: newBalance,
           lastBonusGranted: timestamp,
@@ -109,15 +89,33 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return { beforeBalance, newBalance };
+      // Mark welcome bonus as granted on user doc INSIDE the transaction
+      transaction.set(
+        userRef,
+        {
+          welcomeBonusGranted: true,
+          lastCoinUpdate: timestamp,
+          lastCoinAction: 'welcome_bonus',
+        },
+        { merge: true }
+      );
+
+      return {
+        alreadyGranted: false,
+        beforeBalance,
+        newBalance,
+      };
     });
 
-    // Mark welcome bonus as granted on user doc
-    await userRef.set({
-      welcomeBonusGranted: true,
-      lastCoinUpdate: timestamp,
-      lastCoinAction: 'welcome_bonus',
-    }, { merge: true });
+    if (result.alreadyGranted) {
+      console.log(`ℹ️ Welcome bonus already granted for user ${userId}`);
+      return NextResponse.json({
+        success: true,
+        message: 'Welcome bonus already granted',
+        newBalance: result.newBalance,
+        alreadyGranted: true,
+      });
+    }
 
     // 📝 Log the transaction
     try {

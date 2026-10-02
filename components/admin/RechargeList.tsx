@@ -22,6 +22,8 @@ interface RechargeRequest {
   coins: number;
   trxId: string;
   bkashNumber: string;
+  senderPhone?: string;
+  whatsappNumber?: string;
   paymentMethod?: string;
   paymentTab?: string;
   bankName?: string;
@@ -212,7 +214,9 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
       req.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.trxId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.paymentMethod?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.bankName?.toLowerCase().includes(searchTerm.toLowerCase())
+      req.bankName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.whatsappNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.senderPhone?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 });
@@ -428,6 +432,20 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Customer</p>
                         <div className="font-semibold text-gray-900 dark:text-white text-sm">{req.userName}</div>
                         <div className="text-xs text-gray-500 break-all">{req.userEmail}</div>
+                        {(req.whatsappNumber || req.senderPhone) && (
+                          <div className="mt-1.5">
+                            <a
+                              href={`https://wa.me/${(req.whatsappNumber || req.senderPhone || '').replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 transition-colors"
+                              title="Chat on WhatsApp"
+                            >
+                              <span>WA: {req.whatsappNumber || req.senderPhone}</span>
+                              <span>💬</span>
+                            </a>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Transaction</p>

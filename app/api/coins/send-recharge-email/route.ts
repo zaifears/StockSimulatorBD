@@ -4,8 +4,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SITE_URL } from '@/lib/siteUrl';
 import { sendAdminAlertEmail } from '@/lib/resendAdmin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
+import { checkPersistentRateLimit } from '@/lib/utils/persistentRateLimit';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || SITE_URL;
+
+function escapeHtml(str: unknown): string {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 interface EmailData {
   requestId: string;
@@ -19,6 +31,8 @@ interface EmailData {
   accountTier?: string;
   transactionId: string;
   bkashNumber: string;
+  senderPhone?: string;
+  whatsappNumber?: string;
   paymentMethod?: string;
   paymentTab?: string;
   bankName?: string;
@@ -27,6 +41,38 @@ interface EmailData {
 
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 1. Authentication Check
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required' },
+        { status: 401 }
+      );
+    }
+    const token = authHeader.substring(7).trim();
+    let decodedToken;
+    try {
+      decodedToken = await getAdminAuth().verifyIdToken(token);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Invalid authentication session' },
+        { status: 401 }
+      );
+    }
+    const uid = decodedToken.uid;
+
+    // 🔒 2. Rate Limiting: Max 3 email notifications per user per minute
+    const isRateAllowed = await checkPersistentRateLimit(`recharge-email:${uid}`, {
+      maxRequests: 3,
+      windowMs: 60_000,
+    });
+    if (!isRateAllowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many notification attempts. Please wait a minute.' },
+        { status: 429 }
+      );
+    }
+
     if (!process.env.RESEND_API_KEY) {
       console.error('❌ RESEND_API_KEY not configured');
       return NextResponse.json(
@@ -35,50 +81,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { emailData, recaptchaToken } = await request.json() as {
+    const { emailData } = await request.json() as {
       emailData: EmailData;
-      recaptchaToken?: string;
     };
 
-    // Verify reCAPTCHA token if provided (optional but recommended)
-    if (recaptchaToken) {
-      try {
-        const verifyResponse = await fetch(`${APP_URL}/api/verify-recaptcha`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: recaptchaToken, action: 'submit_recharge' }),
-        });
+    if (!emailData || !emailData.requestId || !emailData.transactionId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required emailData fields' },
+        { status: 400 }
+      );
+    }
 
-        const verifyData = await verifyResponse.json();
-        if (!verifyData.success) {
-          return NextResponse.json(
-            { success: false, error: 'reCAPTCHA verification failed' },
-            { status: 403 }
-          );
-        }
-      } catch (error) {
-        console.error('reCAPTCHA verification error:', error);
-        // Don't block email if verification fails - log and continue
-      }
+    // 🔒 3. Verify request document existence and ownership in Firestore
+    const db = getAdminDb();
+    const requestSnap = await db.collection('recharge_requests').doc(emailData.requestId).get();
+    if (!requestSnap.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Recharge request not found' },
+        { status: 404 }
+      );
+    }
+    const requestDoc = requestSnap.data();
+    if (requestDoc?.userId !== uid) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Request does not belong to authenticated user' },
+        { status: 403 }
+      );
     }
 
     const {
       requestId,
-      userName,
-      userEmail,
+      userName: rawUserName,
+      userEmail: rawUserEmail,
       amount,
       coins,
       bonusCoins = 0,
       totalCoins,
       isBoss = false,
-      accountTier,
-      transactionId,
-      bkashNumber,
-      paymentMethod,
-      paymentTab,
-      bankName,
+      accountTier: rawAccountTier,
+      transactionId: rawTransactionId,
+      bkashNumber: rawBkashNumber,
+      senderPhone: rawSenderPhone,
+      whatsappNumber: rawWhatsappNumber,
+      paymentMethod: rawPaymentMethod,
+      paymentTab: rawPaymentTab,
+      bankName: rawBankName,
       createdAt,
     } = emailData;
+
+    // 🔒 4. HTML Sanitize inputs before injecting into email templates
+    const userName = escapeHtml(rawUserName || decodedToken.name || 'User');
+    const userEmail = escapeHtml(rawUserEmail || decodedToken.email || '');
+    const accountTier = escapeHtml(rawAccountTier || 'Bro');
+    const transactionId = escapeHtml(rawTransactionId);
+    const bkashNumber = escapeHtml(rawBkashNumber);
+    const senderPhone = escapeHtml(rawSenderPhone || rawWhatsappNumber || '');
+    const whatsappNumber = escapeHtml(rawWhatsappNumber || rawSenderPhone || '');
+    const paymentMethod = escapeHtml(rawPaymentMethod);
+    const paymentTab = escapeHtml(rawPaymentTab);
+    const bankName = escapeHtml(rawBankName);
 
     const finalCoins = totalCoins || (coins + bonusCoins);
     const tierLabel = isBoss || accountTier === 'Boss' ? '👑 Boss Tier (+10% Bonus)' : 'Bro Tier (Standard)';
@@ -90,7 +151,9 @@ export async function POST(request: NextRequest) {
     );
 
     let destinationAccount = 'bKash Personal (01865333143)';
-    if (isBank) {
+    if (paymentTab === 'banglaqr' || paymentMethod?.toLowerCase().includes('banglaqr')) {
+      destinationAccount = 'BanglaQR Interoperable Code (StockSimulatorBD)';
+    } else if (isBank) {
       destinationAccount = 'Standard Chartered Bank PLC (A/C: 18246161201, Branch: Motijheel)';
     } else if (paymentTab === 'bkash_pay' || paymentMethod?.toLowerCase().includes('payment')) {
       destinationAccount = 'bKash Merchant / Make Payment (01581401895)';
@@ -171,6 +234,16 @@ export async function POST(request: NextRequest) {
                 <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">${paymentMethod && paymentMethod.includes('Bank') ? 'Sender Account / Reference:' : 'Sender Number:'}</td>
                 <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a; font-family: monospace;">${bkashNumber}</td>
               </tr>
+              ${whatsappNumber ? `
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #64748b;">WhatsApp / Phone:</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #059669; font-weight: 800; font-family: monospace;">
+                  <a href="https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}" target="_blank" style="color: #059669; text-decoration: underline;">
+                    ${whatsappNumber} 💬 (Open WhatsApp)
+                  </a>
+                </td>
+              </tr>
+              ` : ''}
               <tr>
                 <td style="padding: 10px 0; font-weight: bold; color: #64748b;">Submitted At:</td>
                 <td style="padding: 10px 0; color: #64748b;">${new Date(createdAt).toLocaleString()}</td>

@@ -5,16 +5,17 @@ import { identifyCrawlerBot, isPathRobotsAllowed } from '@/lib/seo/botPatterns';
 const ALLOWED_ORIGINS = [
   'https://stocksimulator.tech',
   'https://www.stocksimulator.tech',
+  'https://stocksimulator.shahoriar.bd',
   ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000', 'http://127.0.0.1:3000'] : []),
 ];
 
-const INTERNAL_TELEMETRY_SECRET = process.env.CRON_SECRET || 'stocksimulator-crawler-telemetry-auth';
+const INTERNAL_TELEMETRY_SECRET = process.env.CRON_SECRET || process.env.INTERNAL_TELEMETRY_SECRET || '';
 
 export function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
 
   // 1. Crawler Telemetry: Detect real bot user-agents and log asynchronously without blocking
-  if (!pathname.startsWith('/api/internal/crawler-telemetry')) {
+  if (!pathname.startsWith('/api/internal/crawler-telemetry') && INTERNAL_TELEMETRY_SECRET) {
     const userAgent = request.headers.get('user-agent');
     const botName = identifyCrawlerBot(userAgent);
 

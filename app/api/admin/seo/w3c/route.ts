@@ -39,7 +39,8 @@ export async function GET(req: NextRequest) {
   try {
     const parsed = new URL(rawUrl);
     const mainHost = new URL(SITE_URL).hostname;
-    if (parsed.hostname === mainHost || parsed.hostname === `www.${mainHost}` || parsed.hostname.endsWith(mainHost)) {
+    const isAllowedHost = parsed.hostname === mainHost || parsed.hostname === `www.${mainHost}` || parsed.hostname.endsWith(`.${mainHost}`);
+    if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && isAllowedHost) {
       targetUrl = parsed.toString();
     }
   } catch {

@@ -229,11 +229,14 @@ service cloud.firestore {
 
     // ===== PUBLIC STATS =====
     match /public_stats/site_stats {
-  		allow read: if true;
-  		allow update: if isAuthenticated()
-    		&& request.resource.data.diff(resource.data).affectedKeys()
-        		.hasOnly(['userCount', 'lastUpdated']);
-		}
+      allow read: if true;
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['userCount', 'lastUpdated'])
+        && request.resource.data.userCount is int
+        && request.resource.data.userCount == resource.data.get('userCount', 0) + 1
+        && request.resource.data.lastUpdated is string;
+    }
     
     match /public_stats/site_stats/counted_users/{userId} {
       allow create: if isOwner(userId);

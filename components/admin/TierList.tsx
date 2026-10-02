@@ -50,6 +50,8 @@ interface BossRequest {
   durationDays: number;
   transactionId: string;
   bkashNumber: string;
+  senderPhone?: string;
+  whatsappNumber?: string;
   paymentMethod?: string;
   paymentTab?: string;
   bankName?: string;
@@ -1569,6 +1571,20 @@ export default function TierList() {
                         {req.bkashNumber && (
                           <span className="text-gray-500 font-sans text-[11px]">
                             Sender: <code>{req.bkashNumber}</code>
+                          </span>
+                        )}
+                        {(req.whatsappNumber || req.senderPhone) && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-sans font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                            <span>WhatsApp/Phone:</span>
+                            <a
+                              href={`https://wa.me/${(req.whatsappNumber || req.senderPhone || '').replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:text-emerald-500 font-mono"
+                              title="Chat on WhatsApp"
+                            >
+                              {req.whatsappNumber || req.senderPhone} 💬
+                            </a>
                           </span>
                         )}
                         <span className="text-gray-400 font-sans text-[10px] break-all">

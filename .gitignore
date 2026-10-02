@@ -157,6 +157,5 @@ __pycache__/
 scripts/legacy-coins-backup-*.json
 # Local agent tooling (vendored skills, hook state, editor launch config)
 .agents/
-.claude/
-.codex/
 .impeccable/
+

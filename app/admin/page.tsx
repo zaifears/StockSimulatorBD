@@ -575,6 +575,18 @@ export default function AdminDashboard() {
                           >
                             {copiedBossTrx === req.id ? '✓ Copied' : 'Copy Trx'}
                           </button>
+                          {(req.whatsappNumber || req.senderPhone) && (
+                            <a
+                              href={`https://wa.me/${(req.whatsappNumber || req.senderPhone || '').replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 hover:underline inline-flex items-center gap-1"
+                              title="Chat on WhatsApp"
+                            >
+                              <span>WA: {req.whatsappNumber || req.senderPhone}</span>
+                              <span>💬</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-800/80">

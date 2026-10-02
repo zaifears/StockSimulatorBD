@@ -1,7 +1,7 @@
 'use client';
 
 // app/coins/page.tsx
-// Funds screen — the app-shell version of what used to be a full marketing
+// Funds screen - the app-shell version of what used to be a full marketing
 // page (hero section, grid background, glows, footer). All the functional
 // logic (bKash recharge submission, request history, validation) is
 // unchanged; only the chrome changed: AppShell instead of the marketing
@@ -11,7 +11,7 @@
 // document.
 //
 // SEO: app/coins/layout.tsx (a server component) still exports this route's
-// title/OG/Twitter metadata untouched — that's independent of how the client
+// title/OG/Twitter metadata untouched - that's independent of how the client
 // page inside it renders, so link previews and any indexing that already
 // applied to this URL are unaffected by this rewrite.
 import React, { useState, useEffect } from 'react';
@@ -23,7 +23,7 @@ import Image from 'next/image';
 import { getFirestore, collection, query, where, orderBy, addDoc, onSnapshot } from 'firebase/firestore';
 import {
   Gift, TrendingUp, Copy, CheckCircle2, XCircle, Clock, Plus, Minus,
-  Send, AlertCircle, ArrowRight, Zap, Check, Ticket, Loader2, Crown,
+  Send, AlertCircle, ArrowRight, Zap, Check, Ticket, Loader2, Crown, PhoneCall,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
@@ -52,11 +52,12 @@ function FundsScreen() {
   const balance = Math.floor(simulatorState.balance);
 
   const [showRechargeForm, setShowRechargeForm] = useState(false);
-  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('bkash_send');
-  const [paymentMethodLabel, setPaymentMethodLabel] = useState('bKash Send Money');
+  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('banglaqr');
+  const [paymentMethodLabel, setPaymentMethodLabel] = useState('BanglaQR');
   const [selectedBank, setSelectedBank] = useState('');
   const [rechargeAmount, setRechargeAmount] = useState(20);
   const [trxId, setTrxId] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rechargeError, setRechargeError] = useState('');
   const [rechargeSuccess, setRechargeSuccess] = useState('');
@@ -108,7 +109,7 @@ function FundsScreen() {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to redeem code');
 
-      // No local balance update needed — the shared simulator/state
+      // No local balance update needed - the shared simulator/state
       // listener (contexts/SimulatorContext) picks up the server's credit
       // on its own, same as every other balance-changing action in the app.
       setPromoSuccess(data.message || 'Code redeemed!');
@@ -129,20 +130,42 @@ function FundsScreen() {
 
   const handleRechargeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedTrxId = trxId.trim();
+    const trimmedTrxId = trxId.trim().toUpperCase();
+    const trimmedPhone = whatsappNumber.trim();
 
-    if (!user || !trimmedTrxId) {
-      setRechargeError('Please enter your Transaction ID or Bank Reference Number');
+    if (!user) {
+      setRechargeError('Please sign in to submit a recharge request.');
       return;
     }
-    if (paymentMethodLabel.includes('Bank') && !selectedBank) {
-      setRechargeError('Please select your sending bank account from the dropdown list.');
-      return;
+
+    if (activePaymentTab === 'banglaqr') {
+      if (!trimmedPhone) {
+        setRechargeError('Please enter your Phone / WhatsApp Number to submit your recharge request.');
+        return;
+      }
+      if (!/^(\+8801|8801|01)[3-9]\d{8}$/.test(trimmedPhone.replace(/[\s-]/g, ''))) {
+        setRechargeError('Please enter a valid Bangladesh mobile number (e.g. 01712345678).');
+        return;
+      }
+      if (trimmedTrxId && !/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
+        setRechargeError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
+        return;
+      }
+    } else {
+      if (!trimmedTrxId) {
+        setRechargeError('Please enter your Transaction ID or Bank Reference Number.');
+        return;
+      }
+      if (paymentMethodLabel.includes('Bank') && !selectedBank) {
+        setRechargeError('Please select your sending bank account from the dropdown list.');
+        return;
+      }
+      if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
+        setRechargeError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
+        return;
+      }
     }
-    if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
-      setRechargeError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
-      return;
-    }
+
     if (rechargeAmount < MIN_RECHARGE_BDT || rechargeAmount > MAX_RECHARGE_BDT || rechargeAmount % PRICE_PER_10K_COINS !== 0 || baseCoins <= 0) {
       setRechargeError(`Invalid amount. Must be between ${MIN_RECHARGE_BDT} and ${MAX_RECHARGE_BDT} BDT, and a multiple of ${PRICE_PER_10K_COINS}.`);
       return;
@@ -153,11 +176,16 @@ function FundsScreen() {
     setRechargeSuccess('');
 
     try {
-      const destinationAccount = paymentMethodLabel.includes('Bank')
-        ? PAYMENT_DETAILS.bank.accountNumber
-        : activePaymentTab === 'bkash_pay'
-        ? PAYMENT_DETAILS.bkashPayment.number
-        : BKASH_NUMBER;
+      const finalTrxId = trimmedTrxId || `BQR-${trimmedPhone.replace(/[^0-9]/g, '')}`;
+
+      const destinationAccount =
+        activePaymentTab === 'banglaqr'
+          ? 'BanglaQR'
+          : paymentMethodLabel.includes('Bank')
+          ? PAYMENT_DETAILS.bank.accountNumber
+          : activePaymentTab === 'bkash_pay'
+          ? PAYMENT_DETAILS.bkashPayment.number
+          : BKASH_NUMBER;
 
       const finalPaymentMethod = paymentMethodLabel.includes('Bank') && selectedBank
         ? `Bank Transfer (${selectedBank})`
@@ -176,9 +204,11 @@ function FundsScreen() {
         paymentMethod: finalPaymentMethod,
         paymentTab: activePaymentTab,
         bankName: paymentMethodLabel.includes('Bank') ? selectedBank : null,
-        transactionId: trimmedTrxId,
-        trxId: trimmedTrxId,
+        transactionId: finalTrxId,
+        trxId: finalTrxId,
         bkashNumber: destinationAccount,
+        senderPhone: trimmedPhone || null,
+        whatsappNumber: trimmedPhone || null,
         status: 'pending',
         createdAt: new Date(),
         processedAt: null,
@@ -186,7 +216,7 @@ function FundsScreen() {
       });
 
       try {
-        fetch('/api/coins/send-recharge-email', {
+        fetchWithFreshToken('/api/coins/send-recharge-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -203,8 +233,10 @@ function FundsScreen() {
               paymentMethod: finalPaymentMethod,
               paymentTab: activePaymentTab,
               bankName: paymentMethodLabel.includes('Bank') ? selectedBank : undefined,
-              transactionId: trimmedTrxId,
+              transactionId: finalTrxId,
               bkashNumber: destinationAccount,
+              senderPhone: trimmedPhone || undefined,
+              whatsappNumber: trimmedPhone || undefined,
               createdAt: new Date().toISOString(),
             },
           }),
@@ -213,6 +245,7 @@ function FundsScreen() {
 
       setRechargeSuccess('Recharge request submitted! Wait for admin approval.');
       setTrxId('');
+      setWhatsappNumber('');
       setSelectedBank('');
       setRechargeAmount(20);
       setTimeout(() => {
@@ -228,7 +261,7 @@ function FundsScreen() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-4 pb-6">
+    <div className="max-w-2xl sm:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-8">
       <h1 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Funds</h1>
 
       {/* Balance card */}
@@ -308,7 +341,7 @@ function FundsScreen() {
         </div>
       )}
 
-      {/* Promo code redemption — single-use codes credited server-side via
+      {/* Promo code redemption - single-use codes credited server-side via
           app/api/simulator/promo-redeem, one redemption allowed per account. */}
       <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-5 mb-4">
         <div className="flex items-center gap-2 mb-3">
@@ -379,6 +412,7 @@ function FundsScreen() {
                 setActivePaymentTab(tab);
                 setPaymentMethodLabel(label);
               }}
+              variant="coins"
               className="mb-5"
             />
 
@@ -387,16 +421,16 @@ function FundsScreen() {
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                   Amount in BDT
                 </label>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="grid grid-cols-4 gap-2 mb-3">
                   {[20, 40, 100, 200].map((amt) => (
                     <button
                       key={amt}
                       type="button"
                       onClick={() => setRechargeAmount(amt)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                      className={`w-full py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold transition-all border min-h-[42px] flex items-center justify-center ${
                         rechargeAmount === amt
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/20'
+                          : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
                       }`}
                     >
                       {amt} BDT
@@ -408,9 +442,9 @@ function FundsScreen() {
                     type="button"
                     onClick={() => setRechargeAmount(Math.max(MIN_RECHARGE_BDT, rechargeAmount - PRICE_PER_10K_COINS))}
                     disabled={rechargeAmount <= MIN_RECHARGE_BDT}
-                    className="w-11 h-11 shrink-0 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center disabled:opacity-50"
+                    className="w-12 h-12 shrink-0 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                   <input
                     type="number"
@@ -423,16 +457,15 @@ function FundsScreen() {
                     min={MIN_RECHARGE_BDT}
                     max={MAX_RECHARGE_BDT}
                     step={PRICE_PER_10K_COINS}
-                    className="flex-1 h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-lg font-bold text-center tabular-nums"
-                    required
+                    className="flex-1 h-12 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-xl font-black text-center tabular-nums text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setRechargeAmount(Math.min(MAX_RECHARGE_BDT, rechargeAmount + PRICE_PER_10K_COINS))}
                     disabled={rechargeAmount >= MAX_RECHARGE_BDT}
-                    className="w-11 h-11 shrink-0 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center disabled:opacity-50"
+                    className="w-12 h-12 shrink-0 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
                 {isBoss ? (
@@ -475,33 +508,111 @@ function FundsScreen() {
                 />
               )}
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                  {paymentMethodLabel.includes('Bank')
-                    ? 'Bank Transaction / Reference ID (TrxID)'
-                    : activePaymentTab === 'other'
-                    ? 'Transaction ID / Reference (TrxID)'
-                    : 'bKash Transaction ID (TrxID)'}
-                </label>
-                <input
-                  type="text"
-                  value={trxId}
-                  onChange={(e) => setTrxId(e.target.value.toUpperCase())}
-                  placeholder={
-                    paymentMethodLabel.includes('Bank')
-                      ? 'e.g. FT24091234 or Ref#12345678'
-                      : activePaymentTab === 'other'
-                      ? 'e.g. Nagad/Rocket TrxID or Ref Code'
-                      : 'Example: 9C7B2A1D3E'
-                  }
-                  maxLength={60}
-                  className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-sm font-mono uppercase"
-                  required
-                />
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Found in your {paymentMethodLabel.includes('Bank') ? `${selectedBank || 'Bank'} transfer receipt / SMS` : activePaymentTab === 'other' ? 'MFS confirmation SMS' : 'bKash SMS or app history'}
-                </p>
-              </div>
+              {/* Conditional Inputs based on BanglaQR vs bKash / Other */}
+              {activePaymentTab === 'banglaqr' ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Phone / WhatsApp Number * (Mandatory)
+                      </span>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        Required
+                      </span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={whatsappNumber}
+                      onChange={(e) => {
+                        setWhatsappNumber(e.target.value);
+                        if (rechargeError) setRechargeError('');
+                      }}
+                      placeholder="e.g. 01712345678 (WhatsApp preferred)"
+                      maxLength={20}
+                      disabled={isSubmitting}
+                      className="w-full h-11 px-3 rounded-lg border border-emerald-300 dark:border-emerald-700/60 bg-gray-50 dark:bg-[#111418] text-sm font-mono tracking-wider"
+                    />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+                      <PhoneCall className="w-3 h-3 text-emerald-500 shrink-0" />
+                      Mandatory for BanglaQR: If any verification issue arises, we will communicate directly through WhatsApp.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide flex items-center justify-between">
+                      <span>Transaction ID or Reference (If Available)</span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">Optional</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={trxId}
+                      onChange={(e) => {
+                        setTrxId(e.target.value.toUpperCase());
+                        if (rechargeError) setRechargeError('');
+                      }}
+                      placeholder="e.g. TrxID or Bank Reference code (Optional)"
+                      maxLength={60}
+                      disabled={isSubmitting}
+                      className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-sm font-mono uppercase"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide flex items-center justify-between">
+                      <span>
+                        {paymentMethodLabel.includes('Bank')
+                          ? 'Bank Transaction / Reference ID (TrxID) *'
+                          : activePaymentTab === 'other'
+                          ? 'Transaction ID / Reference (TrxID) *'
+                          : 'bKash Transaction ID (TrxID) *'}
+                      </span>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300">
+                        Mandatory
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={trxId}
+                      onChange={(e) => {
+                        setTrxId(e.target.value.toUpperCase());
+                        if (rechargeError) setRechargeError('');
+                      }}
+                      placeholder={
+                        paymentMethodLabel.includes('Bank')
+                          ? 'e.g. FT24091234 or Ref#12345678'
+                          : activePaymentTab === 'other'
+                          ? 'e.g. Nagad/Rocket TrxID or Ref Code'
+                          : 'Example: 9C7B2A1D3E'
+                      }
+                      maxLength={60}
+                      disabled={isSubmitting}
+                      className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-sm font-mono uppercase"
+                    />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Found in your {paymentMethodLabel.includes('Bank') ? `${selectedBank || 'Bank'} transfer receipt / SMS` : activePaymentTab === 'other' ? 'MFS confirmation SMS' : 'bKash SMS or app history'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide flex items-center justify-between">
+                      <span>WhatsApp Number (Optional - For Ease & Support)</span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">Optional</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      placeholder="e.g. 01712345678 (Optional WhatsApp number)"
+                      maxLength={20}
+                      disabled={isSubmitting}
+                      className="w-full h-11 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-sm font-mono tracking-wider"
+                    />
+                  </div>
+                </>
+              )}
 
               {rechargeError && (
                 <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 p-3 rounded-lg flex items-start gap-2 text-sm">

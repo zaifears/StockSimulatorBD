@@ -9,7 +9,7 @@ function buildSyncUrl(): string {
   return `${base}/api/lanka_price_sync`;
 }
 
-// Primary sync runs roughly every 3 minutes (see CLAUDE.md). 15 minutes is
+// Primary sync runs roughly every 3 minutes (see AGENTS.md). 15 minutes is
 // 5 missed cycles — generous enough that one slow/transient run never
 // triggers this, but not so loose that a real outage runs unnoticed for long.
 const STALE_THRESHOLD_MS = 15 * 60 * 1000;

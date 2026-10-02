@@ -10,12 +10,16 @@ import { AiCrawlerLog } from '@/lib/seo/types';
 
 export const runtime = 'nodejs';
 
-const INTERNAL_TELEMETRY_SECRET = process.env.CRON_SECRET || 'stocksimulator-crawler-telemetry-auth';
+const INTERNAL_TELEMETRY_SECRET = process.env.CRON_SECRET || process.env.INTERNAL_TELEMETRY_SECRET;
 
 export async function POST(req: NextRequest) {
   try {
+    if (!INTERNAL_TELEMETRY_SECRET) {
+      return NextResponse.json({ error: 'Server misconfiguration: telemetry secret not configured' }, { status: 500 });
+    }
+
     const authHeader = req.headers.get('x-crawler-telemetry-secret');
-    if (authHeader !== INTERNAL_TELEMETRY_SECRET) {
+    if (!authHeader || authHeader !== INTERNAL_TELEMETRY_SECRET) {
       return NextResponse.json({ error: 'Unauthorized internal telemetry call' }, { status: 401 });
     }
 
