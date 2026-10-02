@@ -155,11 +155,16 @@ All client SDK writes are strictly validated:
 
 ---
 
-## Email Notification System (`lib/resendAdmin.ts`)
+## Admin Notification System (`lib/resendAdmin.ts` & `lib/telegramAdmin.ts`)
 
-- Powered by [Resend](https://resend.com) with HTML email templates and admin alert styling.
-- **Boss Upgrade Alerts (`app/api/boss/send-request-email/route.ts`)**: Dispatches on new Boss request submission with plan name, BDT amount, user details, monospace TrxID, and link to `/admin/tier`.
-- **Recharge Alerts (`app/api/coins/send-recharge-email/route.ts`)**: Dispatches on coin recharge submission with user tier status (`👑 Boss Tier (+10% Bonus)` vs `Bro Tier`), base coins, and total coins.
+- **Dual-Channel Dispatch**: Admin alerts are fired concurrently via Resend Email, Telegram Bot API, and optional Uptime Kuma push monitor ping.
+- **Telegram Bot Integration (`lib/telegramAdmin.ts`)**:
+  - Direct delivery to Telegram via `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (supports optional `TELEGRAM_TOPIC_ID`).
+  - Sends formatted HTML alerts with emoji status, user identity, amount in BDT, coins/duration, payment method, monospace TrxID, sender WhatsApp number, and direct link to review in `/admin/tier` or `/admin/recharge/pending`.
+  - Supports optional `UPTIME_KUMA_PUSH_URL` (pings `status.shahoriar.bd` push monitor on every request).
+- **Email Notifications (`lib/resendAdmin.ts`)**:
+  - Powered by [Resend](https://resend.com) with HTML email templates and admin alert styling.
+- **Concurrent Non-Blocking Execution**: Both route handlers (`app/api/boss/send-request-email/route.ts` and `app/api/coins/send-recharge-email/route.ts`) execute email and Telegram dispatches via `Promise.allSettled`, ensuring neither provider's outage blocks the trader's request.
 
 ---
 

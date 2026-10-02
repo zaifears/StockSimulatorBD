@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SITE_URL } from '@/lib/siteUrl';
 import { sendAdminAlertEmail } from '@/lib/resendAdmin';
+import { sendTelegramRechargeAlert, pingUptimeKumaPush } from '@/lib/telegramAdmin';
 import { getAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { checkPersistentRateLimit } from '@/lib/utils/persistentRateLimit';
 
@@ -73,14 +74,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.RESEND_API_KEY) {
-      console.error('❌ RESEND_API_KEY not configured');
-      return NextResponse.json(
-        { success: false, error: 'Email service not configured' },
-        { status: 500 }
-      );
-    }
-
     const { emailData } = await request.json() as {
       emailData: EmailData;
     };
@@ -109,51 +102,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      requestId,
-      userName: rawUserName,
-      userEmail: rawUserEmail,
-      amount,
-      coins,
-      bonusCoins = 0,
-      totalCoins,
-      isBoss = false,
-      accountTier: rawAccountTier,
-      transactionId: rawTransactionId,
-      bkashNumber: rawBkashNumber,
-      senderPhone: rawSenderPhone,
-      whatsappNumber: rawWhatsappNumber,
-      paymentMethod: rawPaymentMethod,
-      paymentTab: rawPaymentTab,
-      bankName: rawBankName,
-      createdAt,
-    } = emailData;
+    // 🔒 4. Authoritative Data Derivation:
+    // Read financial & security fields directly from the verified Firestore requestDoc,
+    // preventing any client-side payload tampering of amount, coins, or TrxID.
+    const authoritativeAmount =
+      typeof requestDoc.amount === 'number' ? requestDoc.amount : (Number(emailData.amount) || 20);
+    const authoritativeCoins =
+      typeof requestDoc.coins === 'number' ? requestDoc.coins : (Number(emailData.coins) || 10000);
+    const authoritativeTrxId = String(requestDoc.transactionId || emailData.transactionId || '').trim();
+    const authoritativePhone = String(
+      requestDoc.senderPhone ||
+      requestDoc.whatsappNumber ||
+      emailData.senderPhone ||
+      emailData.whatsappNumber ||
+      ''
+    ).trim();
+    const authoritativeMethod = String(requestDoc.paymentMethod || emailData.paymentMethod || 'BanglaQR').trim();
+    const authoritativeTab = String(requestDoc.paymentTab || emailData.paymentTab || 'banglaqr').trim();
+    const authoritativeBank = requestDoc.bankName
+      ? String(requestDoc.bankName).trim()
+      : (emailData.bankName ? String(emailData.bankName).trim() : undefined);
+    const authoritativeCreatedAt = requestDoc.createdAt
+      ? (typeof requestDoc.createdAt.toDate === 'function'
+          ? requestDoc.createdAt.toDate().toISOString()
+          : new Date(requestDoc.createdAt).toISOString())
+      : new Date().toISOString();
 
-    // 🔒 4. HTML Sanitize inputs before injecting into email templates
-    const userName = escapeHtml(rawUserName || decodedToken.name || 'User');
-    const userEmail = escapeHtml(rawUserEmail || decodedToken.email || '');
-    const accountTier = escapeHtml(rawAccountTier || 'Bro');
-    const transactionId = escapeHtml(rawTransactionId);
-    const bkashNumber = escapeHtml(rawBkashNumber);
-    const senderPhone = escapeHtml(rawSenderPhone || rawWhatsappNumber || '');
-    const whatsappNumber = escapeHtml(rawWhatsappNumber || rawSenderPhone || '');
-    const paymentMethod = escapeHtml(rawPaymentMethod);
-    const paymentTab = escapeHtml(rawPaymentTab);
-    const bankName = escapeHtml(rawBankName);
+    // Check Boss tier directly from Firestore user doc for bonus calculation parity
+    const userSnap = await db.collection('users').doc(uid).get();
+    const userData = userSnap.data();
+    const isUserBoss =
+      userData?.accountTier === 'Boss' ||
+      (typeof userData?.bossUntil === 'number' && userData.bossUntil > Date.now());
+    const finalCoins = isUserBoss ? Math.round(authoritativeCoins * 1.1) : authoritativeCoins;
+    const bonusCoins = isUserBoss ? finalCoins - authoritativeCoins : 0;
 
-    const finalCoins = totalCoins || (coins + bonusCoins);
-    const tierLabel = isBoss || accountTier === 'Boss' ? '👑 Boss Tier (+10% Bonus)' : 'Bro Tier (Standard)';
+    // 🔒 5. HTML Sanitize inputs before injecting into email/telegram templates
+    const userName = escapeHtml(emailData.userName || userData?.displayName || decodedToken.name || 'User');
+    const userEmail = escapeHtml(emailData.userEmail || userData?.email || decodedToken.email || '');
+    const accountTier = isUserBoss ? 'Boss' : 'Bro';
+    const transactionId = escapeHtml(authoritativeTrxId);
+    const senderPhone = escapeHtml(authoritativePhone);
+    const whatsappNumber = escapeHtml(authoritativePhone);
+    const paymentMethod = escapeHtml(authoritativeMethod);
+    const paymentTab = escapeHtml(authoritativeTab);
+    const bankName = authoritativeBank ? escapeHtml(authoritativeBank) : undefined;
+    const amount = authoritativeAmount;
+    const coins = authoritativeCoins;
+    const createdAt = authoritativeCreatedAt;
+    const requestId = emailData.requestId;
 
-    const isBank = Boolean(
-      paymentMethod?.toLowerCase().includes('bank') ||
-      paymentMethod?.toLowerCase().includes('scb') ||
-      (paymentTab === 'other' && bkashNumber === '18246161201')
-    );
+    const isBoss = isUserBoss;
+    const tierLabel = isBoss ? '👑 Boss Tier (+10% Bonus)' : 'Bro Tier (Standard)';
 
     let destinationAccount = 'bKash Personal (01865333143)';
     if (paymentTab === 'banglaqr' || paymentMethod?.toLowerCase().includes('banglaqr')) {
       destinationAccount = 'BanglaQR Interoperable Code (StockSimulatorBD)';
-    } else if (isBank) {
+    } else if (paymentMethod?.toLowerCase().includes('bank') || paymentMethod?.toLowerCase().includes('scb') || (paymentTab === 'other' && emailData.bkashNumber === '18246161201')) {
       destinationAccount = 'Standard Chartered Bank PLC (A/C: 18246161201, Branch: Motijheel)';
     } else if (paymentTab === 'bkash_pay' || paymentMethod?.toLowerCase().includes('payment')) {
       destinationAccount = 'bKash Merchant / Make Payment (01581401895)';
@@ -161,7 +166,15 @@ export async function POST(request: NextRequest) {
       destinationAccount = 'Cellfin / Nagad / Rocket (01865333143)';
     }
 
-    const emailResponse = await sendAdminAlertEmail({
+    const bkashNumber = escapeHtml(emailData.bkashNumber || destinationAccount);
+
+    const isBank = Boolean(
+      paymentMethod?.toLowerCase().includes('bank') ||
+      paymentMethod?.toLowerCase().includes('scb') ||
+      (paymentTab === 'other' && bkashNumber === '18246161201')
+    );
+
+    const emailPromise = sendAdminAlertEmail({
       subject: `💰 [${paymentMethod || 'bKash Send Money'}] Recharge ৳${amount} (${finalCoins.toLocaleString()} coins) from ${userName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
@@ -265,20 +278,51 @@ export async function POST(request: NextRequest) {
       `,
     });
 
-    if (!emailResponse.success) {
-      console.error('❌ Email sending failed:', emailResponse.error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to send notification email' },
-        { status: 500 }
-      );
-    }
+    // 🚀 Dispatch Email, Telegram, and Uptime Kuma alerts concurrently
+    const [emailResult, telegramResult, kumaResult] = await Promise.allSettled([
+      emailPromise,
+      sendTelegramRechargeAlert({
+        userName,
+        userEmail,
+        amount,
+        coins,
+        bonusCoins,
+        totalCoins: finalCoins,
+        isBoss,
+        accountTier,
+        paymentMethod,
+        destinationAccount,
+        transactionId,
+        senderPhone: senderPhone || whatsappNumber,
+        bankName,
+      }),
+      pingUptimeKumaPush(`Coin Recharge: ৳${amount} (${finalCoins.toLocaleString()} coins) by ${userName}`),
+    ]);
 
-    console.log(`✅ Email sent for request ${requestId}`);
+    const emailSent =
+      emailResult.status === 'fulfilled' && emailResult.value.success;
+    const telegramSent =
+      telegramResult.status === 'fulfilled' && telegramResult.value.success;
+
+    if (!emailSent && emailResult.status === 'fulfilled' && emailResult.value.error) {
+      console.warn('⚠️ Admin recharge notification email failed:', emailResult.value.error);
+    }
+    if (
+      !telegramSent &&
+      telegramResult.status === 'fulfilled' &&
+      telegramResult.value.error &&
+      !telegramResult.value.skipped
+    ) {
+      console.warn('⚠️ Admin recharge Telegram alert failed:', telegramResult.value.error);
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Email notification sent successfully',
-      emailId: emailResponse.emailId,
+      message: 'Admin notification processed',
+      emailSent,
+      telegramSent,
+      emailId:
+        emailResult.status === 'fulfilled' ? emailResult.value.emailId : undefined,
     });
 
   } catch (error: any) {
