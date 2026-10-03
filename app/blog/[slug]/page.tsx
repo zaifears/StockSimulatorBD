@@ -58,6 +58,11 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
           'The Dhaka Stock Exchange (DSE) is open for trading Sunday through Thursday from 10:00 AM to 2:15 PM Bangladesh Standard Time (BST). DSE is closed on Fridays, Saturdays, and officially gazetted Bangladesh public holidays.',
       },
       {
+        question: 'What are the DSE opening and closing times today?',
+        answer:
+          'DSE continuous trading opens at 10:00 AM and closes at 2:15 PM BST. A post-closing session follows from 2:15 PM to 2:30 PM BST for executing trades at the day’s closing price.',
+      },
+      {
         question: 'Is DSE open tomorrow?',
         answer:
           'DSE is open tomorrow if tomorrow is Sunday, Monday, Tuesday, Wednesday, or Thursday and does not coincide with a declared public, national, or religious holiday in Bangladesh. Trading hours run from 10:00 AM to 2:15 PM BST.',
@@ -68,7 +73,7 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
           'Standard continuous trading hours on the DSE are 10:00 AM to 2:15 PM BST, followed by a post-closing session from 2:15 PM to 2:30 PM. Any temporary modifications during holy Ramadan or emergency directives are published on dsebd.org and reflected here.',
       },
       {
-        question: 'Is DSE closed today on Friday or Saturday?',
+        question: 'Is DSE closed today on Friday or Saturday? (শুক্রবার কি খোলা থাকে)',
         answer:
           'Yes. The Dhaka Stock Exchange observes a standard two-day weekend on Friday and Saturday. No share trading or transaction matching takes place on weekends.',
       },
@@ -90,6 +95,11 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
           'A BO (Beneficiary Owner) account is an electronic dematerialized account maintained with CDBL (Central Depository Bangladesh Limited) through a registered DSE stock broker, required to buy, hold, and sell shares in Bangladesh.',
       },
       {
+        question: 'What documents are required to open a BO account in Bangladesh? (বিও একাউন্ট খুলতে কি কি লাগে)',
+        answer:
+          'To open a BO account, you need: 1) Investor NID card copy, 2) Passport-size digital photo, 3) Bank account cheque leaf or bank statement displaying the routing number, 4) Nominee NID and photo, and 5) Payment of the CDBL annual fee (৳450).',
+      },
+      {
         question: 'How many BO accounts can I open in Bangladesh?',
         answer:
           'Under BSEC regulations, an individual investor in Bangladesh can open a maximum of two BO accounts under their own name: one single account and one joint account. You can also open accounts across different brokerage houses as long as they link to your unique NID in CDBL.',
@@ -98,6 +108,11 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
         question: 'Can I open a BO account online from home in Bangladesh?',
         answer:
           'Yes. Most top DSE brokerage houses (such as LankaBangla, BRAC EPL, IDLC, and City Brokerage) offer 100% paperless online BO account opening. You only need your NID, photo, bank cheque leaf, and nominee information.',
+      },
+      {
+        question: 'How to check CDBL BO account status online? (cdbl bo account check)',
+        answer:
+          'You can verify your BO account status and holdings online through CDBL’s official portal or your broker’s client portal by entering your unique 16-digit BO ID.',
       },
       {
         question: 'How much does it cost to open a BO account?',
@@ -120,6 +135,16 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
         question: 'What are the best brokerage houses in Bangladesh?',
         answer:
           'The top DSE brokerage houses include LankaBangla Securities, BRAC EPL Stock Brokerage, IDLC Securities, City Brokerage, and EBL Securities. The best broker depends on trading commissions (0.30%–0.50%), mobile app stability, online funding ease, and research support.',
+      },
+      {
+        question: 'What is LankaBangla Securities commission rate?',
+        answer:
+          'LankaBangla Securities typically charges between 0.35% and 0.45% per trade depending on order turnover and account tier, and provides paperless online BO account opening.',
+      },
+      {
+        question: 'What is City Brokerage commission rate?',
+        answer:
+          'City Brokerage Limited charges approximately 0.35% to 0.40% commission per trade and provides online trade execution via their City Brokerage Mobile app.',
       },
       {
         question: 'What are the top 5 best brokerage houses in Bangladesh?',

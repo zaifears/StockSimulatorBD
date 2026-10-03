@@ -167,7 +167,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         
         {/* Google Tag Manager Head Script */}
-        <Script id="gtm-script" strategy="beforeInteractive">
+        <Script id="gtm-script" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -176,13 +176,9 @@ export default function RootLayout({
         </Script>
 
         {/* Performance optimizations */}
-        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="//fonts.gstatic.com" />
         <link rel="dns-prefetch" href="//www.googletagmanager.com" />
         {RECAPTCHA_SITE_KEY && <link rel="dns-prefetch" href="//www.google.com" />}
         {RECAPTCHA_SITE_KEY && <link rel="dns-prefetch" href="//www.gstatic.com" />}
-        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
         {RECAPTCHA_SITE_KEY && <link rel="preconnect" href="https://www.google.com" crossOrigin="anonymous" />}
         {RECAPTCHA_SITE_KEY && <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="anonymous" />}
@@ -206,7 +202,7 @@ export default function RootLayout({
               "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
               "url": SITE_URL,
               "sameAs": [
-                "https://www.facebook.com/stocksimulatorbd"
+                "https://www.facebook.com/stocksimbd"
               ],
               "publisher": {
                 "@type": "Organization",

@@ -70,16 +70,32 @@ const faqs = [
     a: 'The Dhaka Stock Exchange (DSE) is open for trading Sunday through Thursday from 10:00 AM to 2:15 PM Bangladesh Standard Time (BST). The market is closed on Fridays, Saturdays, and official Bangladesh public holidays. StockSimulatorBD enforces these exact market hours in real time.',
   },
   {
+    q: 'What are the official DSE trading sessions and market schedule?',
+    a: 'The DSE trading schedule consists of: 1) Continuous Trading Session from 10:00 AM to 2:15 PM BST, and 2) Post-Closing Session from 2:15 PM to 2:30 PM BST (orders match at the day’s closing price only). Trading takes place Sunday through Thursday. DSE is closed on Fridays, Saturdays, and gazetted national holidays.',
+  },
+  {
     q: 'Is DSE open tomorrow?',
     a: 'The Dhaka Stock Exchange is open tomorrow if tomorrow falls on a regular trading day (Sunday through Thursday) and is not a gazetted national or religious holiday in Bangladesh. Trading hours run from 10:00 AM to 2:15 PM BST.',
   },
   {
     q: 'What is a BO account and how to open one in Bangladesh?',
-    a: 'A BO (Beneficiary Owner) account is an electronic share depository account maintained with CDBL (Central Depository Bangladesh Limited) through a registered DSE broker. You can open a BO account online from home using your NID, photo, bank cheque, and nominee details. A BO account is required to trade real shares on the DSE, but not to practice on StockSimulatorBD.',
+    a: 'A BO (Beneficiary Owner) account is an electronic share depository account maintained with CDBL (Central Depository Bangladesh Limited) through a registered DSE broker. You can open a BO account online from home using your NID, photo, bank cheque leaf, and nominee details. A BO account is required to trade real shares on the DSE, but not to practice on StockSimulatorBD.',
+  },
+  {
+    q: 'What documents are required to open a BO account online in Bangladesh? (বিও একাউন্ট খুলতে কি কি লাগে)',
+    a: 'To open a BO account online in Bangladesh, you need: 1) Your National ID (NID) card, 2) Passport-size digital photo, 3) Bank account cheque leaf or bank statement displaying the routing number, 4) Nominee NID and passport-size photo, and 5) Payment for the CDBL annual maintenance fee (৳450). Most top DSE brokers offer paperless submission.',
   },
   {
     q: 'How many BO accounts can I open in Bangladesh?',
     a: 'Under BSEC regulations, an individual investor in Bangladesh can open a maximum of two BO accounts under their own name: one single account and one joint account. You can also open accounts across different brokerage houses, provided they link to your unique NID in CDBL.',
+  },
+  {
+    q: 'What are the best brokerage houses and DSE brokers in Bangladesh?',
+    a: 'The top DSE brokerage houses in Bangladesh include LankaBangla Securities, BRAC EPL Stock Brokerage, IDLC Securities, City Brokerage, and EBL Securities. Broker commissions typically range between 0.30% and 0.50% per trade. StockSimulatorBD simulates the standard exchange average of 0.40% commission on every order.',
+  },
+  {
+    q: 'Is there a stock market game or demo trading app for Bangladesh?',
+    a: 'Yes. StockSimulatorBD is the dedicated stock market game and paper trading simulator built specifically for the Dhaka Stock Exchange. Registered users receive ৳10,000 in virtual trading currency to practice live DSE equity trades risk-free under authentic market hours, T+1 settlement, and 0.40% commission.',
   },
   {
     q: 'What is a circuit breaker and lower circuit in the share market?',
@@ -443,13 +459,18 @@ export default function HomePage() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 max-w-3xl" lang="bn">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">বাংলায় সংক্ষেপে</h3>
-            <p className="mt-3 text-base text-gray-600 dark:text-gray-400 leading-loose">
-              স্টকসিমুলেটরবিডি হলো ঢাকা স্টক এক্সচেঞ্জের (ডিএসই) জন্য একটি ফ্রি পেপার ট্রেডিং
-              সিমুলেটর। এখানে আসল বাজারের দামে, আসল সময়ে এবং আসল নিয়মে শেয়ার কেনাবেচা
-              অনুশীলন করা যায়, তবে টাকাটা ভার্চুয়াল। ভুল করলেও আসল কোনো ক্ষতি হয় না।
-              বাজার খোলা থাকে রবিবার থেকে বৃহস্পতিবার, সকাল ১০টা থেকে দুপুর ২টা ১৫ পর্যন্ত।
-            </p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">বাংলায় সংক্ষেপে: সাধারণ জিজ্ঞাসা ও উত্তর</h3>
+            <div className="mt-4 space-y-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p>
+                <strong>স্টকসিমুলেটরবিডি কী?</strong> এটি ঢাকা স্টক এক্সচেঞ্জের (DSE) একমাত্র ফ্রি পেপার ট্রেডিং প্ল্যাটফর্ম। এখানে আসল বাজারের লাইভ ডেটা, বাস্তব মার্কেট আওয়ার এবং T+1 সেটেলমেন্ট নিয়মে সম্পূর্ণ ঝুঁকিমুক্তভাবে শেয়ার ট্রেডিং শেখা যায়। নতুন একাউন্ট খুললেই পাচ্ছেন ৳১০,০০০ ভার্চুয়াল ব্যালেন্স।
+              </p>
+              <p>
+                <strong>ডিএসই মার্কেট টাইম / শেয়ার বাজার ট্রেডিং সময়সূচী:</strong> রবিবার থেকে বৃহস্পতিবার সকাল ১০:০০ টা থেকে দুপুর ২:১৫ পর্যন্ত সরাসরি লেনদেন চলে। এরপর দুপুর ২:১৫ থেকে ২:৩০ পর্যন্ত পোস্ট-ক্লোজিং সেশন। শুক্রবার ও শনিবার সাপ্তাহিক বন্ধ।
+              </p>
+              <p>
+                <strong>অনলাইনে বিও একাউন্ট খোলার নিয়ম:</strong> ঘরে বসে লংকাবাংলা, ব্র্যাক ইপিএল বা আইডিএলসির মতো শীর্ষ ব্রোকারেজ হাউসের অ্যাপে আপনার জাতীয় পরিচয়পত্র (NID), ছবি, ব্যাংক চেকের ছবি ও নমিনির তথ্য জমা দিয়ে অনলাইনে বিও (BO) একাউন্ট খুলতে পারবেন। সিডিবিএল বাৎসরিক ফি ৪৫০ টাকা। তবে স্টকসিমুলেটরবিডিতে প্র্যাকটিস করার জন্য কোনো বিও একাউন্ট বা টাকার প্রয়োজন নেই।
+              </p>
+            </div>
           </div>
         </div>
       </section>

@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: 'Coins - Your Trading Balance | Stock Simulator BD',
   description: 'View your Coin balance, recharge via bKash, and start trading on the DSE simulator. 20 BDT = 10,000 Coins.',
   keywords: ['Coins', 'trading balance', 'DSE simulator', 'virtual trading', 'Bangladesh stock exchange', 'bKash recharge'],
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
   openGraph: {
     title: 'Coins - Your Trading Balance | Stock Simulator BD',
     description: 'View your Coin balance, recharge via bKash, and trade DSE stocks. 20 BDT = 10,000 Coins.',
@@ -13,19 +21,19 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/og/og-image-coins.png',
+        url: absoluteUrl('/og/og-image-coins.png'),
         width: 1200,
         height: 630,
-        alt: 'Stock Simulator BD Coins - Your Trading Balance'
-      }
-    ]
+        alt: 'Stock Simulator BD Coins - Your Trading Balance',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Coins - Your Trading Balance | Stock Simulator BD',
     description: 'View your Coin balance and trade DSE stocks in the simulator',
-    images: ['/og/og-image-coins.png']
-  }
+    images: [absoluteUrl('/og/og-image-coins.png')],
+  },
 };
 
 export default function CoinsLayout({ children }: { children: ReactNode }) {

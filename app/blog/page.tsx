@@ -5,7 +5,7 @@ import { ArrowRight, ShieldCheck } from 'lucide-react';
 import Footer from '@/components/shared/Footer';
 import BlogExplorer, { type ExplorerPost } from '@/components/blog/BlogExplorer';
 import { getBlogPosts, type BlogPost } from '@/lib/contentful-blog';
-import { SITE_URL } from '@/lib/siteUrl';
+import { SITE_URL, absoluteUrl } from '@/lib/siteUrl';
 
 const baseUrl = SITE_URL;
 
@@ -25,12 +25,21 @@ export const metadata: Metadata = {
     description:
       'Learn about DSE trading, BO accounts, market rules, brokers, and paper trading through practical Bangladesh-focused guides.',
     siteName: 'StockSimulatorBD',
+    images: [
+      {
+        url: absoluteUrl('/og/og-image.png'),
+        width: 1200,
+        height: 630,
+        alt: 'Bangladesh Stock Market Blog | StockSimulatorBD',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Bangladesh Stock Market Blog | StockSimulatorBD',
     description:
       'Practical guides on DSE trading, BO accounts, market rules, brokers, and paper trading in Bangladesh.',
+    images: [absoluteUrl('/og/og-image.png')],
   },
   robots: {
     index: true,

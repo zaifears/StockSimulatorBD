@@ -45,6 +45,14 @@ StockSimulatorBD (${SITE_URL}) is an educational paper-trading platform designed
 ## Stock Research
 Individual stock pages are available at \`${absoluteUrl('/stocks')}/[symbol]\` (e.g. \`${absoluteUrl('/stocks/gp')}\`, \`${absoluteUrl('/stocks/batbc')}\`). Each page contains chart history, key ratios, trading volume, and company categorization.
 
+## Key Market Facts & Quick Reference
+- **DSE Trading Hours**: Continuous trading session runs Sunday through Thursday from 10:00 AM to 2:15 PM BST (UTC+6). Post-closing session runs from 2:15 PM to 2:30 PM BST. The exchange is closed on Friday, Saturday, and officially gazetted Bangladesh holidays.
+- **Is DSE Open Today/Tomorrow**: Open on regular weekdays (Sun–Thu) excluding public holidays. Enforced in real time by StockSimulatorBD.
+- **BO Account (Beneficiary Owner)**: An electronic share account with CDBL (Central Depository Bangladesh Limited) through a registered DSE broker. Annual fee is ৳450. Max 2 accounts per person (1 individual + 1 joint). Can be opened 100% online with NID, photo, bank cheque, and nominee details.
+- **Best Brokerage Houses in Bangladesh**: LankaBangla Securities, BRAC EPL Stock Brokerage, IDLC Securities, City Brokerage, and EBL Securities. Broker commissions range from 0.30% to 0.50% (simulated as 0.40% on StockSimulatorBD).
+- **Circuit Breakers & Lower Circuit**: Daily price movement limits set by BSEC. Lower circuit is the floor price below which shares cannot trade that day.
+- **Stock Market Game / Simulator**: StockSimulatorBD provides ৳10,000 in virtual trading capital to paper trade 300+ DSE equities risk-free under authentic market hours and T+1 settlement.
+
 ## Educational & Simulation Scope
 StockSimulatorBD is strictly an educational simulation platform. Virtual trades, portfolio returns, and coins do not constitute real-world securities transactions, legal financial advice, or broker custodial services.
 
