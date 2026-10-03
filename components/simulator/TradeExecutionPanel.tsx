@@ -103,7 +103,13 @@ export default function TradeExecutionPanel({
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Market Price</p>
           {isTraded ? (
-            <p className="font-mono font-bold text-2xl text-gray-900 dark:text-white tabular-nums">৳{fmt(currentPrice)}</p>
+            currentPrice > 0 ? (
+              <p className="font-mono font-bold text-2xl text-gray-900 dark:text-white tabular-nums">৳{fmt(currentPrice)}</p>
+            ) : lastClose && lastClose > 0 ? (
+              <p className="font-mono font-bold text-2xl text-gray-900 dark:text-white tabular-nums">৳{fmt(lastClose)}</p>
+            ) : (
+              <p className="font-mono font-bold text-2xl text-gray-400 dark:text-gray-500 tabular-nums">—</p>
+            )
           ) : (
             <div className="flex items-center gap-1.5">
               <p className="text-base font-bold text-gray-400 dark:text-gray-500">Not traded today</p>

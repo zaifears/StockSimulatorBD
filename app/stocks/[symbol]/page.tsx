@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { getAllDseStocks as fetchAllStocks, TOP_STATIC_DSE_SYMBOLS, type DseStock } from '@/lib/dseStocks';
+import { getAllDseStocks as fetchAllStocks, getStockLatestPrice, TOP_STATIC_DSE_SYMBOLS, type DseStock } from '@/lib/dseStocks';
 import { classifyInstrument, getInstrumentProfile, pickFitting } from '@/lib/dseInstrumentTypes';
 import StockChart from '@/components/StockChart';
 import StockTradingSection from '@/components/StockTradingSection';
@@ -174,7 +174,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
     notFound();
   }
 
-  const basePrice = (stock as unknown as { ltp?: number }).ltp || 0;
+  const basePrice = await getStockLatestPrice(stock.symbol);
   const profile = getInstrumentProfile(stock.symbol, stock.name);
   const related = getRelatedStocks(stock, stocks);
   const pageUrl = `${BASE_URL}${stockHref(stock.symbol)}`;

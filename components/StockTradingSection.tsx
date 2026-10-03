@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useSimulator } from '@/hooks/useSimulator';
 import { useAuth } from '@/contexts/AuthContext';
 import TradeExecutionPanel from '@/components/simulator/TradeExecutionPanel';
@@ -21,9 +22,36 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
     resetTransaction 
   } = useSimulator();
 
-  // Extract the live polled price if available, otherwise use the server-side fallback price
+  const [clientPrice, setClientPrice] = useState<number>(fallbackPrice);
+
+  useEffect(() => {
+    if (fallbackPrice > 0) {
+      setClientPrice(fallbackPrice);
+    }
+  }, [fallbackPrice]);
+
+  // Extract the live polled price if available, otherwise use client/fallback price
   const liveStock = marketInfo?.stocks?.find(s => s.symbol.toUpperCase() === symbol.toUpperCase());
-  const currentPrice = liveStock && liveStock.ltp > 0 ? liveStock.ltp : fallbackPrice;
+  const resolvedPrice = liveStock && liveStock.ltp > 0 ? liveStock.ltp : (clientPrice > 0 ? clientPrice : fallbackPrice);
+
+  // If price is still 0 (e.g. unauthenticated session on static ISR page), fetch latest day-end price from chart endpoint
+  useEffect(() => {
+    if (resolvedPrice > 0 || user) return;
+    let isMounted = true;
+    fetch(`/api/chart-data?symbol=${encodeURIComponent(symbol)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          const lastCandle = data[data.length - 1];
+          if (lastCandle && typeof lastCandle.close === 'number' && lastCandle.close > 0) {
+            setClientPrice(lastCandle.close);
+          }
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, [symbol, resolvedPrice, user]);
+
   // Before live data arrives, don't block on a signal we don't have yet;
   // once we have it, a stock with zero trades today (ltp 0) has no live
   // price and trading must be disabled — this mirrors the same gate used
@@ -40,7 +68,7 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
     <div className="space-y-4">
       <TradeExecutionPanel
         symbol={symbol}
-        currentPrice={currentPrice}
+        currentPrice={resolvedPrice}
         isTraded={isTraded}
         lastClose={lastClose}
         availableBalance={simulatorState.balance}

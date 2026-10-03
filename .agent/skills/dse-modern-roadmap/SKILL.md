@@ -1,13 +1,13 @@
 ---
 name: dse-modern-roadmap
-description: Comprehensive architecture, feature roadmap, and execution playbook for the DSE modern platform integration, Oracle VPS offloading, Level 2 order book, company fundamentals, and Impeccable UI upgrades for StockSimulatorBD.
+description: Comprehensive architecture, feature roadmap, execution playbook, and Impeccable UI standards for DSE market integration, Oracle VPS offloading, Level 2 order book, company fundamentals, and premium experience design for StockSimulatorBD.
 ---
 
 # DSE Modern Platform Architecture & Future Plan Playbook
 
 This skill encodes the master architecture and phased delivery playbook for integrating the Dhaka Stock Exchange's modernized data infrastructure (`https://new.dsebd.org`) into **StockSimulatorBD**.
 
-Whenever working on market sync, stock detail pages, the trading terminal, or external VPS tasks, activate and reference this skill to ensure consistency, zero database bloat, and peak frontend craft.
+Whenever working on market sync, stock detail pages, the trading terminal, external VPS tasks, or premium UI surfaces, activate and reference this skill to ensure consistency, zero database bloat, trustworthy product behavior, and genuinely Impeccable frontend craft.
 
 ---
 
@@ -122,11 +122,25 @@ Following `/using-agent-skills` principles (*build in thin vertical slices, pref
 
 ## 4. Impeccable UI Craft Standards
 
-Whenever authoring frontend components under this roadmap:
-1. **Monospace Tabular Numerals**: Always apply `font-mono tabular-nums` (`tnum`) to all prices, percentages, indices, and share counts to prevent layout jitter during live updates.
+Whenever authoring frontend components under this roadmap, the standard is not merely "good-looking" — it is product-truthful, premium, and resistant to reverse-engineering or visual bypasses.
+
+1. **Monospace Tabular Numerals**: Always apply `font-mono tabular-nums` (`tnum`) to all prices, percentages, indices, share counts, and volume metrics to prevent live-updating layout jitter and preserve a clean trading-terminal feel.
 2. **Subtle Color Palettes**:
    - Up / Gains: Emerald-600 (`text-emerald-600 dark:text-emerald-400 bg-emerald-500/10`)
    - Down / Losses: Rose-600 (`text-rose-600 dark:text-rose-400 bg-rose-500/10`)
    - Neutral / Unchanged: Amber-600 / Slate-500 (`text-amber-600 dark:text-amber-400 bg-amber-500/10`)
-3. **No DevTools CSS-Blur Leaks**: Pro/Boss gated sections (like Portfolio News Radar) must be stripped from the React tree on the server for Bro tier accounts, exactly as defined in `AGENTS.md`.
-4. **Responsive Integrity**: Test desktop (`1440px`), tablet (`768px`), and mobile (`375px`) viewports simultaneously. Collapsible trays and bottom sheets for mobile order books.
+3. **Truthful Gating & No Hidden DOM**: Pro/Boss gated sections (like Portfolio Insights or Portfolio News Radar) must never appear as hidden DOM or mocked placeholder state in the React tree for Bro tier accounts. If a user is not Boss, the feature must not exist in memory or the rendered output; follow the `AGENTS.md` guidance exactly.
+4. **No Demo-Bypass or Fake Unlock Flows**: Remove preview/demo unlock patterns and fake access states. Real unlocks happen through actual account-tier checks and server data, not toggles like `demoUnlocked` that produce visual illusions.
+5. **Mobile First, Terminal Grade**: Keep data dense but readable. Use collapsible order-book trays, sticky action bars, and concise hierarchy on mobile; on desktop, preserve spacious dashboards without empty filler.
+6. **Responsive Integrity**: Test desktop (`1440px`), tablet (`768px`), and mobile (`375px`) viewports simultaneously. Collapsible trays and bottom sheets for mobile order books.
+7. **Trustworthy Metrics**: All financial numbers should be derived from single-source-of-truth app data, not client-side guesswork. For market data, prefer server-derived or authoritative pricing; for account state, rely on Firestore auth state and tier synchronization rather than stale UI flags.
+8. **Premium Content Framing**: For student and new-investor audiences, keep educational clarity in the foreground. Explain risk, not just returns. Avoid over-optimistic language that undermines the paper-trading simulator's risk-free educational purpose.
+
+### Impeccable Implementation Checklist
+
+Before shipping a feature under this roadmap, confirm all of the following:
+- The feature respects Bro/Boss gating and is not merely visually hidden.
+- Data is fetched from authoritative sources or server routes, not fake client-side values.
+- Currency, account tier, market status, and commissions are consistent with the system truth in `AGENTS.md`.
+- Performance remains snappy under live updates, with tabular numerals and constrained re-renders.
+- The final UI reads like a trustworthy operating terminal for DSE trading, not a marketing mockup.

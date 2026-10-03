@@ -68,7 +68,7 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
     }
 
     if (!window.google?.accounts?.id) {
-      console.warn('[GoogleOneTap] Skipped: window.google.accounts.id is not available yet (GSI script not loaded).')
+      // GSI script is still loading via next/script; onLoad will invoke initializeOneTap
       return
     }
 
@@ -86,28 +86,25 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
       })
       initializedRef.current = true
 
-      // Best-effort floating "Sign in with Google" card. Under FedCM the
-      // failure/skip reason is sometimes opaque by design, but browsers
-      // often still report one — log it so a silent no-show is debuggable
-      // instead of a mystery.
+      // Best-effort floating "Sign in with Google" card.
+      // Under FedCM, browsers manage the prompt lifecycle natively.
       window.google.accounts.id.prompt((notification: any) => {
         try {
           if (notification?.isNotDisplayed?.()) {
-            console.warn(
-              `[GoogleOneTap] Not displayed. Reason: ${notification.getNotDisplayedReason?.()}. ` +
-              'Common causes: origin missing from Google Cloud Console → Credentials → ' +
-              'Authorized JavaScript origins; no active Google session in this browser; ' +
-              'FedCM disabled/blocked; or Google\'s cooldown after recent dismissals.'
-            )
-          } else if (notification?.isSkippedMoment?.()) {
-            console.warn(`[GoogleOneTap] Skipped. Reason: ${notification.getSkippedReason?.()}.`)
+            const reason = notification.getNotDisplayedReason?.()
+            if (reason) {
+              console.info(`[GoogleOneTap] Not displayed (${reason}).`)
+            }
           } else if (notification?.isDismissedMoment?.()) {
-            console.info(`[GoogleOneTap] Dismissed. Reason: ${notification.getDismissedReason?.()}.`)
-          } else {
-            console.info(`[GoogleOneTap] Prompt moment: ${notification?.getMomentType?.() || 'displayed'}.`)
+            const reason = notification.getDismissedReason?.()
+            if (reason) {
+              console.info(`[GoogleOneTap] Dismissed (${reason}).`)
+            }
+          } else if (notification?.isDisplayMoment?.()) {
+            console.info('[GoogleOneTap] Prompt displayed.')
           }
         } catch (notifyErr) {
-          console.warn('[GoogleOneTap] Could not read prompt moment notification:', notifyErr)
+          // Non-blocking notification read failure
         }
       })
     } catch (err) {
@@ -116,16 +113,30 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
   }, [clientId, disabled, handleCredentialResponse])
 
   useEffect(() => {
-    if (disabled) return
-    initializeOneTap()
+    // Suppress unhandled FedCM abort errors triggered when navigating away
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (
+        event?.reason?.name === 'AbortError' ||
+        (typeof event?.reason?.message === 'string' && event.reason.message.toLowerCase().includes('abort'))
+      ) {
+        event.preventDefault?.()
+      }
+    }
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    if (!disabled) {
+      initializeOneTap()
+    }
 
     return () => {
-      // Dismiss any visible prompt on unmount so it doesn't linger across
-      // route changes (e.g. user navigates away right as it appears).
-      try {
-        window.google?.accounts?.id?.cancel()
-      } catch {
-        // no-op
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+      // Dismiss any visible prompt on unmount so it doesn't linger across route changes
+      if (initializedRef.current && typeof window !== 'undefined' && window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.cancel()
+        } catch {
+          // ignore cleanup abort
+        }
       }
     }
   }, [disabled, initializeOneTap])

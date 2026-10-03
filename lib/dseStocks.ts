@@ -105,3 +105,60 @@ export async function getAllDseStocks(): Promise<DseStock[]> {
 export function getLocalDseStocks(): DseStock[] {
   return LOCAL_STOCKS;
 }
+
+interface LatestPriceInfo {
+  ltp: number;
+  ycp?: number;
+  close?: number;
+}
+
+let latestPricesPromise: Promise<Map<string, LatestPriceInfo>> | null = null;
+
+async function fetchLatestPrices(): Promise<Map<string, LatestPriceInfo>> {
+  const priceMap = new Map<string, LatestPriceInfo>();
+  try {
+    await import('./firebaseAdmin');
+    const { getFirestore } = await import('firebase-admin/firestore');
+
+    const snap = await getFirestore()
+      .doc(`artifacts/${APP_ID}/public/data/market_info/latest`)
+      .get();
+
+    if (!snap.exists) return priceMap;
+
+    const stocks = (snap.data()?.stocks ?? []) as Array<{
+      symbol?: string;
+      ltp?: number;
+      ycp?: number;
+      close?: number;
+    }>;
+
+    for (const s of stocks) {
+      if (s.symbol && typeof s.symbol === 'string') {
+        const sym = s.symbol.trim().toUpperCase();
+        priceMap.set(sym, {
+          ltp: typeof s.ltp === 'number' && s.ltp > 0 ? s.ltp : 0,
+          ycp: typeof s.ycp === 'number' && s.ycp > 0 ? s.ycp : undefined,
+          close: typeof s.close === 'number' && s.close > 0 ? s.close : undefined,
+        });
+      }
+    }
+  } catch {
+    // Missing credentials or build-time offline degradation
+  }
+  return priceMap;
+}
+
+/**
+ * Resolves the authoritative latest traded price or previous close for a given ticker.
+ * Memoized across ISR page renders during a build to prevent duplicate Firestore queries.
+ */
+export async function getStockLatestPrice(symbol: string): Promise<number> {
+  if (!latestPricesPromise) {
+    latestPricesPromise = fetchLatestPrices().catch(() => new Map());
+  }
+  const map = await latestPricesPromise;
+  const data = map.get(symbol.trim().toUpperCase());
+  if (!data) return 0;
+  return data.ltp > 0 ? data.ltp : (data.close && data.close > 0 ? data.close : (data.ycp || 0));
+}
