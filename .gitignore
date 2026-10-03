@@ -159,3 +159,8 @@ scripts/legacy-coins-backup-*.json
 .agents/
 .impeccable/
 scratch/
+skills-lock.json
+
+# Brag video outputs
+brag-output*/
+
