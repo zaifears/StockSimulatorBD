@@ -107,11 +107,14 @@ StockSimulatorBD was created to address the gap in Bangladesh's financial educat
   - Single-holding concentration risk alerts (warning at 40%+ portfolio allocation)
   - Lifetime commission audit
 
-## 4. DSE Trading Hours & Conventions (Asia/Dhaka)
-- Standard Market Hours: Sunday to Thursday (excluding announced Bangladesh government and exchange holidays)
-- Trading Session: 10:00 AM to 2:30 PM BST (UTC+6)
-- Settlement: T+1 for standard A, B, N, G categories; variations apply for Z category.
-- Circuit Breaker: Daily upper and lower price change limits enforced according to BSEC/DSE guidelines.
+## 4. DSE Trading Hours, Schedule & Key Rules (Asia/Dhaka BST)
+- Market Status & Schedule: Sunday to Thursday, 10:00 AM to 2:15 PM BST (UTC+6) continuous trading session, followed by 2:15 PM to 2:30 PM post-closing session.
+- Weekly Holidays: Friday and Saturday (exchange closed).
+- Market Holidays: Officially gazetted Bangladesh national and religious holidays.
+- Settlement: T+1 settlement cycle for standard equity categories (A, B, N, G). Shares bought on day T unlock for sale on day T+1.
+- Circuit Breaker: Daily upper and lower price change limits (bands) enforced by BSEC to curb extreme market volatility. Lower circuit is the minimum price a share can drop to in a session; upper circuit is the maximum price it can rise to.
+- BO Account (Beneficiary Owner): Central Depository Bangladesh Limited (CDBL) demat account required to trade real DSE shares. Max 2 accounts per investor under BSEC rules (1 single + 1 joint). Not required to paper trade on StockSimulatorBD.
+- Brokerage Commission: Standard DSE brokers charge 0.30%–0.50% (simulated as 0.40% on StockSimulatorBD).
 
 ## 5. Major Educational Guides & Articles
 ${blogSnippet || '- Educational guides are published in the /blog section.'}

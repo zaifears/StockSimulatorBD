@@ -40,6 +40,150 @@ interface FaqItem {
   answer: string;
 }
 
+interface SearchIntentOptimization {
+  title: string;
+  description: string;
+  faqs: FaqItem[];
+}
+
+const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
+  'dse-trading-hours-bangladesh': {
+    title: 'Is DSE Open Today? Trading Hours & Schedule (2026)',
+    description:
+      'Is the Dhaka Stock Exchange open today? Official DSE trading hours are Sunday to Thursday, 10:00 AM – 2:15 PM BST. Closed on Fridays, Saturdays & holidays.',
+    faqs: [
+      {
+        question: 'Is DSE open today?',
+        answer:
+          'The Dhaka Stock Exchange (DSE) is open for trading Sunday through Thursday from 10:00 AM to 2:15 PM Bangladesh Standard Time (BST). DSE is closed on Fridays, Saturdays, and officially gazetted Bangladesh public holidays.',
+      },
+      {
+        question: 'Is DSE open tomorrow?',
+        answer:
+          'DSE is open tomorrow if tomorrow is Sunday, Monday, Tuesday, Wednesday, or Thursday and does not coincide with a declared public, national, or religious holiday in Bangladesh. Trading hours run from 10:00 AM to 2:15 PM BST.',
+      },
+      {
+        question: 'Has DSE market time changed?',
+        answer:
+          'Standard continuous trading hours on the DSE are 10:00 AM to 2:15 PM BST, followed by a post-closing session from 2:15 PM to 2:30 PM. Any temporary modifications during holy Ramadan or emergency directives are published on dsebd.org and reflected here.',
+      },
+      {
+        question: 'Is DSE closed today on Friday or Saturday?',
+        answer:
+          'Yes. The Dhaka Stock Exchange observes a standard two-day weekend on Friday and Saturday. No share trading or transaction matching takes place on weekends.',
+      },
+      {
+        question: 'What time does the DSE market close?',
+        answer:
+          'Continuous trading on the DSE closes promptly at 2:15 PM BST. The post-closing session runs until 2:30 PM BST, allowing order execution at the day’s closing price only.',
+      },
+    ],
+  },
+  'how-to-open-bo-account-bangladesh': {
+    title: 'How to Open a BO Account in Bangladesh (2026 Online Guide)',
+    description:
+      'Step-by-step guide to opening a BO account in Bangladesh online or via DSE brokers. Required NID documents, CDBL fees (৳450), account limits & rules.',
+    faqs: [
+      {
+        question: 'What is a BO account in Bangladesh?',
+        answer:
+          'A BO (Beneficiary Owner) account is an electronic dematerialized account maintained with CDBL (Central Depository Bangladesh Limited) through a registered DSE stock broker, required to buy, hold, and sell shares in Bangladesh.',
+      },
+      {
+        question: 'How many BO accounts can I open in Bangladesh?',
+        answer:
+          'Under BSEC regulations, an individual investor in Bangladesh can open a maximum of two BO accounts under their own name: one single account and one joint account. You can also open accounts across different brokerage houses as long as they link to your unique NID in CDBL.',
+      },
+      {
+        question: 'Can I open a BO account online from home in Bangladesh?',
+        answer:
+          'Yes. Most top DSE brokerage houses (such as LankaBangla, BRAC EPL, IDLC, and City Brokerage) offer 100% paperless online BO account opening. You only need your NID, photo, bank cheque leaf, and nominee information.',
+      },
+      {
+        question: 'How much does it cost to open a BO account?',
+        answer:
+          'The CDBL annual maintenance fee for a BO account is ৳450. Broker opening charges vary from ৳0 to ৳500 depending on ongoing promotional campaigns.',
+      },
+      {
+        question: 'How to buy stocks in Bangladesh after opening a BO account?',
+        answer:
+          'Once your BO account is active, transfer funds to your broker account via BEFTN, NPSB, or bKash/Nagad. Then use your broker mobile app or DSE-Mobile to place buy orders during market hours (10:00 AM – 2:15 PM BST).',
+      },
+    ],
+  },
+  'top-dse-stock-brokers-2026': {
+    title: 'Best Brokerage Houses in Bangladesh: Top DSE Brokers (2026)',
+    description:
+      'Compare the best brokerage houses and DSE stock brokers in Bangladesh for 2026. Review trading commissions (0.3%–0.5%), BO account charges & online apps.',
+    faqs: [
+      {
+        question: 'What are the best brokerage houses in Bangladesh?',
+        answer:
+          'The top DSE brokerage houses include LankaBangla Securities, BRAC EPL Stock Brokerage, IDLC Securities, City Brokerage, and EBL Securities. The best broker depends on trading commissions (0.30%–0.50%), mobile app stability, online funding ease, and research support.',
+      },
+      {
+        question: 'What are the top 5 best brokerage houses in Bangladesh?',
+        answer:
+          'The 5 most reputable and widely used brokerage houses in Bangladesh are: 1) LankaBangla Securities, 2) BRAC EPL Stock Brokerage, 3) IDLC Securities, 4) City Brokerage Limited, and 5) Shanta Securities.',
+      },
+      {
+        question: 'What is a normal brokerage commission in Bangladesh?',
+        answer:
+          'DSE brokers typically charge between 0.30% and 0.50% commission per trade. StockSimulatorBD simulates the standard exchange average of 0.40% commission on every transaction.',
+      },
+      {
+        question: 'Can I trade DSE stocks online using a mobile app?',
+        answer:
+          'Yes. Most top brokerage houses provide online trading via their proprietary mobile apps or the DSE-Mobile trading platform, allowing order placement, portfolio tracking, and price monitoring from anywhere.',
+      },
+    ],
+  },
+  'dse-circuit-breaker': {
+    title: 'What Is Circuit Breaker in Stock Market? DSE Price Limits',
+    description:
+      'Learn what circuit breakers, upper circuits, and lower circuits mean on the Dhaka Stock Exchange (DSE). Understand daily price limit tiers and market rules.',
+    faqs: [
+      {
+        question: 'What is a circuit breaker in the stock market?',
+        answer:
+          'A circuit breaker is a regulatory price control mechanism set by the exchange (DSE) and BSEC that caps the maximum percentage a stock price can rise or drop within a single trading day to curb excessive panic and speculation.',
+      },
+      {
+        question: 'What is lower circuit in share market?',
+        answer:
+          'A lower circuit is the minimum allowable price for a security during a trading day. When a stock hits its lower circuit limit, no transactions can take place below that price. Sellers must wait for buyers willing to purchase at or above the lower circuit threshold.',
+      },
+      {
+        question: 'What is upper circuit in share market?',
+        answer:
+          'An upper circuit is the maximum allowable price a security can reach during a trading session. If a stock hits its upper circuit, orders cannot execute at any higher price for the remainder of that day.',
+      },
+      {
+        question: 'What are the circuit breaker percentages on the DSE?',
+        answer:
+          'DSE enforces daily price change limits based on stock price tiers (typically ranging from 10% for lower-priced shares to 3%–5% for high-priced securities, subject to BSEC circulars and category rules).',
+      },
+    ],
+  },
+  'candlestick-chart-ki-ebong-kivabe-porben': {
+    title: 'How to Read Candlestick Charts: ক্যান্ডেলস্টিক চার্ট গাইড',
+    description:
+      'Learn how to read candlestick charts for stock market trading & technical analysis. ক্যান্ডেলস্টিক চার্ট পড়ার নিয়ম, OHLC, body, wick এবং প্রাইস অ্যাকশন গাইড।',
+    faqs: [
+      {
+        question: 'How to read candlestick chart for day trading?',
+        answer:
+          'To read candlestick charts for day trading, analyze the four key price points: Open, High, Low, and Close (OHLC). A green/white candle indicates price closed higher than open (bullish), while a red/black candle indicates price closed lower (bearish). The real body shows the buying/selling consensus, and long wicks signal price rejections and key support/resistance levels.',
+      },
+      {
+        question: 'How to read charts in stock market for beginners?',
+        answer:
+          'Beginners should start with candlestick charts: identify the overall market trend (uptrend, downtrend, or sideways), observe volume during price movements, and watch for key reversal patterns like Hammers, Dojis, and Bullish/Bearish Engulfing candles.',
+      },
+    ],
+  },
+};
+
 interface SourceItem {
   name: string;
   url: string;
@@ -178,8 +322,9 @@ export async function generateMetadata({
     };
   }
 
-  const defaultTitle = post.seoTitle || post.title;
-  const defaultDescription = post.seoDescription || post.excerpt;
+  const intentOpt = SEARCH_INTENT_OPTIMIZATIONS[post.slug.toLowerCase()];
+  const defaultTitle = intentOpt?.title || post.seoTitle || post.title;
+  const defaultDescription = intentOpt?.description || post.seoDescription || post.excerpt;
   const articleUrl = `${baseUrl}/blog/${post.slug}`;
 
   // Check for safe Level 1 metadata override from the Change Management System
@@ -268,7 +413,13 @@ export default async function BlogArticlePage({
 
   const articleUrl = `${baseUrl}/blog/${post.slug}`;
   const readingTime = getReadingTime(post);
-  const faqItems = getFaqItems(post.faq);
+  const intentOpt = SEARCH_INTENT_OPTIMIZATIONS[post.slug.toLowerCase()];
+  const rawFaqItems = getFaqItems(post.faq);
+  const existingQuestions = new Set(rawFaqItems.map((f) => f.question.toLowerCase().trim()));
+  const extraFaqs = (intentOpt?.faqs || []).filter(
+    (f) => !existingQuestions.has(f.question.toLowerCase().trim())
+  );
+  const faqItems = [...extraFaqs, ...rawFaqItems];
   const sourceItems = getSourceItems(post.sources);
   const relatedPosts = getRelatedPosts(post, allPosts);
 
@@ -276,8 +427,8 @@ export default async function BlogArticlePage({
     '@context': 'https://schema.org',
     '@type': post.articleType === 'NewsArticle' ? 'NewsArticle' : 'BlogPosting',
     '@id': `${articleUrl}#article`,
-    headline: post.title,
-    description: post.seoDescription || post.excerpt,
+    headline: intentOpt?.title || post.title,
+    description: intentOpt?.description || post.seoDescription || post.excerpt,
     url: articleUrl,
     inLanguage: 'en',
     isAccessibleForFree: true,

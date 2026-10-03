@@ -28,14 +28,14 @@ export async function generateSeoOpportunities(): Promise<SeoOpportunity[]> {
 
   // 1. High Impression / Low CTR detection
   for (const q of queries) {
-    if (q.impressions >= 500 && q.ctr < siteMedianCtr && q.position <= 10) {
+    if (q.impressions >= 5 && q.ctr < siteMedianCtr && q.position <= 10) {
       opportunities.push({
         id: `opp-ctr-${encodeURIComponent(q.query.slice(0, 30))}`,
         type: 'high_impression_low_ctr',
         title: `Improve CTR for high-impression query "${q.query}"`,
         query: q.query,
         targetUrl: q.targetPages?.[0] || '/trade',
-        priority: q.impressions > 2000 ? 'high' : 'medium',
+        priority: q.impressions > 50 ? 'high' : 'medium',
         evidence: {
           impressions: q.impressions,
           clicks: q.clicks,
@@ -51,15 +51,15 @@ export async function generateSeoOpportunities(): Promise<SeoOpportunity[]> {
       });
     }
 
-    // 2. Striking Distance Positions (Position 4.0 - 15.0 with good impressions)
-    if (q.position >= 4.0 && q.position <= 15.0 && q.impressions >= 300) {
+    // 2. Striking Distance Positions (Position 3.0 - 15.0 with impressions)
+    if (q.position >= 3.0 && q.position <= 15.0 && q.impressions >= 2) {
       opportunities.push({
         id: `opp-strike-${encodeURIComponent(q.query.slice(0, 30))}`,
         type: 'striking_distance',
         title: `Push "${q.query}" into Top 3 Search Positions`,
         query: q.query,
         targetUrl: q.targetPages?.[0] || '/blog',
-        priority: q.impressions > 1500 ? 'high' : 'medium',
+        priority: q.impressions > 20 ? 'high' : 'medium',
         evidence: {
           impressions: q.impressions,
           position: Math.round(q.position * 10) / 10,

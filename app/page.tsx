@@ -10,9 +10,9 @@ import { ArrowRight, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 const SITE = SITE_URL;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const defaultTitle = 'StockSimulatorBD: DSE Trading Simulator';
+  const defaultTitle = 'StockSimulatorBD: DSE Trading Simulator & Market Practice';
   const defaultDescription =
-    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+1 rules and virtual money.';
+    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours (Sun–Thu 10:00–14:15), T+1 settlement and virtual money.';
 
   const resolved = await resolvePageMetadata('/', defaultTitle, defaultDescription);
 
@@ -66,6 +66,26 @@ const steps = [
 
 const faqs = [
   {
+    q: 'Is DSE open today? What are the trading hours and schedule?',
+    a: 'The Dhaka Stock Exchange (DSE) is open for trading Sunday through Thursday from 10:00 AM to 2:15 PM Bangladesh Standard Time (BST). The market is closed on Fridays, Saturdays, and official Bangladesh public holidays. StockSimulatorBD enforces these exact market hours in real time.',
+  },
+  {
+    q: 'Is DSE open tomorrow?',
+    a: 'The Dhaka Stock Exchange is open tomorrow if tomorrow falls on a regular trading day (Sunday through Thursday) and is not a gazetted national or religious holiday in Bangladesh. Trading hours run from 10:00 AM to 2:15 PM BST.',
+  },
+  {
+    q: 'What is a BO account and how to open one in Bangladesh?',
+    a: 'A BO (Beneficiary Owner) account is an electronic share depository account maintained with CDBL (Central Depository Bangladesh Limited) through a registered DSE broker. You can open a BO account online from home using your NID, photo, bank cheque, and nominee details. A BO account is required to trade real shares on the DSE, but not to practice on StockSimulatorBD.',
+  },
+  {
+    q: 'How many BO accounts can I open in Bangladesh?',
+    a: 'Under BSEC regulations, an individual investor in Bangladesh can open a maximum of two BO accounts under their own name: one single account and one joint account. You can also open accounts across different brokerage houses, provided they link to your unique NID in CDBL.',
+  },
+  {
+    q: 'What is a circuit breaker and lower circuit in the share market?',
+    a: 'A circuit breaker is a regulatory price control mechanism set by BSEC that caps the maximum percentage a share price can rise or fall in a single day. A lower circuit is the minimum price a share can drop to, and an upper circuit is the maximum it can rise. Orders outside these circuit breaker limits cannot execute.',
+  },
+  {
     q: 'Is StockSimulatorBD a trading simulator / fake trading simulator?',
     a: 'Yes. It is a trading simulator / fake trading simulator in the sense that every balance and trade is virtual, so you can practise without risking real money. It uses published DSE prices and realistic market hours, commission and T+1 settlement rules to make the practice useful.',
   },
@@ -105,16 +125,34 @@ const faqs = [
 
 const articles = [
   {
+    href: '/blog/dse-trading-hours-bangladesh',
+    tag: 'Market schedule',
+    title: 'Is DSE open today? Trading hours, schedule & holidays (2026)',
+    description: 'Current DSE trading sessions, opening and closing times, Friday–Saturday weekends, and Bangladesh public holidays.',
+  },
+  {
     href: '/blog/how-to-open-bo-account-bangladesh',
     tag: 'Beginner guide',
-    title: 'How to open a BO account in Bangladesh (2026)',
-    description: 'The exact steps, documents and fees needed to open a BO account and start trading on the DSE.',
+    title: 'How to open a BO account in Bangladesh (2026 online guide)',
+    description: 'The exact steps, required NID documents, CDBL fees, single vs joint account limits, and how to start trading.',
   },
   {
     href: '/blog/top-dse-stock-brokers-2026',
     tag: 'Broker comparison',
-    title: 'Compare the top DSE stock brokers in Bangladesh',
-    description: 'BO account fees, commission rates and platform quality across leading DSE brokers, side by side.',
+    title: 'Compare the best brokerage houses and DSE brokers in Bangladesh',
+    description: 'BO account opening fees, commission rates (0.30%–0.50%), mobile trading apps, and customer service compared.',
+  },
+  {
+    href: '/blog/dse-circuit-breaker',
+    tag: 'Trading rules',
+    title: 'What is a circuit breaker? DSE upper & lower price limits explained',
+    description: 'How upper and lower circuit breakers protect investors from extreme volatility and how daily price bands work on the DSE.',
+  },
+  {
+    href: '/blog/candlestick-chart-ki-ebong-kivabe-porben',
+    tag: 'Technical analysis',
+    title: 'How to read candlestick charts for stock market trading',
+    description: 'Learn to read candlestick charts: OHLC prices, real body, wick rejection, and understanding buyer-seller psychology.',
   },
 ];
 
@@ -240,8 +278,9 @@ export default function HomePage() {
             </h2>
             <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
               Nothing has been loosened to make practice comfortable. When the DSE is closed,
-              so is this. When settlement takes a day, you wait the day. Practice only counts
-              if the constraints are the real ones.
+              so is this. When settlement takes a day, you wait the day. Regular continuous trading
+              runs Sunday to Thursday from 10:00 to 14:15 BST. Practice only counts if the constraints
+              are the real ones.
             </p>
           </div>
 
