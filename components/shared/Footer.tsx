@@ -28,7 +28,7 @@ const PLATFORM_LINKS: InternalFooterLink[] = [
 const SOCIAL_LINKS: SocialFooterLink[] = [
   {
     label: 'Facebook',
-    href: 'https://www.facebook.com/stocksimbd',
+    href: 'https://facebook.com/stocksimulatorbd/',
     icon: <Facebook size={16} />,
     ariaLabel: 'Follow StockSimulatorBD on Facebook',
   },
@@ -54,7 +54,7 @@ const Footer = memo(function Footer() {
                 height={40}
                 className="transition-transform duration-300 hover:scale-105"
               />
-              <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <span className="font-coolvetica text-xl sm:text-2xl font-normal tracking-normal text-gray-900 dark:text-white">
                 StockSimulator<span className="text-blue-600 dark:text-blue-400">BD</span>
               </span>
             </Link>

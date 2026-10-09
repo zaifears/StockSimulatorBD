@@ -6,6 +6,7 @@ import { OpenRemark } from '@/components/OpenRemark';
 import { SITE_URL } from '@/lib/siteUrl';
 import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 import { ArrowRight, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { coolvetica } from '@/lib/fonts';
 
 const SITE = SITE_URL;
 
@@ -232,7 +233,7 @@ export default function HomePage() {
       />
 
       {/* HERO */}
-      <section className="relative w-full pt-36 pb-14 sm:pt-40 sm:pb-20 overflow-hidden border-b border-gray-200 dark:border-gray-800/60">
+      <section className="relative w-full pt-36 pb-14 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-18 overflow-hidden border-b border-gray-200 dark:border-gray-800/60">
         <div
           className="absolute inset-0 bg-[linear-gradient(to_right,#80808010_1px,transparent_1px),linear-gradient(to_bottom,#80808010_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(to_right,#3b82f612_1px,transparent_1px),linear-gradient(to_bottom,#3b82f612_1px,transparent_1px)]"
           aria-hidden="true"
@@ -242,13 +243,16 @@ export default function HomePage() {
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h1 className="animate-rise text-3xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight !leading-[1.15] sm:!leading-[1.1]">
-            Dhaka Stock Exchange Paper Trading Simulator.{' '}
-            <span className="block sm:inline text-blue-600 dark:text-blue-400">All the rules, zero risk.</span>
+          <h1 className={`${coolvetica.className} font-coolvetica animate-rise text-4xl xs:text-[2.65rem] sm:text-5xl lg:text-6xl font-normal text-gray-900 dark:text-white tracking-normal sm:tracking-tight leading-[1.08] sm:!leading-[1.08]`}>
+            <span className="sm:block">Dhaka Stock Exchange</span>{' '}
+            <span className="sm:block">Paper Trading Simulator.</span>{' '}
+            <span className="block text-blue-600 dark:text-blue-400 mt-1.5 sm:mt-0">
+              All the rules, zero risk.
+            </span>
           </h1>
 
           <p
-            className="animate-rise mt-5 sm:mt-6 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto"
+            className="animate-rise mt-4 sm:mt-6 text-xs sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto"
             style={{ animationDelay: '90ms' }}
           >
             StockSimulatorBD is a free paper trading simulator for the Dhaka Stock Exchange.

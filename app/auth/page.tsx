@@ -368,7 +368,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
       />
 
       {/* Main card - centered */}
-      <div className="w-full max-w-4xl relative z-10">
+      <div className="w-full max-w-4xl relative z-10 font-spaceGrotesk">
         <div className="bg-white dark:bg-[#1A1F26] rounded-3xl p-5 sm:p-8 shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800">
 
           {/* 2-column grid: 1 col on mobile, 65/35 split on lg screens */}
@@ -386,7 +386,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
               {/* Sign In View */}
               {!isSignUp && (
                 <>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h1 className="font-coolvetica text-2xl sm:text-4xl font-normal tracking-normal text-gray-900 dark:text-white mb-2">
                     Welcome <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">back!</span>
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Sign in to your account</p>
@@ -491,7 +491,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
               {/* Sign Up View */}
               {isSignUp && (
                 <>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h1 className="font-coolvetica text-2xl sm:text-4xl font-normal tracking-normal text-gray-900 dark:text-white mb-2">
                     Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">account</span>
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Join StockSimulatorBD today</p>
@@ -501,7 +501,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                       <div className="flex items-start gap-2">
                         <span className="text-lg">🎉</span>
                         <div className="flex-1 text-xs">
-                          <h4 className="font-semibold text-green-800 dark:text-green-300 mb-1">Welcome to StockSimulatorBD!</h4>
+                          <h4 className="font-spaceGrotesk font-semibold text-green-800 dark:text-green-300 mb-1">Welcome to StockSimulatorBD!</h4>
                           <div className="text-green-700 dark:text-green-400 space-y-1">
                             <p>📧 Check your email and click the verification link</p>
                             <p>🪙 After verification, your 10,000 welcome coins will be credited automatically</p>
@@ -836,8 +836,8 @@ class AuthErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-white dark:bg-[#090E17] transition-colors duration-300 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1F26] rounded-3xl p-8 shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800 max-w-md w-full text-center">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Something went wrong</h2>
+          <div className="bg-white dark:bg-[#1A1F26] rounded-3xl p-8 shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-800 max-w-md w-full text-center font-spaceGrotesk">
+            <h2 className="font-spaceGrotesk text-xl font-bold text-gray-900 dark:text-white mb-3">Something went wrong</h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
               The authentication page encountered an error. Please try refreshing.
             </p>

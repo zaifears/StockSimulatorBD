@@ -9,6 +9,8 @@
 /* Optimized CSS Variables */
 :root {
   --font-inter: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-space-grotesk: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-coolvetica: 'Coolvetica', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --primary-blue: #2563eb;
   --primary-purple: #7c3aed;
   --primary-emerald: #059669;
@@ -75,6 +77,22 @@ body {
   color: var(--text-primary);
   transition: background-color 0.2s ease, color 0.2s ease;
   line-height: 1.6;
+}
+
+/* Headings typography: Space Grotesk for H2 and other headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-space-grotesk), var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dedicated font utility classes */
+.font-coolvetica {
+  font-family: var(--font-coolvetica), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.font-spaceGrotesk,
+.font-space-grotesk,
+.font-heading {
+  font-family: var(--font-space-grotesk), var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* ============================================

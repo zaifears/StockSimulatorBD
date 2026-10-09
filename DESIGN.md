@@ -39,13 +39,13 @@ colors:
   hairline-dark: "#1F2937"
 typography:
   display:
-    fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "var(--font-coolvetica), 'Coolvetica', system-ui, sans-serif"
     fontSize: "clamp(2.25rem, 6vw, 4.5rem)"
-    fontWeight: 800
+    fontWeight: 400
     lineHeight: 1.1
-    letterSpacing: "-0.025em"
+    letterSpacing: "normal"
   headline:
-    fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontFamily: "var(--font-space-grotesk), 'Space Grotesk', system-ui, sans-serif"
     fontSize: "clamp(1.875rem, 4vw, 2.25rem)"
     fontWeight: 800
     lineHeight: 1.2

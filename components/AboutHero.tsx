@@ -3,10 +3,10 @@ import { Info } from 'lucide-react';
 
 const AboutHero = () => {
   return (
-    <section className="text-center flex flex-col items-center justify-center mb-8 md:mb-12">
+    <section className="text-center flex flex-col items-center justify-center mb-8 md:mb-10">
       
       {/* Category Pill */}
-      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wide mb-6">
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wide mb-6 md:mb-4">
         <Info className="w-3.5 h-3.5" />
         <span>Our Story</span>
       </div>

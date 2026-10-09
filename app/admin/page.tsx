@@ -432,8 +432,8 @@ export default function AdminDashboard() {
                 href="/admin/survey"
                 className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 sm:px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95"
               >
-                <Vote className="w-4 h-4 text-blue-500 shrink-0" />
-                <span className="truncate">Polls</span>
+                <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
+                <span className="truncate">Announcements & Polls</span>
                 {stats.surveyResponses > 0 && (
                   <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
                     {stats.surveyResponses}

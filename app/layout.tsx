@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { inter, spaceGrotesk, coolvetica } from '@/lib/fonts'
 import './globals.css'
 import NavbarWrapper from '../components/NavbarWrapper'
 import SiteMain from '../components/SiteMain'
@@ -20,14 +20,6 @@ const GTM_ID = 'GTM-PS2HRL37'
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim()
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim()
 const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID?.trim()
-
-// Optimize font loading with display swap
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  preload: true,
-  variable: '--font-inter'
-})
 
 export const viewport: Viewport = {
   themeColor: [
@@ -157,7 +149,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${coolvetica.variable}`}>
       <head>
         {/* LLM Discovery Links - Helps AI assistants understand this site */}
         <link rel="ai-content" href="/llms.txt" />
@@ -202,7 +194,7 @@ export default function RootLayout({
               "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
               "url": SITE_URL,
               "sameAs": [
-                "https://www.facebook.com/stocksimbd"
+                "https://facebook.com/stocksimulatorbd/"
               ],
               "publisher": {
                 "@type": "Organization",

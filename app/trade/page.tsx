@@ -19,7 +19,7 @@ import MarketOverviewBanner from '@/components/market/MarketOverviewBanner';
 import StockRow from '@/components/simulator/trade/StockRow';
 import StockSkeleton from '@/components/simulator/trade/StockSkeleton';
 import TradeModal from '@/components/simulator/trade/TradeModal';
-import TradeQuestionnaireModal from '@/components/simulator/trade/TradeQuestionnaireModal';
+import UserNoticeModal from '@/components/shared/UserNoticeModal';
 import { useAuth } from '@/contexts/AuthContext';
 import BossTradeBanner from '@/components/boss/BossTradeBanner';
 import MarketClosedModal from '@/components/market/MarketClosedModal';
@@ -40,9 +40,35 @@ export default function TradePage() {
   );
 }
 
-// Active community poll flag: disabled since enough responses were gathered for this poll.
-// Feature architecture stays fully wired so future polls can be activated by toggling this flag.
-const IS_TRADE_POLL_ACTIVE = false;
+// Active Notice / Announcement / Poll Configuration for /trade
+// Controls what modal is shown once per login until completed. Trade is NEVER blocked.
+const ACTIVE_NOTICE_CONFIG = {
+  isActive: true,
+  campaignId: 'community_announcement_v1',
+  variant: 'announcement' as const, // 'announcement' | 'image' | 'questionnaire'
+  title: {
+    en: 'Welcome to StockSimulatorBD!',
+    bn: 'StockSimulatorBD-তে স্বাগতম!',
+  },
+  description: {
+    en: 'Practice buying and selling Dhaka Stock Exchange (DSE) shares risk-free with virtual currency. Follow our official Facebook page for live market updates, DSE educational tips, and new features!',
+    bn: 'ভার্চুয়াল মানি দিয়ে ঝুঁকিমুক্তভাবে ঢাকা স্টক এক্সচেঞ্জ (DSE) শেয়ার বেচাকেনা চর্চা করুন। সর্বশেষ মার্কেট আপডেট, শিক্ষণীয় টিপস এবং নতুন ফিচারের জন্য আমাদের ফেসবুক পেজে যুক্ত থাকুন!',
+  },
+  badge: {
+    en: 'ANNOUNCEMENT',
+    bn: 'বিজ্ঞপ্তি',
+  },
+  ctaText: {
+    en: 'Visit Facebook Page →',
+    bn: 'ফেসবুক পেজ দেখুন →',
+  },
+  ctaLink: 'https://facebook.com/stocksimulatorbd/',
+  ctaOpenInNewTab: true,
+  dismissText: {
+    en: 'Continue to Trade',
+    bn: 'ট্রেডিং-এ যান',
+  },
+};
 
 function MarketScreen() {
   const { user, isBoss } = useAuth();
@@ -50,48 +76,6 @@ function MarketScreen() {
     marketInfo, simulatorState, loading: simulatorLoading, isMarketOpen,
     executeTrade, transactionStatus, transactionMessage, resetTransaction,
   } = useSharedSimulator();
-
-  const [showSurvey, setShowSurvey] = useState(false);
-
-  useEffect(() => {
-    if (!IS_TRADE_POLL_ACTIVE || !user?.uid) {
-      setShowSurvey(false);
-      return;
-    }
-
-    const cachedKey = `ssbd_trade_survey_done_${user.uid}`;
-    if (typeof window !== 'undefined' && localStorage.getItem(cachedKey) === 'true') {
-      setShowSurvey(false);
-      return;
-    }
-
-    const userRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(
-      userRef,
-      (snap) => {
-        if (snap.exists() && snap.data()?.tradeSurveyCompletedAt) {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(cachedKey, 'true');
-          }
-          setShowSurvey(false);
-        } else {
-          setShowSurvey(true);
-        }
-      },
-      (err) => {
-        console.warn('Trade survey status listener error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user?.uid]);
-
-  const handleSurveySuccess = useCallback(() => {
-    if (user?.uid && typeof window !== 'undefined') {
-      localStorage.setItem(`ssbd_trade_survey_done_${user.uid}`, 'true');
-    }
-    setShowSurvey(false);
-  }, [user?.uid]);
 
   const modal = useTradeModal(executeTrade);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -466,9 +450,7 @@ function MarketScreen() {
         source={marketClosedModalSource}
       />
 
-      {IS_TRADE_POLL_ACTIVE && showSurvey && (
-        <TradeQuestionnaireModal onSuccess={handleSurveySuccess} />
-      )}
+      <UserNoticeModal {...ACTIVE_NOTICE_CONFIG} />
     </div>
   );
 }

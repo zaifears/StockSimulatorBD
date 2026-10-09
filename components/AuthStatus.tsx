@@ -63,7 +63,7 @@ export default function AuthStatus() {
         <div className="flex items-center">
             <button
                 onClick={handleAuthAction}
-                className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 rounded-md hover:shadow-lg transition-all whitespace-nowrap flex items-center gap-2"
+                className="font-spaceGrotesk px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 rounded-md hover:shadow-lg transition-all whitespace-nowrap flex items-center gap-2"
             >
                 {user && userName ? (
                     <div className="flex items-center gap-2">

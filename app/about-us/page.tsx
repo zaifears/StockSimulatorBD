@@ -10,7 +10,7 @@ export default function AboutUsPage() {
     <main className="min-h-screen flex flex-col w-full bg-white dark:bg-[#090E17] transition-colors duration-300 pb-safe overflow-x-hidden text-gray-800 dark:text-gray-200">
 
       {/* ✅ HERO SECTION WITH HOMEPAGE GRID & GLOWS */}
-      <div className="relative flex-1 w-full pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden border-b border-gray-100 dark:border-gray-800/60">
+      <div className="relative flex-1 w-full pt-24 pb-16 md:pt-20 md:pb-20 overflow-hidden border-b border-gray-100 dark:border-gray-800/60">
         
         {/* Modern Grid Background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,#3b82f615_1px,transparent_1px),linear-gradient(to_bottom,#3b82f615_1px,transparent_1px)]"></div>

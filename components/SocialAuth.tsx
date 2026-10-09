@@ -92,7 +92,7 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 font-spaceGrotesk">
       <button
         type="button"
         onClick={handleGoogleSignIn}
