@@ -32,7 +32,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { doc, getFirestore, onSnapshot } from 'firebase/firestore';
+import { doc, getFirestore, getDoc } from 'firebase/firestore';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import { VALID_DOMAIN_CHOICES } from '@/lib/surveyConstants';
 
@@ -198,6 +198,55 @@ export default function UserNoticeModal({
     [campaignId, variant, lang, user]
   );
 
+  const dismissedRef = useRef(false);
+
+  // Check if this notice is permanently finished or dismissed for the current session
+  const isSuppressed = useCallback(() => {
+    if (typeof window === 'undefined') return true;
+    if (dismissedRef.current) return true;
+
+    // Check permanent completion across user-specific and generic keys
+    if (
+      localStorage.getItem(permanentKey) === 'true' ||
+      localStorage.getItem(`ssbd_notice_done_${campaignId}`) === 'true' ||
+      localStorage.getItem(`ssbd_notice_done_${campaignId}_guest`) === 'true'
+    ) {
+      return true;
+    }
+
+    // Check session dismissal across user-specific and generic keys
+    if (
+      sessionStorage.getItem(sessionKey) === 'true' ||
+      sessionStorage.getItem(`ssbd_notice_session_${campaignId}`) === 'true' ||
+      sessionStorage.getItem(`ssbd_notice_session_${campaignId}_guest`) === 'true'
+    ) {
+      return true;
+    }
+
+    return false;
+  }, [campaignId, permanentKey, sessionKey]);
+
+  // Mark permanently finished in localStorage (never again)
+  const markCompletedPermanently = useCallback(() => {
+    dismissedRef.current = true;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(permanentKey, 'true');
+      localStorage.setItem(`ssbd_notice_done_${campaignId}`, 'true');
+    }
+    setVisible(false);
+  }, [permanentKey, campaignId]);
+
+  // Mark dismissed for this session only (will show once next login if unfinished)
+  const markDismissedForSession = useCallback(() => {
+    dismissedRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(sessionKey, 'true');
+      sessionStorage.setItem(`ssbd_notice_session_${campaignId}`, 'true');
+      sessionStorage.setItem(`ssbd_notice_session_${campaignId}_guest`, 'true');
+    }
+    setVisible(false);
+  }, [sessionKey, campaignId]);
+
   // Copy link handler with clipboard copy, UI feedback, and telemetry tracking
   const handleCopyLink = useCallback(
     (url: string) => {
@@ -211,11 +260,9 @@ export default function UserNoticeModal({
         href: url,
       });
       // Mark permanently completed in localStorage once user interacted with copy action
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(permanentKey, 'true');
-      }
+      markCompletedPermanently();
     },
-    [sendTelemetry, permanentKey]
+    [sendTelemetry, markCompletedPermanently]
   );
 
   useEffect(() => {
@@ -229,29 +276,21 @@ export default function UserNoticeModal({
       return;
     }
 
-    if (!isActive) {
+    if (!isActive || isSuppressed()) {
       setVisible(false);
       return;
     }
 
-    // 1. Check if user already FINISHED what was needed -> Never again
-    if (typeof window !== 'undefined' && localStorage.getItem(permanentKey) === 'true') {
-      setVisible(false);
-      return;
-    }
+    let isCancelled = false;
 
-    // 2. Check if user dismissed it during this active login session -> Suppress for this session
-    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey) === 'true') {
-      setVisible(false);
-      return;
-    }
+    const checkEligibility = async () => {
+      // 1. If user is logged in, do a one-shot fetch of Firestore profile
+      if (uid) {
+        try {
+          const userRef = doc(getFirestore(), 'users', uid);
+          const snap = await getDoc(userRef);
+          if (isCancelled || isSuppressed()) return;
 
-    // 3. If user is logged in, check Firestore profile for permanent completion
-    if (uid) {
-      const userRef = doc(getFirestore(), 'users', uid);
-      const unsubscribe = onSnapshot(
-        userRef,
-        (snap) => {
           if (snap.exists()) {
             const data = snap.data();
             const finishedInProfile = Boolean(
@@ -260,31 +299,33 @@ export default function UserNoticeModal({
             );
 
             if (finishedInProfile) {
-              if (typeof window !== 'undefined') {
-                localStorage.setItem(permanentKey, 'true');
-              }
-              setVisible(false);
+              markCompletedPermanently();
               return;
             }
           }
+        } catch (err) {
+          console.warn('Notice user check error:', err);
+        }
+      }
 
-          // User hasn't finished: display after smooth 700ms entrance delay
-          const timer = setTimeout(() => setVisible(true), 700);
-          return () => clearTimeout(timer);
-        },
-        (err) => {
-          console.warn('Notice user listener error:', err);
+      if (isCancelled || isSuppressed()) return;
+
+      // 2. User hasn't finished: display after smooth 700ms entrance delay
+      const timer = setTimeout(() => {
+        if (!isCancelled && !isSuppressed()) {
           setVisible(true);
         }
-      );
+      }, 700);
 
-      return () => unsubscribe();
-    } else {
-      // Guest visitor: show once after 1000ms delay
-      const timer = setTimeout(() => setVisible(true), 1000);
       return () => clearTimeout(timer);
-    }
-  }, [isActive, campaignId, permanentKey, sessionKey, uid, controlledIsOpen]);
+    };
+
+    checkEligibility();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isActive, campaignId, uid, controlledIsOpen, isSuppressed, markCompletedPermanently]);
 
   // Log impression once when shown
   useEffect(() => {
@@ -294,25 +335,11 @@ export default function UserNoticeModal({
     }
   }, [visible, sendTelemetry]);
 
-  // Mark permanently finished in localStorage (never again)
-  const markCompletedPermanently = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(permanentKey, 'true');
-    }
-    setVisible(false);
-  }, [permanentKey]);
-
-  // Mark dismissed for this session only (will show once next login if unfinished)
-  const markDismissedForSession = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem(sessionKey, 'true');
-    }
-    setVisible(false);
-  }, [sessionKey]);
-
   // Handle cross (X) or "Continue to Trade" dismissal
   const handleCrossDismiss = useCallback(() => {
     if (!dismissible) return;
+    dismissedRef.current = true;
+    setVisible(false);
     markDismissedForSession();
     sendTelemetry('dismiss', {
       reason: 'cross_clicked_to_continue',
@@ -340,6 +367,7 @@ export default function UserNoticeModal({
   const handleCtaClick = useCallback(
     (label: string, href?: string) => {
       // User did what was needed: mark completed permanently so it NEVER appears again!
+      dismissedRef.current = true;
       markCompletedPermanently();
       sendTelemetry('click', {
         source: 'cta_button',
@@ -356,6 +384,7 @@ export default function UserNoticeModal({
   const handleContentClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = (e.target as HTMLElement).closest('a');
     if (!target) return;
+    dismissedRef.current = true;
     const href = target.getAttribute('href');
     const label = (target.textContent || '').trim().slice(0, 60);
 

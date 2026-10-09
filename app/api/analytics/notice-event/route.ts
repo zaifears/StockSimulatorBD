@@ -137,18 +137,6 @@ export async function POST(req: NextRequest) {
         },
         { merge: true }
       );
-    } else if (uid && action === 'dismiss') {
-      const userRef = db.collection('users').doc(uid);
-      batch.set(
-        userRef,
-        {
-          lastNoticeDismissal: {
-            campaignId,
-            at: nowIso,
-          },
-        },
-        { merge: true }
-      );
     }
 
     // 4. Detailed audit event
