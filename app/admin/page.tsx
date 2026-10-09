@@ -434,11 +434,6 @@ export default function AdminDashboard() {
               >
                 <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
                 <span className="truncate">Announcements & Polls</span>
-                {stats.surveyResponses > 0 && (
-                  <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
-                    {stats.surveyResponses}
-                  </span>
-                )}
               </Link>
 
               <Link

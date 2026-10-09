@@ -555,6 +555,43 @@ export default function AnnouncementsAndPollsManager() {
         {/* ======================================================== */}
         {activeTab === 'announcements' && (
           <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Active Campaign Info Banner */}
+            <div className="bg-white dark:bg-[#111622] border border-blue-200/80 dark:border-blue-900/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Campaign Active
+                    </span>
+                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-700">
+                      ID: facebook_page_launch_v1
+                    </span>
+                  </div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white">
+                    StockSimulatorBD Official Facebook Page Launch
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Modal broadcasted on /trade terminal once per user until completed or dismissed via Continue to Trade. Tracking CTA visits, link copy clicks, and cross dismissals.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+                <Link
+                  href="/trade"
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Preview on /trade</span>
+                </Link>
+              </div>
+            </div>
+
             {/* Search and Action Filter Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-3 sm:p-4 shadow-xs">
               
