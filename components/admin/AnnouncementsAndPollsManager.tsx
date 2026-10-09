@@ -31,6 +31,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
+import { useAuth } from '@/contexts/AuthContext';
 import { VALID_DOMAIN_CHOICES } from '@/lib/surveyConstants';
 
 interface NoticeInteraction {
@@ -82,6 +83,7 @@ interface PollStats {
 }
 
 export default function AnnouncementsAndPollsManager() {
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export default function AnnouncementsAndPollsManager() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchData = async (isManualRefresh = false) => {
+    if (!user) return;
     if (isManualRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
@@ -150,8 +153,10 @@ export default function AnnouncementsAndPollsManager() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!authLoading && user) {
+      fetchData();
+    }
+  }, [authLoading, user]);
 
   const copyToClipboard = (text: string, id: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -345,6 +350,31 @@ export default function AnnouncementsAndPollsManager() {
         return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700';
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen pt-28 pb-16 flex items-center justify-center bg-gray-50/60 dark:bg-[#090E17]">
+        <div className="flex items-center gap-2.5 text-xs sm:text-sm text-gray-500 font-bold bg-white dark:bg-[#111622] px-5 py-3 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+          <span>Authenticating admin session…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authLoading && !user) {
+    return (
+      <div className="min-h-screen pt-28 pb-16 flex items-center justify-center bg-gray-50/60 dark:bg-[#090E17] px-4">
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 text-center max-w-sm shadow-xs">
+          <p className="font-bold text-gray-900 dark:text-white mb-1.5 text-sm">Admin Access Required</p>
+          <p className="text-xs text-gray-500 mb-4 leading-relaxed">Please sign in with your verified administrator account to view the announcements & polls hub.</p>
+          <Link href="/auth" className="inline-block px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs active:scale-95 transition-all">
+            Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 sm:pt-28 pb-24 sm:pb-16 bg-gray-50/60 dark:bg-[#090E17] text-gray-900 dark:text-gray-100">
