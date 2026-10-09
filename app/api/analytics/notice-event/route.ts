@@ -122,12 +122,16 @@ export async function POST(req: NextRequest) {
       { merge: true }
     );
 
-    // 3. Mark user profile if user finished what was needed (click, copy, or submit)
-    if (uid && (action === 'click' || action === 'copy' || action === 'submit')) {
+    // 3. Mark user profile if user finished what was needed (click, copy, or submit) or dismissed
+    // Every trader after clicking continue/cross or interacting should NEVER see this announcement again.
+    if (uid && (action === 'click' || action === 'copy' || action === 'submit' || action === 'dismiss')) {
       const userRef = db.collection('users').doc(uid);
       batch.set(
         userRef,
         {
+          noticesSeen: {
+            [campaignId]: nowIso,
+          },
           [`noticesSeen.${campaignId}`]: nowIso,
           lastNoticeInteraction: {
             campaignId,

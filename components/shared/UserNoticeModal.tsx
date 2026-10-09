@@ -232,6 +232,7 @@ export default function UserNoticeModal({
     if (typeof window !== 'undefined') {
       localStorage.setItem(permanentKey, 'true');
       localStorage.setItem(`ssbd_notice_done_${campaignId}`, 'true');
+      localStorage.setItem(`ssbd_notice_done_${campaignId}_guest`, 'true');
     }
     setVisible(false);
   }, [permanentKey, campaignId]);
@@ -295,6 +296,7 @@ export default function UserNoticeModal({
             const data = snap.data();
             const finishedInProfile = Boolean(
               data?.noticesSeen?.[campaignId] ||
+              data?.[`noticesSeen.${campaignId}`] ||
               (campaignId === 'domain_survey' && data?.tradeSurveyCompletedAt)
             );
 
@@ -340,14 +342,15 @@ export default function UserNoticeModal({
     if (!dismissible) return;
     dismissedRef.current = true;
     setVisible(false);
-    markDismissedForSession();
+    // User clicked continue to trade / cross: mark permanently so they never see it again!
+    markCompletedPermanently();
     sendTelemetry('dismiss', {
       reason: 'cross_clicked_to_continue',
       variant,
       label: 'Cross (X) / Continue to Trade',
     });
     if (onDismiss) onDismiss();
-  }, [dismissible, markDismissedForSession, sendTelemetry, variant, onDismiss]);
+  }, [dismissible, markCompletedPermanently, sendTelemetry, variant, onDismiss]);
 
   // Handle Escape key to dismiss
   useEffect(() => {
