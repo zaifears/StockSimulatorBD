@@ -50,22 +50,19 @@ const ACTIVE_NOTICE_CONFIG = {
   badge: 'OFFICIAL ANNOUNCEMENT',
   title: 'StockSimulatorBD Official Facebook Page Launch',
   description: (
-    <div className="space-y-2.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-      <p className="font-medium text-gray-900 dark:text-gray-100">
+    <div className="space-y-2 text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">
         StockSimulatorBD was built on one principle: empowering people to learn the Dhaka Stock Exchange with 100% confidence, zero financial risk, and authentic market rules.
       </p>
       <p>
-        We are bringing that exact mission to our official Facebook page. We will share practical educational content about the stock market, DSE mechanics, and trading guides to help you make informed decisions.
-      </p>
-      <p className="text-gray-700 dark:text-gray-300">
-        Please like, follow, and share the page with your friends, colleagues, and anyone looking to learn the stock market!
+        Follow our official Facebook page for market guides, DSE tips, and share with fellow learners!
       </p>
     </div>
   ),
   copyBox: {
     url: 'https://facebook.com/stocksimulatorbd/',
     label: 'Share the official page with friends & fellow learners:',
-    educationalNote: 'We will share educational content about the stock market here — built on the exact principle StockSimulatorBD was founded upon: empowering people to learn risk-free.',
+    educationalNote: 'We will share educational content about the stock market here — exactly on the principle StockSimulatorBD was built upon.',
     buttonText: 'Copy Link',
   },
   ctaText: 'Visit Facebook Page →',

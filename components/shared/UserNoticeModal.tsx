@@ -521,14 +521,14 @@ export default function UserNoticeModal({
           </div>
         </div>
 
-        {/* Scrollable Content Body */}
+        {/* Content Body (Optimized for zero-scroll on mobile and desktop) */}
         <div
-          className="overflow-y-auto overscroll-contain p-4 sm:p-6 text-gray-900 dark:text-gray-100 flex-1"
+          className="px-4 py-3.5 sm:px-6 sm:py-4 text-gray-900 dark:text-gray-100 flex-1 overflow-visible"
           onClickCapture={handleContentClickCapture}
         >
           {/* CASE B: Image variant poster */}
           {imageUrl && (
-            <div className="relative w-full h-48 sm:h-60 rounded-xl overflow-hidden mb-4 border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shadow-xs">
+            <div className="relative w-full h-40 sm:h-52 rounded-xl overflow-hidden mb-3 border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shadow-xs">
               <Image
                 src={imageUrl}
                 alt={imageAlt}
@@ -540,14 +540,19 @@ export default function UserNoticeModal({
             </div>
           )}
 
-          {/* Title */}
-          <h2 id="user-notice-title" className="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white mb-2 leading-snug">
+          {/* Title - Styled with official Facebook brand blue #1877F2 when iconType is facebook */}
+          <h2
+            id="user-notice-title"
+            className={`text-base sm:text-xl font-extrabold tracking-tight mb-2 leading-snug ${
+              iconType === 'facebook' ? 'text-[#1877F2]' : 'text-gray-900 dark:text-white'
+            }`}
+          >
             {titleText}
           </h2>
 
-          {/* Description (handles plain text, localized object, or rich HTML links) */}
+          {/* Description */}
           {description && (
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4 prose dark:prose-invert max-w-none">
+            <div className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2 prose dark:prose-invert max-w-none">
               {typeof description === 'string'
                 ? description
                 : typeof description === 'object' && description !== null && 'en' in description
@@ -556,27 +561,27 @@ export default function UserNoticeModal({
             </div>
           )}
 
-          {/* Interactive Copy Box */}
+          {/* Interactive Copy Box (Zero-scroll tight layout) */}
           {copyBox && (
-            <div className="my-4 p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-[#141B26] border border-blue-200/80 dark:border-blue-900/60 shadow-xs">
+            <div className="mt-2.5 p-2.5 sm:p-3 rounded-xl bg-blue-50/70 dark:bg-[#141B26] border border-blue-200/80 dark:border-blue-900/60 shadow-xs">
               {copyBox.educationalNote && (
-                <p className="text-xs text-blue-950 dark:text-blue-200 font-medium mb-3 leading-relaxed">
+                <p className="text-[11px] sm:text-xs text-blue-950 dark:text-blue-200 font-medium mb-2 leading-snug">
                   {copyBox.educationalNote}
                 </p>
               )}
               {copyBox.label && (
-                <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
                   {copyBox.label}
                 </p>
               )}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-[#0D121B] border border-gray-200 dark:border-gray-800 rounded-xl text-xs font-mono text-blue-600 dark:text-blue-400 select-all truncate">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0 px-2.5 py-1.5 bg-white dark:bg-[#0D121B] border border-gray-200 dark:border-gray-800 rounded-lg text-xs font-mono text-blue-600 dark:text-blue-400 select-all truncate">
                   {copyBox.url}
                 </div>
                 <button
                   type="button"
                   onClick={() => handleCopyLink(copyBox.url)}
-                  className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95 shrink-0 ${
+                  className={`h-8 sm:h-9 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 shrink-0 ${
                     copied
                       ? 'bg-emerald-600 text-white shadow-emerald-500/20'
                       : 'bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-blue-500/20'
@@ -741,15 +746,15 @@ export default function UserNoticeModal({
           )}
         </div>
 
-        {/* Sticky Action Footer (for Announcement / Image / Alert) */}
+        {/* Sticky Action Footer (for Announcement / Image / Alert) - Compact side-by-side buttons */}
         {variant !== 'questionnaire' && (
-          <div className="p-4 sm:p-5 pt-3 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/80 dark:bg-[#161B24]/80 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+          <div className="px-4 py-2.5 sm:px-6 sm:py-3 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/80 dark:bg-[#161B24]/80 flex flex-row items-center justify-end gap-2">
             {/* Dismiss / Continue to Trade */}
             {dismissible && (
               <button
                 type="button"
                 onClick={handleCrossDismiss}
-                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 transition-colors text-center cursor-pointer active:scale-95"
+                className="flex-1 sm:flex-initial h-9 sm:h-10 px-3 rounded-xl text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 transition-colors text-center cursor-pointer active:scale-95"
               >
                 {dismissBtnText}
               </button>
@@ -763,32 +768,32 @@ export default function UserNoticeModal({
                   target={ctaOpenInNewTab ? '_blank' : undefined}
                   rel={ctaOpenInNewTab ? 'noopener noreferrer' : undefined}
                   onClick={() => handleCtaClick(ctaBtnText, ctaLink)}
-                  className={`w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
+                  className={`flex-1 sm:flex-initial h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
                     iconType === 'facebook'
-                      ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-md shadow-[#1877F2]/25'
-                      : 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20'
+                      ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-xs'
+                      : 'bg-blue-600 hover:bg-blue-700 shadow-xs'
                   }`}
                 >
                   {iconType === 'facebook' && (
-                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                     </svg>
                   )}
                   <span>{ctaBtnText}</span>
-                  {ctaOpenInNewTab ? <ExternalLink className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                  {ctaOpenInNewTab ? <ExternalLink className="w-3 h-3" /> : <ArrowRight className="w-3 h-3" />}
                 </Link>
               ) : (
                 <button
                   type="button"
                   onClick={() => handleCtaClick(ctaBtnText)}
-                  className={`w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
+                  className={`flex-1 sm:flex-initial h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
                     iconType === 'facebook'
-                      ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-md shadow-[#1877F2]/25'
-                      : 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20'
+                      ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-xs'
+                      : 'bg-blue-600 hover:bg-blue-700 shadow-xs'
                   }`}
                 >
                   <span>{ctaBtnText}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               )
             )}
