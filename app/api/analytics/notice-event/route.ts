@@ -22,7 +22,7 @@ import '@/lib/firebaseAdmin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VALID_ACTIONS = new Set(['impression', 'click', 'dismiss', 'submit']);
+const VALID_ACTIONS = new Set(['impression', 'click', 'dismiss', 'submit', 'copy']);
 const RATE_LIMIT_CONFIG = { maxRequests: 120, windowMs: 60_000 };
 
 interface AuthUserInfo {
@@ -71,12 +71,12 @@ export async function POST(req: NextRequest) {
     const rawAction = typeof body.action === 'string' ? body.action.trim().toLowerCase() : '';
     if (!VALID_ACTIONS.has(rawAction)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid notice action. Must be impression, click, dismiss, or submit.' },
+        { success: false, error: 'Invalid notice action. Must be impression, click, copy, dismiss, or submit.' },
         { status: 400 }
       );
     }
 
-    const action = rawAction as 'impression' | 'click' | 'dismiss' | 'submit';
+    const action = rawAction as 'impression' | 'click' | 'dismiss' | 'submit' | 'copy';
     const metadata = typeof body.metadata === 'object' && body.metadata !== null ? body.metadata : {};
     const authUser = await verifyOptionalUser(req);
     const uid = authUser?.uid || null;
@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
         campaignId,
         totalImpressions: FieldValue.increment(action === 'impression' ? 1 : 0),
         totalClicks: FieldValue.increment(action === 'click' ? 1 : 0),
+        totalCopies: FieldValue.increment(action === 'copy' ? 1 : 0),
         totalDismissals: FieldValue.increment(action === 'dismiss' ? 1 : 0),
         totalSubmissions: FieldValue.increment(action === 'submit' ? 1 : 0),
         lastAction: action,
@@ -113,6 +114,7 @@ export async function POST(req: NextRequest) {
         date: dateKey,
         impressions: FieldValue.increment(action === 'impression' ? 1 : 0),
         clicks: FieldValue.increment(action === 'click' ? 1 : 0),
+        copies: FieldValue.increment(action === 'copy' ? 1 : 0),
         dismissals: FieldValue.increment(action === 'dismiss' ? 1 : 0),
         submissions: FieldValue.increment(action === 'submit' ? 1 : 0),
         lastUpdated: FieldValue.serverTimestamp(),
@@ -120,8 +122,8 @@ export async function POST(req: NextRequest) {
       { merge: true }
     );
 
-    // 3. Mark user profile if user interacted (clicked, dismissed, or submitted)
-    if (uid && action !== 'impression') {
+    // 3. Mark user profile if user finished what was needed (click, copy, or submit)
+    if (uid && (action === 'click' || action === 'copy' || action === 'submit')) {
       const userRef = db.collection('users').doc(uid);
       batch.set(
         userRef,
@@ -130,6 +132,18 @@ export async function POST(req: NextRequest) {
           lastNoticeInteraction: {
             campaignId,
             action,
+            at: nowIso,
+          },
+        },
+        { merge: true }
+      );
+    } else if (uid && action === 'dismiss') {
+      const userRef = db.collection('users').doc(uid);
+      batch.set(
+        userRef,
+        {
+          lastNoticeDismissal: {
+            campaignId,
             at: nowIso,
           },
         },

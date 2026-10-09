@@ -44,30 +44,34 @@ export default function TradePage() {
 // Controls what modal is shown once per login until completed. Trade is NEVER blocked.
 const ACTIVE_NOTICE_CONFIG = {
   isActive: true,
-  campaignId: 'community_announcement_v1',
-  variant: 'announcement' as const, // 'announcement' | 'image' | 'questionnaire'
-  title: {
-    en: 'Welcome to StockSimulatorBD!',
-    bn: 'StockSimulatorBD-তে স্বাগতম!',
+  campaignId: 'facebook_page_launch_v1',
+  variant: 'announcement' as const,
+  iconType: 'facebook' as const,
+  badge: 'OFFICIAL ANNOUNCEMENT',
+  title: 'StockSimulatorBD Official Facebook Page Launch',
+  description: (
+    <div className="space-y-2.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+      <p className="font-medium text-gray-900 dark:text-gray-100">
+        StockSimulatorBD was built on one principle: empowering people to learn the Dhaka Stock Exchange with 100% confidence, zero financial risk, and authentic market rules.
+      </p>
+      <p>
+        We are bringing that exact mission to our official Facebook page. We will share practical educational content about the stock market, DSE mechanics, and trading guides to help you make informed decisions.
+      </p>
+      <p className="text-gray-700 dark:text-gray-300">
+        Please like, follow, and share the page with your friends, colleagues, and anyone looking to learn the stock market!
+      </p>
+    </div>
+  ),
+  copyBox: {
+    url: 'https://facebook.com/stocksimulatorbd/',
+    label: 'Share the official page with friends & fellow learners:',
+    educationalNote: 'We will share educational content about the stock market here — built on the exact principle StockSimulatorBD was founded upon: empowering people to learn risk-free.',
+    buttonText: 'Copy Link',
   },
-  description: {
-    en: 'Practice buying and selling Dhaka Stock Exchange (DSE) shares risk-free with virtual currency. Follow our official Facebook page for live market updates, DSE educational tips, and new features!',
-    bn: 'ভার্চুয়াল মানি দিয়ে ঝুঁকিমুক্তভাবে ঢাকা স্টক এক্সচেঞ্জ (DSE) শেয়ার বেচাকেনা চর্চা করুন। সর্বশেষ মার্কেট আপডেট, শিক্ষণীয় টিপস এবং নতুন ফিচারের জন্য আমাদের ফেসবুক পেজে যুক্ত থাকুন!',
-  },
-  badge: {
-    en: 'ANNOUNCEMENT',
-    bn: 'বিজ্ঞপ্তি',
-  },
-  ctaText: {
-    en: 'Visit Facebook Page →',
-    bn: 'ফেসবুক পেজ দেখুন →',
-  },
+  ctaText: 'Visit Facebook Page →',
   ctaLink: 'https://facebook.com/stocksimulatorbd/',
   ctaOpenInNewTab: true,
-  dismissText: {
-    en: 'Continue to Trade',
-    bn: 'ট্রেডিং-এ যান',
-  },
+  dismissText: 'Continue to Trade',
 };
 
 function MarketScreen() {

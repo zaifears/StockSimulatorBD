@@ -28,6 +28,8 @@ import {
   ExternalLink,
   Loader2,
   Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getFirestore, onSnapshot } from 'firebase/firestore';
@@ -61,6 +63,13 @@ export interface QuestionnaireConfig {
   defaultLang?: 'en' | 'bn';
 }
 
+export interface CopyBoxConfig {
+  url: string;
+  label?: string;
+  educationalNote?: string;
+  buttonText?: string;
+}
+
 export interface UserNoticeModalProps {
   /** Unique campaign ID used to track once-per-user delivery */
   campaignId: string;
@@ -85,6 +94,12 @@ export interface UserNoticeModalProps {
   /** Visual accent for alert variant */
   alertType?: NoticeAlertType;
 
+  /** Brand icon override (e.g. 'facebook' for official Facebook branding) */
+  iconType?: 'default' | 'facebook';
+
+  /** Interactive link copy box with educational note */
+  copyBox?: CopyBoxConfig;
+
   /** Primary Call-to-Action button text (e.g. "Okay", "Upgrade", "Learn More") */
   ctaText?: string | { en: string; bn: string };
   /** Primary Call-to-Action target link */
@@ -94,7 +109,7 @@ export interface UserNoticeModalProps {
   /** Optional callback fired when CTA is clicked */
   onCtaClick?: () => void;
 
-  /** Secondary dismiss button label (defaults to 'Continue to Trade' / 'ট্রেডিং-এ যান') */
+  /** Secondary dismiss button label (defaults to 'Continue to Trade') */
   dismissText?: string | { en: string; bn: string };
 
   /** Configuration for questionnaire variant */
@@ -119,6 +134,8 @@ export default function UserNoticeModal({
   imageUrl,
   imageAlt = 'Notice banner',
   alertType = 'info',
+  iconType = 'default',
+  copyBox,
   ctaText,
   ctaLink,
   ctaOpenInNewTab = false,
@@ -134,7 +151,8 @@ export default function UserNoticeModal({
 
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [lang, setLang] = useState<'en' | 'bn'>(questionnaire?.defaultLang || 'bn');
+  const [lang, setLang] = useState<'en' | 'bn'>(questionnaire?.defaultLang || 'en');
+  const [copied, setCopied] = useState(false);
 
   // Questionnaire state
   const [rating, setRating] = useState<number | null>(null);
@@ -153,7 +171,7 @@ export default function UserNoticeModal({
 
   // Helper to send telemetry beacons to /api/analytics/notice-event
   const sendTelemetry = useCallback(
-    async (action: 'impression' | 'click' | 'dismiss' | 'submit', metadata?: Record<string, any>) => {
+    async (action: 'impression' | 'click' | 'dismiss' | 'submit' | 'copy', metadata?: Record<string, any>) => {
       try {
         const idToken = user ? await user.getIdToken().catch(() => null) : null;
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -178,6 +196,26 @@ export default function UserNoticeModal({
       }
     },
     [campaignId, variant, lang, user]
+  );
+
+  // Copy link handler with clipboard copy, UI feedback, and telemetry tracking
+  const handleCopyLink = useCallback(
+    (url: string) => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(url).catch(() => {});
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2200);
+      }
+      sendTelemetry('copy', {
+        label: 'Copy Facebook Page Link',
+        href: url,
+      });
+      // Mark permanently completed in localStorage once user interacted with copy action
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(permanentKey, 'true');
+      }
+    },
+    [sendTelemetry, permanentKey]
   );
 
   useEffect(() => {
@@ -433,55 +471,41 @@ export default function UserNoticeModal({
       }}
     >
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-[#11161F] border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-in fade-in zoom-in-95 duration-200 select-text"
+        className="relative w-full max-w-sm sm:max-w-xl md:max-w-2xl bg-white dark:bg-[#11161F] border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] sm:max-h-[86vh] animate-in fade-in zoom-in-95 duration-200 select-text"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Top Header Bar */}
         <div className="flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-[#11161F]/95 backdrop-blur-xs z-10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              {variant === 'questionnaire' ? (
-                <HelpCircle className="w-4 h-4" />
-              ) : variant === 'alert' ? (
-                getAlertIcon()
-              ) : (
-                <Sparkles className="w-4 h-4 text-amber-500" />
-              )}
-            </div>
+            {iconType === 'facebook' ? (
+              <div className="w-8 h-8 rounded-xl bg-[#1877F2] text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                {variant === 'questionnaire' ? (
+                  <HelpCircle className="w-4 h-4" />
+                ) : variant === 'alert' ? (
+                  getAlertIcon()
+                ) : (
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                )}
+              </div>
+            )}
             {badgeText && (
-              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+              <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                iconType === 'facebook'
+                  ? 'bg-blue-100 dark:bg-blue-900/40 text-[#1877F2] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60'
+                  : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+              }`}>
                 {badgeText}
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Language Switcher for bilingual notices */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700/60">
-              <button
-                type="button"
-                onClick={() => setLang('bn')}
-                className={`px-2 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                  lang === 'bn'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
-              >
-                বাংলা
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('en')}
-                className={`px-2 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
-                  lang === 'en'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
-              >
-                EN
-              </button>
-            </div>
-
             {/* Accessible Cross (X) Close button: minimum 40px touch area */}
             {dismissible && (
               <button
@@ -532,6 +556,48 @@ export default function UserNoticeModal({
             </div>
           )}
 
+          {/* Interactive Copy Box */}
+          {copyBox && (
+            <div className="my-4 p-3.5 sm:p-4 rounded-2xl bg-blue-50/70 dark:bg-[#141B26] border border-blue-200/80 dark:border-blue-900/60 shadow-xs">
+              {copyBox.educationalNote && (
+                <p className="text-xs text-blue-950 dark:text-blue-200 font-medium mb-3 leading-relaxed">
+                  {copyBox.educationalNote}
+                </p>
+              )}
+              {copyBox.label && (
+                <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  {copyBox.label}
+                </p>
+              )}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-[#0D121B] border border-gray-200 dark:border-gray-800 rounded-xl text-xs font-mono text-blue-600 dark:text-blue-400 select-all truncate">
+                  {copyBox.url}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink(copyBox.url)}
+                  className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-95 shrink-0 ${
+                    copied
+                      ? 'bg-emerald-600 text-white shadow-emerald-500/20'
+                      : 'bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-blue-500/20'
+                  }`}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copyBox.buttonText || 'Copy Link'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Error banner */}
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
@@ -552,17 +618,15 @@ export default function UserNoticeModal({
                       ? lang === 'bn'
                         ? questionnaire.ratingQuestion.titleBn
                         : questionnaire.ratingQuestion.titleEn
-                      : lang === 'bn'
-                      ? 'আপনার ট্রেডিং অভিজ্ঞতা কেমন?'
                       : 'Your trading experience'}
                   </label>
                   <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
-                    {activeRating > 0 ? `${activeRating}/10` : lang === 'bn' ? 'বাছাই করুন' : 'Rate 1–10'}
+                    {activeRating > 0 ? `${activeRating}/10` : 'Rate 1–10'}
                   </span>
                 </div>
 
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {lang === 'bn' ? getRatingLabel(activeRating).bn : getRatingLabel(activeRating).en}
+                  {getRatingLabel(activeRating).en}
                 </p>
 
                 {/* 10 Stars Container */}
@@ -605,8 +669,6 @@ export default function UserNoticeModal({
                       ? lang === 'bn'
                         ? questionnaire.choiceQuestion.titleBn
                         : questionnaire.choiceQuestion.titleEn
-                      : lang === 'bn'
-                      ? 'ডোমেইনের মেয়াদ ও সার্ভিসের ধারাবাহিকতা বিষয়ে আপনার মতামত:'
                       : 'Community input on project domain & continuity:'}
                   </span>
                 </label>
@@ -638,10 +700,7 @@ export default function UserNoticeModal({
                         <div className="flex-1 leading-relaxed">
                           <div>
                             <span className="font-bold text-gray-900 dark:text-white mr-1.5">{idx + 1}.</span>
-                            {lang === 'bn' ? option.labelBn : option.labelEn}
-                          </div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 font-normal">
-                            {lang === 'bn' ? option.labelEn : option.labelBn}
+                            {option.labelEn}
                           </div>
                         </div>
                       </button>
@@ -664,15 +723,13 @@ export default function UserNoticeModal({
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{lang === 'bn' ? 'জমা হচ্ছে…' : 'Submitting…'}</span>
+                      <span>Submitting…</span>
                     </>
                   ) : (
                     <>
                       <span>
                         {questionnaire?.submitButtonText
                           ? getText(questionnaire.submitButtonText)
-                          : lang === 'bn'
-                          ? 'জমা দিন এবং ট্রেডিং শুরু করুন'
                           : 'Submit & Continue Trading'}
                       </span>
                       <ArrowRight className="w-4 h-4" />
@@ -698,7 +755,7 @@ export default function UserNoticeModal({
               </button>
             )}
 
-            {/* Primary Action Button (Okay, Upgrade, Open Link) */}
+            {/* Primary Action Button (Visit Facebook Page / Okay) */}
             {ctaBtnText && (
               ctaLink ? (
                 <Link
@@ -706,8 +763,17 @@ export default function UserNoticeModal({
                   target={ctaOpenInNewTab ? '_blank' : undefined}
                   rel={ctaOpenInNewTab ? 'noopener noreferrer' : undefined}
                   onClick={() => handleCtaClick(ctaBtnText, ctaLink)}
-                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95 transition-all text-center cursor-pointer"
+                  className={`w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
+                    iconType === 'facebook'
+                      ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-md shadow-[#1877F2]/25'
+                      : 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20'
+                  }`}
                 >
+                  {iconType === 'facebook' && (
+                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  )}
                   <span>{ctaBtnText}</span>
                   {ctaOpenInNewTab ? <ExternalLink className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
                 </Link>
@@ -715,7 +781,11 @@ export default function UserNoticeModal({
                 <button
                   type="button"
                   onClick={() => handleCtaClick(ctaBtnText)}
-                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95 transition-all text-center cursor-pointer"
+                  className={`w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
+                    iconType === 'facebook'
+                      ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-md shadow-[#1877F2]/25'
+                      : 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20'
+                  }`}
                 >
                   <span>{ctaBtnText}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -724,13 +794,6 @@ export default function UserNoticeModal({
             )}
           </div>
         )}
-
-        {/* Discrete safety footnote: trade access assurance */}
-        <div className="bg-gray-50/50 dark:bg-black/20 py-2 px-4 border-t border-gray-100 dark:border-gray-800/40 text-center">
-          <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
-            🔒 {lang === 'bn' ? 'ট্রেডিং কখনোই বন্ধ থাকবে না · একবার কাজ শেষ করলে এটি আর আসবে না' : 'Trading is never blocked · Once completed, this notice will never appear again'}
-          </p>
-        </div>
       </div>
     </div>,
     document.body

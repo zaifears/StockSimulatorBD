@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
     const campaigns: any[] = [];
     let aggImpressions = 0;
     let aggClicks = 0;
+    let aggCopies = 0;
     let aggDismissals = 0;
     let aggSubmissions = 0;
 
@@ -48,12 +49,14 @@ export async function GET(req: NextRequest) {
       const data = doc.data() || {};
       const imp = Number(data.totalImpressions) || 0;
       const clk = Number(data.totalClicks) || 0;
+      const cop = Number(data.totalCopies) || 0;
       const dis = Number(data.totalDismissals) || 0;
       const sub = Number(data.totalSubmissions) || 0;
       const ctr = imp > 0 ? Number(((clk / imp) * 100).toFixed(2)) : 0;
 
       aggImpressions += imp;
       aggClicks += clk;
+      aggCopies += cop;
       aggDismissals += dis;
       aggSubmissions += sub;
 
@@ -61,6 +64,7 @@ export async function GET(req: NextRequest) {
         campaignId: doc.id,
         totalImpressions: imp,
         totalClicks: clk,
+        totalCopies: cop,
         totalDismissals: dis,
         totalSubmissions: sub,
         ctr,
@@ -184,6 +188,7 @@ export async function GET(req: NextRequest) {
         stats: {
           totalImpressions: aggImpressions,
           totalClicks: aggClicks,
+          totalCopies: aggCopies,
           totalDismissals: aggDismissals,
           totalSubmissions: aggSubmissions,
           ctr: overallCtr,

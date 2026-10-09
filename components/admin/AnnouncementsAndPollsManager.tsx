@@ -36,7 +36,7 @@ import { VALID_DOMAIN_CHOICES } from '@/lib/surveyConstants';
 interface NoticeInteraction {
   id: string;
   campaignId: string;
-  action: 'click' | 'dismiss' | 'impression' | 'submit';
+  action: 'click' | 'dismiss' | 'impression' | 'submit' | 'copy';
   uid: string | null;
   userEmail: string;
   displayName: string | null;
@@ -49,6 +49,7 @@ interface NoticeInteraction {
 interface NoticeStats {
   totalImpressions: number;
   totalClicks: number;
+  totalCopies?: number;
   totalDismissals: number;
   totalSubmissions: number;
   ctr: number;
@@ -278,6 +279,20 @@ export default function AnnouncementsAndPollsManager() {
             )}
           </div>
         );
+      case 'copy':
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800">
+              <Copy className="w-3 h-3" />
+              {metadata?.label ? `Copied: "${metadata.label}"` : 'Copied Link'}
+            </span>
+            {metadata?.href && (
+              <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400 truncate max-w-[200px]" title={metadata.href}>
+                🔗 {metadata.href}
+              </span>
+            )}
+          </div>
+        );
       case 'dismiss':
         if (metadata?.reason === 'cross_clicked_to_continue') {
           return (
@@ -385,7 +400,7 @@ export default function AnnouncementsAndPollsManager() {
         {/* ======================================================== */}
         {/* KPI SUMMARY METRIC CARDS                                 */}
         {/* ======================================================== */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           
           {/* Card 1: Impressions */}
           <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
@@ -420,7 +435,21 @@ export default function AnnouncementsAndPollsManager() {
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Direct CTA conversions</p>
           </div>
 
-          {/* Card 3: Dismissals */}
+          {/* Card 3: Link Copies */}
+          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Link Copies</span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Copy className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">
+              {(noticeStats.totalCopies || 0).toLocaleString()}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Facebook URL copied</p>
+          </div>
+
+          {/* Card 4: Dismissals */}
           <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Dismissed</span>
@@ -434,8 +463,8 @@ export default function AnnouncementsAndPollsManager() {
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Closed without conversion</p>
           </div>
 
-          {/* Card 4: Historical Poll Responses */}
-          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
+          {/* Card 5: Historical Poll Responses */}
+          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Historic Poll Votes</span>
               <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -517,7 +546,8 @@ export default function AnnouncementsAndPollsManager() {
                   className="px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#161B24] text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <option value="all">All Actions</option>
-                  <option value="click">Clicked "Okay" / Links</option>
+                  <option value="click">Clicked Facebook / Links</option>
+                  <option value="copy">Copied Page Link</option>
                   <option value="cross">Cross (X) / Continue</option>
                   <option value="submit">Poll Submissions</option>
                   <option value="dismiss">Dismissed</option>
