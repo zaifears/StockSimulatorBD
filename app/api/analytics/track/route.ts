@@ -30,7 +30,7 @@ export const dynamic = 'force-dynamic';
 
 const VALID_ACTIONS = new Set(['start', 'heartbeat', 'end']);
 const VALID_DEVICE_TYPES = new Set(['mobile', 'tablet', 'desktop', 'unknown']);
-const MAX_DELTA_SECONDS = 60; // clamp per-beacon active-time delta (heartbeat interval is ~25-30s)
+const MAX_DELTA_SECONDS = 120; // clamp per-beacon active-time delta (heartbeat interval is 60s)
 const MAX_PAGE_COUNT = 2000;
 
 // ── Tiered Retention Policy (Dividing the Data) ──────────────────────────
@@ -136,12 +136,6 @@ function pathToDocId(path: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = getClientIP(req);
-    const allowed = await checkPersistentRateLimit(`analytics:${ip}`, ANALYTICS_RATE_LIMIT);
-    if (!allowed) {
-      return NextResponse.json({ success: false, error: 'Rate limited' }, { status: 429 });
-    }
-
     let body: any;
     try {
       body = await req.json();
@@ -157,6 +151,14 @@ export async function POST(req: NextRequest) {
     const sessionId = body?.sessionId;
     if (!isPlausibleSessionId(sessionId)) {
       return NextResponse.json({ success: false, error: 'Invalid or missing sessionId' }, { status: 400 });
+    }
+
+    if (action === 'start') {
+      const ip = getClientIP(req);
+      const allowed = await checkPersistentRateLimit(`analytics:${ip}`, ANALYTICS_RATE_LIMIT);
+      if (!allowed) {
+        return NextResponse.json({ success: false, error: 'Rate limited' }, { status: 429 });
+      }
     }
 
     const db = getFirestore();

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Newspaper, BellRing, Crown, ExternalLink, ShieldAlert, Sparkles, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchVpsWithFallback } from '@/lib/vpsClient';
 
 interface NewsItem {
   id: string;
@@ -34,7 +35,11 @@ export default function StockNewsSection({ symbol, isBoss }: Props) {
 
     async function loadNews() {
       try {
-        const res = await fetch(`/api/market-news?symbol=${encodeURIComponent(symbol.toUpperCase())}`);
+        const encoded = encodeURIComponent(symbol.toUpperCase());
+        const res = await fetchVpsWithFallback(
+          `/api/market_news?symbol=${encoded}`,
+          `/api/market-news?symbol=${encoded}`
+        );
         if (res.ok) {
           const json = await res.json();
           if (mounted) {

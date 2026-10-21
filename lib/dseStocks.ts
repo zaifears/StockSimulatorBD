@@ -42,12 +42,21 @@ function toStock(symbol: string): DseStock {
   return { symbol, name: name ?? symbol, nameKnown: name !== null };
 }
 
-/**
- * Symbols currently carried in the live market snapshot the trade terminal reads.
- * Returns null on any failure so callers fall back to the shipped roster rather
- * than failing a build or serving an empty stock directory.
- */
-async function fetchLiveSymbols(): Promise<string[] | null> {
+interface LatestPriceInfo {
+  ltp: number;
+  ycp?: number;
+  close?: number;
+}
+
+interface MarketLatestSnapshot {
+  symbols: string[] | null;
+  prices: Map<string, LatestPriceInfo>;
+}
+
+let marketSnapshotPromise: Promise<MarketLatestSnapshot> | null = null;
+
+async function fetchMarketLatestSnapshot(): Promise<MarketLatestSnapshot> {
+  const prices = new Map<string, LatestPriceInfo>();
   try {
     // Side-effect import initialises Firebase Admin with the service account.
     await import('./firebaseAdmin');
@@ -57,19 +66,49 @@ async function fetchLiveSymbols(): Promise<string[] | null> {
       .doc(`artifacts/${APP_ID}/public/data/market_info/latest`)
       .get();
 
-    if (!snap.exists) return null;
+    if (!snap.exists) return { symbols: null, prices };
 
-    const stocks = (snap.data()?.stocks ?? []) as Array<{ symbol?: unknown }>;
-    const symbols = stocks
-      .map((s) => (typeof s.symbol === 'string' ? s.symbol.trim().toUpperCase() : ''))
-      .filter((s) => s.length > 0 && /^[A-Z0-9().\-]+$/.test(s));
+    const stocks = (snap.data()?.stocks ?? []) as Array<{
+      symbol?: unknown;
+      ltp?: number;
+      ycp?: number;
+      close?: number;
+    }>;
 
-    return symbols.length > 0 ? symbols : null;
+    const symbols: string[] = [];
+    for (const s of stocks) {
+      if (typeof s.symbol === 'string') {
+        const sym = s.symbol.trim().toUpperCase();
+        if (sym.length > 0 && /^[A-Z0-9().\-]+$/.test(sym)) {
+          symbols.push(sym);
+          prices.set(sym, {
+            ltp: typeof s.ltp === 'number' && s.ltp > 0 ? s.ltp : 0,
+            ycp: typeof s.ycp === 'number' && s.ycp > 0 ? s.ycp : undefined,
+            close: typeof s.close === 'number' && s.close > 0 ? s.close : undefined,
+          });
+        }
+      }
+    }
+
+    return {
+      symbols: symbols.length > 0 ? symbols : null,
+      prices,
+    };
   } catch {
     // Missing credentials at build time, network failure, permission error: all
     // degrade to the shipped roster instead of breaking the route.
-    return null;
+    return { symbols: null, prices };
   }
+}
+
+function getMarketSnapshot(): Promise<MarketLatestSnapshot> {
+  if (!marketSnapshotPromise) {
+    marketSnapshotPromise = fetchMarketLatestSnapshot().catch(() => ({
+      symbols: null,
+      prices: new Map(),
+    }));
+  }
+  return marketSnapshotPromise;
 }
 
 /**
@@ -79,7 +118,7 @@ async function fetchLiveSymbols(): Promise<string[] | null> {
 let rosterPromise: Promise<DseStock[]> | null = null;
 
 async function buildRoster(): Promise<DseStock[]> {
-  const live = await fetchLiveSymbols();
+  const { symbols: live } = await getMarketSnapshot();
   if (!live) return LOCAL_STOCKS;
 
   // Union, not replacement. New listings gain a page automatically; symbols that
@@ -106,59 +145,13 @@ export function getLocalDseStocks(): DseStock[] {
   return LOCAL_STOCKS;
 }
 
-interface LatestPriceInfo {
-  ltp: number;
-  ycp?: number;
-  close?: number;
-}
-
-let latestPricesPromise: Promise<Map<string, LatestPriceInfo>> | null = null;
-
-async function fetchLatestPrices(): Promise<Map<string, LatestPriceInfo>> {
-  const priceMap = new Map<string, LatestPriceInfo>();
-  try {
-    await import('./firebaseAdmin');
-    const { getFirestore } = await import('firebase-admin/firestore');
-
-    const snap = await getFirestore()
-      .doc(`artifacts/${APP_ID}/public/data/market_info/latest`)
-      .get();
-
-    if (!snap.exists) return priceMap;
-
-    const stocks = (snap.data()?.stocks ?? []) as Array<{
-      symbol?: string;
-      ltp?: number;
-      ycp?: number;
-      close?: number;
-    }>;
-
-    for (const s of stocks) {
-      if (s.symbol && typeof s.symbol === 'string') {
-        const sym = s.symbol.trim().toUpperCase();
-        priceMap.set(sym, {
-          ltp: typeof s.ltp === 'number' && s.ltp > 0 ? s.ltp : 0,
-          ycp: typeof s.ycp === 'number' && s.ycp > 0 ? s.ycp : undefined,
-          close: typeof s.close === 'number' && s.close > 0 ? s.close : undefined,
-        });
-      }
-    }
-  } catch {
-    // Missing credentials or build-time offline degradation
-  }
-  return priceMap;
-}
-
 /**
  * Resolves the authoritative latest traded price or previous close for a given ticker.
- * Memoized across ISR page renders during a build to prevent duplicate Firestore queries.
+ * Shares the memoized market_info/latest snapshot to prevent duplicate Firestore queries.
  */
 export async function getStockLatestPrice(symbol: string): Promise<number> {
-  if (!latestPricesPromise) {
-    latestPricesPromise = fetchLatestPrices().catch(() => new Map());
-  }
-  const map = await latestPricesPromise;
-  const data = map.get(symbol.trim().toUpperCase());
+  const { prices } = await getMarketSnapshot();
+  const data = prices.get(symbol.trim().toUpperCase());
   if (!data) return 0;
   return data.ltp > 0 ? data.ltp : (data.close && data.close > 0 ? data.close : (data.ycp || 0));
 }

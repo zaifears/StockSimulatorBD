@@ -21,6 +21,7 @@ import {
   type NextMarketSession,
 } from '@/lib/utils/marketSchedule';
 import { useAuth } from '@/contexts/AuthContext';
+import { postVpsAnalyticsWithFallback } from '@/lib/vpsClient';
 
 interface MarketClosedModalProps {
   isOpen: boolean;
@@ -103,25 +104,27 @@ export default function MarketClosedModal({
     };
   }, [pendingGCalReturn]);
 
-  // Send lightweight analytics beacon
+  // Send lightweight analytics beacon (offloaded to Oracle VPS with Vercel fallback)
   const trackReminder = useCallback(
     async (type: 'google_calendar' | 'apple_ics' | 'weekly_ics', isRecurring: boolean = false) => {
       try {
         const idToken = user ? await user.getIdToken().catch(() => null) : null;
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        const headers: Record<string, string> = {};
         if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
-        fetch('/api/analytics/market-reminder', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
+        postVpsAnalyticsWithFallback(
+          '/api/analytics/market-reminder',
+          '/api/analytics/market-reminder',
+          {
             type,
             source,
             leadMinutes,
             isRecurring,
             nextOpenDhaka: nextSession.nextOpenDhakaFormatted,
-          }),
-        }).catch(() => {});
+            idToken: idToken || undefined,
+          },
+          { headers }
+        );
       } catch {
         // Analytics failure should never block UX
       }

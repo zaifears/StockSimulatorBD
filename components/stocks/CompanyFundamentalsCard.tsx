@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { DollarSign, Percent, TrendingUp, PieChart, Calendar, Award, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { fetchVpsWithFallback } from '@/lib/vpsClient';
 
 export interface CompanyFundamentals {
   code: string;
@@ -51,7 +52,11 @@ export default function CompanyFundamentalsCard({ symbol, currentPrice }: Props)
     let mounted = true;
     async function loadFundamentals() {
       try {
-        const res = await fetch(`/api/fundamentals/${encodeURIComponent(symbol.toUpperCase())}`);
+        const encoded = encodeURIComponent(symbol.toUpperCase());
+        const res = await fetchVpsWithFallback(
+          `/api/fundamentals/${encoded}`,
+          `/api/fundamentals/${encoded}`
+        );
         if (res.ok) {
           const json = await res.json();
           if (mounted) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { fetchVpsWithFallback } from '@/lib/vpsClient';
 import {
   createChart,
   ColorType,
@@ -57,7 +58,12 @@ export default function StockChart({ symbol }: { symbol: string }) {
 
     const initChart = async () => {
       try {
-        const response = await fetch(`/api/chart-data?symbol=${symbol}`);
+        const encodedSymbol = encodeURIComponent(symbol.trim().toUpperCase());
+        const response = await fetchVpsWithFallback(
+          `/api/dse_chart?symbol=${encodedSymbol}`,
+          `/api/chart-data?symbol=${encodedSymbol}`,
+          { timeoutMs: 8000 }
+        );
         if (!response.ok) throw new Error('Failed to load chart data');
 
         const raw = await response.json();

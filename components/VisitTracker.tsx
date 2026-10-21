@@ -3,11 +3,18 @@
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { postVpsAnalyticsWithFallback } from '@/lib/vpsClient'
 
 const TRACK_URL = '/api/analytics/track'
 const SESSION_KEY = 'sb_analytics_sid' // sessionStorage — resets per tab/browser-restart
 const GUEST_KEY = 'sb_analytics_gid'   // localStorage — persists across sessions on this browser
-const HEARTBEAT_INTERVAL_MS = 25000
+const HEARTBEAT_INTERVAL_MS = 60000
+
+function readGeoCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined
+  const match = document.cookie.match(/(?:^|;\s*)sb_geo=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : undefined
+}
 
 function generateId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -50,25 +57,7 @@ function detectDeviceType(): 'mobile' | 'tablet' | 'desktop' {
 }
 
 function postAnalytics(payload: Record<string, any>, useBeacon = false) {
-  try {
-    const body = JSON.stringify(payload)
-    if (useBeacon && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const blob = new Blob([body], { type: 'application/json' })
-      const ok = navigator.sendBeacon(TRACK_URL, blob)
-      if (ok) return
-      // sendBeacon can fail to queue (e.g. payload too large / browser limit) — fall through to fetch.
-    }
-    fetch(TRACK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      keepalive: true,
-    }).catch(() => {
-      // Analytics must never surface an error to the visitor.
-    })
-  } catch {
-    // no-op — analytics is best-effort
-  }
+  postVpsAnalyticsWithFallback(TRACK_URL, TRACK_URL, payload, { useBeacon })
 }
 
 /**
@@ -152,6 +141,7 @@ export default function VisitTracker() {
         entryPath,
         referrer: typeof document !== 'undefined' ? document.referrer || null : null,
         deviceType,
+        geoBucket: readGeoCookie(),
         idToken,
       })
     }

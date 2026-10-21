@@ -10,19 +10,20 @@ const ALLOWED_ORIGINS = [
 ];
 
 const INTERNAL_TELEMETRY_SECRET = process.env.CRON_SECRET || process.env.INTERNAL_TELEMETRY_SECRET || '';
+const VPS_TELEMETRY_URL = `${(process.env.NEXT_PUBLIC_VPS_API_URL || 'https://dse.shahoriar.bd').replace(/\/+$/, '')}/api/internal/crawler-telemetry`;
 
 export function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
 
-  // 1. Crawler Telemetry: Detect real bot user-agents and log asynchronously without blocking
+  // 1. Crawler Telemetry: Detect real bot user-agents and log asynchronously directly to the Oracle VPS
+  //    (eliminating Vercel serverless invocations for bot traffic).
   if (!pathname.startsWith('/api/internal/crawler-telemetry') && INTERNAL_TELEMETRY_SECRET) {
     const userAgent = request.headers.get('user-agent');
     const botName = identifyCrawlerBot(userAgent);
 
     if (botName) {
       const robotsAllowed = isPathRobotsAllowed(pathname);
-      const telemetryUrl = new URL('/api/internal/crawler-telemetry', request.url);
-      const telemetryPromise = fetch(telemetryUrl.toString(), {
+      const telemetryPromise = fetch(VPS_TELEMETRY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

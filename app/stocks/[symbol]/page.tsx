@@ -76,6 +76,13 @@ export async function generateStaticParams(): Promise<RouteParams[]> {
 export async function generateMetadata({ params }: StockPageProps): Promise<Metadata> {
   const { symbol } = await params;
   const formattedSymbol = formatSymbol(symbol);
+  if (!/^[A-Z0-9().\-]{1,20}$/.test(formattedSymbol)) {
+    return {
+      title: 'Stock not found | StockSimulatorBD',
+      description: 'This DSE stock page is not available right now.',
+      robots: { index: false, follow: true },
+    };
+  }
   const stocks = await getAllDseStocks();
   const stock = stocks.find((item) => item.symbol.toUpperCase() === formattedSymbol);
 
@@ -167,6 +174,9 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
 export default async function StockDetailsPage({ params }: StockPageProps) {
   const { symbol } = await params;
   const formattedSymbol = formatSymbol(symbol);
+  if (!/^[A-Z0-9().\-]{1,20}$/.test(formattedSymbol)) {
+    notFound();
+  }
   const stocks = await getAllDseStocks();
   const stock = stocks.find((item) => item.symbol.toUpperCase() === formattedSymbol);
 

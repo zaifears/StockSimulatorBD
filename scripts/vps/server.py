@@ -14,11 +14,13 @@ Runs as a systemd service (stocksimulator-daemon) behind Caddy on port 8005.
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
-from typing import Optional
+from typing import Any, Optional
 
 import psutil
 from fastapi import FastAPI, HTTPException, Header, Query, Request, status
@@ -31,6 +33,7 @@ sys.path.insert(0, os.path.join(SCRIPT_DIR, "scrapers"))
 
 import category_sync
 import dse_chart
+import firebase_telemetry
 import lanka_price_sync
 import lanka_sector_sync
 import market_sync
@@ -63,10 +66,11 @@ app = FastAPI(
 )
 
 # Enable CORS for Next.js frontend and edge calls
+# allow_credentials=False allows wildcard "*" origin to work seamlessly with navigator.sendBeacon
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -175,18 +179,82 @@ def api_category_sync(
         raise HTTPException(status_code=500, detail=f"Category Sync Error: {str(e)}")
 
 
+_chart_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
+_chart_lock = threading.Lock()
+CHART_TTL_SEC = 180.0  # 3 minutes
+
+
+def _persist_chart_to_firestore_async(sym: str, chart_data_list: list[dict[str, Any]]):
+    def _worker():
+        try:
+            db = firebase_telemetry.get_prod_db()
+            db.collection("stock_charts").document(sym).set({
+                "chartData": chart_data_list,
+                "lastUpdated": int(time.time() * 1000),
+                "isScraping": False,
+                "lockTime": 0,
+            })
+        except Exception as exc:
+            logger.debug("Optional Firestore chart backup skipped for %s: %s", sym, exc)
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
 @app.get("/api/dse_chart")
 def api_dse_chart(symbol: str = Query(..., description="Stock ticker symbol (e.g. GP)")):
+    sym = (symbol or "").strip().upper()
+    if not sym or not re.match(r"^[A-Z0-9.\-]{1,20}$", sym):
+        raise HTTPException(status_code=400, detail="Invalid DSE stock symbol")
+
+    now = time.time()
+    with _chart_lock:
+        cached = _chart_cache.get(sym)
+        if cached and (now - cached[1]) < CHART_TTL_SEC:
+            return JSONResponse(
+                content=cached[0],
+                headers={"Cache-Control": "public, max-age=180, s-maxage=180", "X-Cache": "HIT"},
+            )
+
     try:
-        chart_data_list = dse_chart.get_chart_data(symbol)
-        if not chart_data_list:
-            raise HTTPException(status_code=404, detail=f"No chart data found for {symbol}")
-        return chart_data_list
-    except HTTPException:
-        raise
+        chart_data_list = dse_chart.get_chart_data(sym)
+        if chart_data_list:
+            with _chart_lock:
+                _chart_cache[sym] = (chart_data_list, now)
+            _persist_chart_to_firestore_async(sym, chart_data_list)
+            return JSONResponse(
+                content=chart_data_list,
+                headers={"Cache-Control": "public, max-age=180, s-maxage=180", "X-Cache": "MISS"},
+            )
     except Exception as e:
-        logger.error("dse_chart failed for %s: %s", symbol, e)
-        raise HTTPException(status_code=500, detail=f"DSE Chart Scraper Error: {str(e)}")
+        logger.warning("Live dse_chart scrape failed for %s: %s", sym, e)
+
+    # Fallback 1: Stale in-memory cache
+    with _chart_lock:
+        stale = _chart_cache.get(sym)
+        if stale and stale[0]:
+            return JSONResponse(
+                content=stale[0],
+                headers={"Cache-Control": "public, max-age=60, s-maxage=60", "X-Cache": "STALE-MEM"},
+            )
+
+    # Fallback 2: Firestore stock_charts/{sym}
+    try:
+        db = firebase_telemetry.get_prod_db()
+        snap = db.collection("stock_charts").document(sym).get()
+        if snap.exists:
+            doc_data = snap.to_dict() or {}
+            fb_chart = doc_data.get("chartData")
+            if isinstance(fb_chart, list) and len(fb_chart) > 0:
+                with _chart_lock:
+                    _chart_cache[sym] = (fb_chart, now)
+                return JSONResponse(
+                    content=fb_chart,
+                    headers={"Cache-Control": "public, max-age=120, s-maxage=120", "X-Cache": "FIRESTORE"},
+                )
+    except Exception as fb_err:
+        logger.warning("Firestore chart fallback failed for %s: %s", sym, fb_err)
+
+    raise HTTPException(status_code=404, detail=f"No chart data found for {sym}")
 
 
 @app.get("/api/lanka_sector_sync")
@@ -434,6 +502,111 @@ def api_crawler_status():
         except Exception as e:
             return {"error": f"Failed reading cursor: {e}"}
     return {"status": "never_run", "totalInStore": len(get_cached_fundamentals())}
+
+
+# ── Offloaded Client Analytics & Bot Telemetry Endpoints ──────────────────────
+
+def _extract_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        first_ip = forwarded.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+    real_ip = request.headers.get("x-real-ip") or request.headers.get("cf-connecting-ip")
+    if real_ip:
+        return real_ip.strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+async def _parse_json_body(request: Request) -> Optional[dict[str, Any]]:
+    try:
+        raw = await request.body()
+        if not raw:
+            return {}
+        parsed = json.loads(raw.decode("utf-8"))
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
+@app.post("/api/analytics/track")
+async def api_analytics_track(request: Request):
+    """High-frequency visitor session/heartbeat tracker offloaded from Vercel."""
+    from starlette.concurrency import run_in_threadpool
+
+    body = await _parse_json_body(request)
+    if body is None:
+        return JSONResponse(content={"success": False, "error": "Invalid JSON body"}, status_code=400)
+
+    client_ip = _extract_client_ip(request)
+    headers_dict = {k.lower(): v for k, v in request.headers.items()}
+
+    try:
+        payload, status_code = await run_in_threadpool(
+            firebase_telemetry.handle_analytics_track, body, headers_dict, client_ip
+        )
+        return JSONResponse(content=payload, status_code=status_code)
+    except Exception as e:
+        logger.error("analytics/track error: %s", e)
+        return JSONResponse(content={"success": False, "error": "Internal server error"}, status_code=500)
+
+
+@app.post("/api/analytics/notice-event")
+async def api_analytics_notice_event(request: Request):
+    """Campaign modal telemetry offloaded from Vercel."""
+    from starlette.concurrency import run_in_threadpool
+
+    body = await _parse_json_body(request) or {}
+    client_ip = _extract_client_ip(request)
+    headers_dict = {k.lower(): v for k, v in request.headers.items()}
+
+    try:
+        payload, status_code = await run_in_threadpool(
+            firebase_telemetry.handle_notice_event, body, headers_dict, client_ip
+        )
+        return JSONResponse(content=payload, status_code=status_code)
+    except Exception as e:
+        logger.error("analytics/notice-event error: %s", e)
+        return JSONResponse(content={"success": False, "error": "Internal Server Error"}, status_code=500)
+
+
+@app.post("/api/analytics/market-reminder")
+async def api_analytics_market_reminder(request: Request):
+    """Market reminder acceptance telemetry offloaded from Vercel."""
+    from starlette.concurrency import run_in_threadpool
+
+    body = await _parse_json_body(request) or {}
+    client_ip = _extract_client_ip(request)
+    headers_dict = {k.lower(): v for k, v in request.headers.items()}
+
+    try:
+        payload, status_code = await run_in_threadpool(
+            firebase_telemetry.handle_market_reminder, body, headers_dict, client_ip
+        )
+        return JSONResponse(content=payload, status_code=status_code)
+    except Exception as e:
+        logger.error("analytics/market-reminder error: %s", e)
+        return JSONResponse(content={"error": "Internal Server Error"}, status_code=500)
+
+
+@app.post("/api/internal/crawler-telemetry")
+async def api_internal_crawler_telemetry(request: Request):
+    """Bot crawler telemetry offloaded from Vercel middleware."""
+    from starlette.concurrency import run_in_threadpool
+
+    body = await _parse_json_body(request) or {}
+    headers_dict = {k.lower(): v for k, v in request.headers.items()}
+
+    try:
+        payload, status_code = await run_in_threadpool(
+            firebase_telemetry.handle_crawler_telemetry, body, headers_dict
+        )
+        return JSONResponse(content=payload, status_code=status_code)
+    except Exception as e:
+        logger.error("internal/crawler-telemetry error: %s", e)
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":

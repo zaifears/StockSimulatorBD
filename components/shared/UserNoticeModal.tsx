@@ -169,28 +169,30 @@ export default function UserNoticeModal({
   const permanentKey = `ssbd_notice_done_${campaignId}_${uid || 'guest'}`;
   const sessionKey = `ssbd_notice_session_${campaignId}_${uid || 'guest'}`;
 
-  // Helper to send telemetry beacons to /api/analytics/notice-event
+  // Helper to send telemetry beacons to /api/analytics/notice-event (offloaded to Oracle VPS with Vercel fallback)
   const sendTelemetry = useCallback(
     async (action: 'impression' | 'click' | 'dismiss' | 'submit' | 'copy', metadata?: Record<string, any>) => {
       try {
+        const { postVpsAnalyticsWithFallback } = await import('@/lib/vpsClient');
         const idToken = user ? await user.getIdToken().catch(() => null) : null;
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        const headers: Record<string, string> = {};
         if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
-        fetch('/api/analytics/notice-event', {
-          method: 'POST',
-          headers,
-          keepalive: true,
-          body: JSON.stringify({
+        postVpsAnalyticsWithFallback(
+          '/api/analytics/notice-event',
+          '/api/analytics/notice-event',
+          {
             campaignId,
             action,
+            idToken: idToken || undefined,
             metadata: {
               variant,
               lang,
               ...metadata,
             },
-          }),
-        }).catch(() => {});
+          },
+          { headers }
+        );
       } catch {
         // Analytics failure should never block UI
       }

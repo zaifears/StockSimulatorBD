@@ -36,6 +36,7 @@ import BossBadge from '@/components/ui/BossBadge';
 import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 import type { PortfolioItem, Stock } from '@/hooks/useSimulator';
 import { DSE_COMPANY_NAMES } from '@/lib/dseCompanyNames';
+import { fetchVpsWithFallback } from '@/lib/vpsClient';
 
 export interface NewsItem {
   id: string;
@@ -263,7 +264,10 @@ function BossActiveNewsRadar({
     setError(null);
     try {
       const query = ownedSymbols.length > 0 ? `?symbol=${encodeURIComponent(ownedSymbols.join(','))}` : '';
-      const res = await fetch(`/api/market-news${query}`);
+      const res = await fetchVpsWithFallback(
+        `/api/market_news${query}`,
+        `/api/market-news${query}`
+      );
       if (res.ok) {
         const json = await res.json();
         setAllNews(json.news || []);

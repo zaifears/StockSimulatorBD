@@ -185,16 +185,6 @@ const nextConfig = {
           },
         ],
       },
-      // 🚀 Cache API responses
-      {
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'private, max-age=300',
-          },
-        ],
-      },
     ];
   },
 

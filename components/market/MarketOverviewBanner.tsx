@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Activity, BarChart3, Layers, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { fetchVpsWithFallback } from '@/lib/vpsClient';
 
 interface IndexItem {
   key: string;
@@ -49,8 +50,9 @@ export default function MarketOverviewBanner({ onSelectStock }: Props) {
     let mounted = true;
 
     async function fetchOverview() {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       try {
-        const res = await fetch('/api/market-overview');
+        const res = await fetchVpsWithFallback('/api/market_overview', '/api/market-overview');
         if (res.ok) {
           const json = await res.json();
           if (mounted) {
@@ -64,7 +66,7 @@ export default function MarketOverviewBanner({ onSelectStock }: Props) {
     }
 
     fetchOverview();
-    const interval = setInterval(fetchOverview, 30_000); // 30s auto-refresh
+    const interval = setInterval(fetchOverview, 30_000); // 30s auto-refresh while visible
     return () => {
       mounted = false;
       clearInterval(interval);
