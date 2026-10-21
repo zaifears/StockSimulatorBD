@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
-import { isMarketOpenServer } from '@/lib/utils/marketHours';
+import { isMarketOpenServer, isMarketOpenCorroborated } from '@/lib/utils/marketHours';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +48,14 @@ export async function GET(req: NextRequest) {
     const catData = catSnap.exists ? catSnap.data() : null;
     const secData = secSnap.exists ? secSnap.data() : null;
 
+    const corroborated = isMarketOpenCorroborated(
+      { marketStatus: latestData?.marketStatus, lastUpdated: latestData?.lastUpdated },
+      now
+    );
+    const activeMarketOpen = corroborated.open;
+    baseResponse.marketOpen = activeMarketOpen;
+    baseResponse.marketOpenReason = corroborated.reason;
+
     // 1. Price Feed (Primary DSE vs Backup LankaBangla)
     let priceStatus: 'healthy' | 'failsafe-active' | 'stale' | 'down' = 'healthy';
     let isStale = false;
@@ -58,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     if (lastUpdated) {
       ageMinutes = Math.round((nowMs - new Date(lastUpdated).getTime()) / 60000);
-      if (marketOpen && ageMinutes > 15) {
+      if (activeMarketOpen && ageMinutes > 15) {
         isStale = true;
         priceStatus = 'stale';
       } else if (source === 'lankabd-failsafe') {
@@ -96,7 +104,7 @@ export async function GET(req: NextRequest) {
 
     // Determine overall health status
     let overallStatus: 'healthy' | 'degraded' | 'down' = 'healthy';
-    if (priceStatus === 'down' || (priceStatus === 'stale' && marketOpen)) {
+    if (priceStatus === 'down' || (priceStatus === 'stale' && activeMarketOpen)) {
       overallStatus = 'down';
     } else if (priceStatus === 'failsafe-active' || catStatus === 'stale' || secStatus === 'stale') {
       overallStatus = 'degraded';

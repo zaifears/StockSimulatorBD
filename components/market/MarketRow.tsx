@@ -52,7 +52,7 @@ export default function MarketRow({
   const companyName = getCompanyName(stock.symbol);
   const symbolHref = `/stocks/${stock.symbol.toLowerCase()}`;
 
-  const handleNavigate = () => {
+  const saveScrollState = () => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('ssbd_last_stock_source', '/trade');
       sessionStorage.setItem('ssbd_trade_scroll_state', JSON.stringify({
@@ -61,6 +61,10 @@ export default function MarketRow({
         timestamp: Date.now(),
       }));
     }
+  };
+
+  const handleNavigate = () => {
+    saveScrollState();
     router.push(symbolHref);
   };
 
@@ -184,7 +188,7 @@ export default function MarketRow({
           href={symbolHref}
           onClick={(e) => {
             e.stopPropagation();
-            handleNavigate();
+            saveScrollState();
           }}
           className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 active:scale-95 transition-all shrink-0"
         >

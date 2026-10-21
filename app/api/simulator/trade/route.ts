@@ -93,11 +93,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { symbol, type, quantity } = body || {};
+    const { symbol: rawSymbol, type, quantity } = body || {};
 
-    if (typeof symbol !== 'string' || !symbol.trim()) {
+    if (typeof rawSymbol !== 'string' || !rawSymbol.trim()) {
       return NextResponse.json({ success: false, error: 'Invalid Stock' }, { status: 400 });
     }
+    const symbol = rawSymbol.trim().toUpperCase();
     if (type !== 'BUY' && type !== 'SELL') {
       return NextResponse.json({ success: false, error: "Type must be 'BUY' or 'SELL'" }, { status: 400 });
     }
@@ -148,6 +149,8 @@ export async function POST(req: NextRequest) {
       // Loud on purpose: this means bangladeshHolidays.ts has a wrong date
       // that would otherwise be blocking trading right now, and needs fixing.
       console.warn('[trade] Holiday calendar says closed but DSE reports Open — trading allowed. Fix lib/bangladeshHolidays.ts.');
+    } else if (marketState.reason === 'dse-open-overrides-weekend') {
+      console.info('[trade] Weekend calendar says closed but DSE reports Open (special working Saturday) — trading allowed.');
     }
 
     const stocks = (marketDoc.stocks || []) as Array<{ symbol: string; ltp: number; traded?: boolean }>;
@@ -159,7 +162,7 @@ export async function POST(req: NextRequest) {
     // see api/market_sync.py's `traded` field). Reject rather than let a
     // trade execute against a non-price; this is the server-side backstop
     // behind the client's own disabled Buy/Sell state.
-    if (typeof stock.ltp !== 'number' || !Number.isFinite(stock.ltp) || stock.ltp <= 0) {
+    if (stock.traded === false || typeof stock.ltp !== 'number' || !Number.isFinite(stock.ltp) || stock.ltp <= 0) {
       return NextResponse.json(
         { success: false, error: 'This stock has not traded today, so there is no live price to trade at.' },
         { status: 400 }
@@ -270,7 +273,12 @@ export async function POST(req: NextRequest) {
 
         const netProceeds = moneySubtract(grossValue, commission);
         const averageCost = existingItem.averageBuyPrice;
-        const costOfSoldShares = moneyMultiply(averageCost, quantity);
+        // When selling the full position, use existingItem.totalCost directly so rounding
+        // in averageBuyPrice never leaves residual positive or negative totalInvested.
+        const costOfSoldShares =
+          existingItem.quantity === quantity
+            ? roundMoney(existingItem.totalCost)
+            : moneyMultiply(averageCost, quantity);
         const realizedGain = moneySubtract(netProceeds, costOfSoldShares);
 
         newBalance = moneyAdd(currentBalance, netProceeds);
@@ -284,7 +292,7 @@ export async function POST(req: NextRequest) {
           portfolio[itemIndex] = {
             ...existingItem,
             quantity: existingItem.quantity - quantity,
-            totalCost: moneySubtract(existingItem.totalCost, costOfSoldShares),
+            totalCost: Math.max(0, moneySubtract(existingItem.totalCost, costOfSoldShares)),
             lots: newLots,
           };
         }
@@ -295,7 +303,7 @@ export async function POST(req: NextRequest) {
           ...currentState,
           balance: newBalance,
           portfolio,
-          totalInvested: moneySubtract(currentState.totalInvested || 0, costOfSoldShares),
+          totalInvested: portfolio.length === 0 ? 0 : Math.max(0, moneySubtract(currentState.totalInvested || 0, costOfSoldShares)),
           realizedGainLoss: moneyAdd(currentState.realizedGainLoss || 0, realizedGain),
         });
       }

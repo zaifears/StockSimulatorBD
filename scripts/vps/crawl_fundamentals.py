@@ -3,6 +3,7 @@
 crawl_fundamentals.py - Resilient Overnight Fundamentals Crawler for DSE Equities.
 
 Crawls company profiles from https://new.dsebd.org/company/{symbol}
+(with automatic mirror failover to https://www.dsebd.org/company/{symbol})
 Extracts audited valuation ratios, 52-week ranges, shareholding distributions,
 and corporate disclosures. Saves atomically to data/fundamentals.json.
 
@@ -32,7 +33,14 @@ DATA_DIR = os.path.join(SCRIPT_DIR, "data")
 FUNDAMENTALS_FILE = os.path.join(DATA_DIR, "fundamentals.json")
 CURSOR_FILE = os.path.join(DATA_DIR, "crawler_cursor.json")
 
-DSE_PRICES_API = "https://new.dsebd.org/api/live/prices"
+DSE_PRICES_APIS = [
+    "https://new.dsebd.org/api/live/prices",
+    "https://www.dsebd.org/api/live/prices",
+]
+COMPANY_BASE_URLS = [
+    "https://new.dsebd.org/company",
+    "https://www.dsebd.org/company",
+]
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
 # Core DSE top symbols fallback in case live prices API is down
@@ -52,34 +60,38 @@ def ensure_data_dir():
 
 def get_active_symbols():
     """Fetches list of active non-bond DSE stock symbols."""
-    try:
-        req = urllib.request.Request(DSE_PRICES_API, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        
-        symbols = []
-        raw_stocks = (data.get("rows") or data.get("data") or []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
-        for item in raw_stocks:
-            # item can be list or dict
-            if isinstance(item, list) and len(item) > 0:
-                code = str(item[0]).strip().upper()
-                asset_type = str(item[14]).strip().upper() if len(item) > 14 else ""
-                sector = str(item[13]).strip().upper() if len(item) > 13 else ""
-                if not code.startswith("TB") and "GOV" not in asset_type and "BOND" not in sector:
-                    symbols.append(code)
-            elif isinstance(item, dict):
-                code = str(item.get("code") or item.get("symbol") or "").strip().upper()
-                asset_type = str(item.get("assetType") or "").strip().upper()
-                sector = str(item.get("sector") or "").strip().upper()
-                if code and not code.startswith("TB") and "GOV" not in asset_type and "BOND" not in sector:
-                    symbols.append(code)
+    for api_url in DSE_PRICES_APIS:
+        try:
+            req = urllib.request.Request(
+                api_url,
+                headers={"User-Agent": USER_AGENT, "Referer": "https://new.dsebd.org/"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
 
-        if symbols:
-            logger.info("Retrieved %d active equity symbols from DSE API", len(symbols))
-            return sorted(list(set(symbols)))
-    except Exception as e:
-        logger.warning("Failed to fetch symbols from %s: %s. Using fallback list.", DSE_PRICES_API, e)
+            symbols = []
+            raw_stocks = (data.get("rows") or data.get("data") or []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+            for item in raw_stocks:
+                if isinstance(item, list) and len(item) > 0:
+                    code = str(item[0]).strip().upper()
+                    asset_type = str(item[14]).strip().upper() if len(item) > 14 else ""
+                    sector = str(item[13]).strip().upper() if len(item) > 13 else ""
+                    if not code.startswith("TB") and "GOV" not in asset_type and "BOND" not in sector:
+                        symbols.append(code)
+                elif isinstance(item, dict):
+                    code = str(item.get("code") or item.get("symbol") or "").strip().upper()
+                    asset_type = str(item.get("assetType") or "").strip().upper()
+                    sector = str(item.get("sector") or "").strip().upper()
+                    if code and not code.startswith("TB") and "GOV" not in asset_type and "BOND" not in sector:
+                        symbols.append(code)
 
+            if symbols:
+                logger.info("Retrieved %d active equity symbols from %s", len(symbols), api_url)
+                return sorted(list(set(symbols)))
+        except Exception as e:
+            logger.warning("Failed to fetch symbols from %s: %s", api_url, e)
+
+    logger.warning("All DSE price endpoints failed. Using fallback symbol list.")
     return sorted(list(set(TOP_SYMBOLS_FALLBACK)))
 
 
@@ -124,23 +136,25 @@ def extract_rsc_fundamentals(html: str) -> dict | None:
 
 
 def crawl_symbol(symbol: str, retries: int = 3) -> dict | None:
-    """Fetches and parses company profile for a single ticker with backoff."""
-    url = f"https://new.dsebd.org/company/{symbol}"
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-
+    """Fetches and parses company profile for a single ticker with backoff and mirror failover."""
     for attempt in range(1, retries + 1):
+        base_url = COMPANY_BASE_URLS[(attempt - 1) % len(COMPANY_BASE_URLS)]
+        url = f"{base_url}/{symbol}"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": USER_AGENT, "Referer": "https://new.dsebd.org/"},
+        )
         try:
             with urllib.request.urlopen(req, timeout=12) as resp:
                 html = resp.read().decode("utf-8", errors="replace")
 
             data = extract_rsc_fundamentals(html)
             if data and data.get("code"):
-                # Clean and enrich payload
                 data["_scrapedAt"] = int(time.time() * 1000)
                 data["_source"] = "new.dsebd.org"
                 return data
 
-            logger.warning("[%s] RSC payload not found on attempt %d", symbol, attempt)
+            logger.warning("[%s] RSC payload not found on attempt %d (%s)", symbol, attempt, base_url)
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 logger.warning("[%s] 404 Not Found on DSE", symbol)
@@ -209,13 +223,11 @@ def run_crawler(limit: int | None = None, single_symbol: str | None = None, forc
         else:
             fail_count += 1
 
-        # Periodic atomic checkpoint every 25 symbols
         if idx % 25 == 0:
             save_atomic_fundamentals(store)
 
         time.sleep(delay)
 
-    # Final atomic save
     save_atomic_fundamentals(store)
     duration = time.time() - start_time
     logger.info(
@@ -223,15 +235,31 @@ def run_crawler(limit: int | None = None, single_symbol: str | None = None, forc
         duration, success_count, fail_count, len(store)
     )
 
-    # Write cursor/telemetry
     cursor_info = {
         "lastRun": int(time.time() * 1000),
         "durationSec": round(duration, 1),
         "totalSymbols": len(symbols),
         "success": success_count,
         "failed": fail_count,
-        "totalInStore": len(store)
+        "totalInStore": len(store),
     }
+    if single_symbol or (limit and limit < len(store)):
+        # Preserve the last full overnight crawl metrics when running a targeted single-symbol or partial refresh
+        existing_cursor = {}
+        if os.path.exists(CURSOR_FILE):
+            try:
+                with open(CURSOR_FILE, "r", encoding="utf-8") as f:
+                    existing_cursor = json.load(f)
+            except Exception:
+                pass
+        if existing_cursor.get("totalSymbols", 0) > len(symbols):
+            cursor_info = {
+                **existing_cursor,
+                "totalInStore": len(store),
+                "lastTargetedRun": int(time.time() * 1000),
+                "lastTargetedSymbol": single_symbol or f"limit:{limit}",
+            }
+
     with open(CURSOR_FILE, "w", encoding="utf-8") as f:
         json.dump(cursor_info, f, indent=2)
 

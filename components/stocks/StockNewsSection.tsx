@@ -3,15 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Newspaper, BellRing, Crown, ExternalLink, ShieldAlert, Sparkles, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NewsItem {
   id: string;
   code: string;
   name?: string;
+  title?: string;
   type?: string;
   date?: string;
   time?: string;
-  summary: string;
+  summary?: string;
   body?: string;
   filedAt?: string;
 }
@@ -22,6 +24,8 @@ interface Props {
 }
 
 export default function StockNewsSection({ symbol, isBoss }: Props) {
+  const { isBoss: authIsBoss } = useAuth();
+  const effectiveIsBoss = isBoss ?? authIsBoss;
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +71,7 @@ export default function StockNewsSection({ symbol, isBoss }: Props) {
           </p>
         </div>
 
-        {isBoss ? (
+        {effectiveIsBoss ? (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
             <Crown className="w-3.5 h-3.5 fill-current text-amber-500" />
             Boss Radar Active
@@ -84,7 +88,7 @@ export default function StockNewsSection({ symbol, isBoss }: Props) {
       </div>
 
       {/* ── Boss Tier Portfolio News Callout ──────────────────────────────── */}
-      {!isBoss && (
+      {!effectiveIsBoss && (
         <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/[0.07] via-yellow-500/[0.05] to-amber-500/[0.07] border border-amber-500/25 flex items-start gap-3">
           <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
             <Crown className="w-4 h-4 fill-current" />
@@ -129,8 +133,11 @@ export default function StockNewsSection({ symbol, isBoss }: Props) {
       ) : (
         <div className="space-y-3 sm:space-y-3.5">
           {news.map((item) => {
-            const isPsi = item.type?.toLowerCase().includes('price sensitive') || item.summary.includes('PSI');
-            const isDiv = item.type?.toLowerCase().includes('dividend') || item.summary.toLowerCase().includes('dividend');
+            const headline = item.title || item.summary || 'Corporate Disclosure';
+            const detailText = item.body || (item.title && item.summary && item.summary !== item.title ? item.summary : undefined);
+            const combinedText = `${item.type || ''} ${headline} ${detailText || ''}`;
+            const isPsi = combinedText.toLowerCase().includes('price sensitive') || combinedText.includes('PSI');
+            const isDiv = combinedText.toLowerCase().includes('dividend');
 
             return (
               <article
@@ -161,12 +168,12 @@ export default function StockNewsSection({ symbol, isBoss }: Props) {
                 </div>
 
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug break-words">
-                  {item.summary}
+                  {headline}
                 </h3>
 
-                {item.body && (
+                {detailText && (
                   <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pt-1.5 border-t border-gray-100 dark:border-gray-800/50 break-words">
-                    {item.body}
+                    {detailText}
                   </p>
                 )}
               </article>

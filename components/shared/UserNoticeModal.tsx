@@ -205,48 +205,36 @@ export default function UserNoticeModal({
     if (typeof window === 'undefined') return true;
     if (dismissedRef.current) return true;
 
-    // Check permanent completion across user-specific and generic keys
-    if (
-      localStorage.getItem(permanentKey) === 'true' ||
-      localStorage.getItem(`ssbd_notice_done_${campaignId}`) === 'true' ||
-      localStorage.getItem(`ssbd_notice_done_${campaignId}_guest`) === 'true'
-    ) {
+    // Check permanent completion for the active user (or guest when signed out)
+    if (localStorage.getItem(permanentKey) === 'true') {
       return true;
     }
 
-    // Check session dismissal across user-specific and generic keys
-    if (
-      sessionStorage.getItem(sessionKey) === 'true' ||
-      sessionStorage.getItem(`ssbd_notice_session_${campaignId}`) === 'true' ||
-      sessionStorage.getItem(`ssbd_notice_session_${campaignId}_guest`) === 'true'
-    ) {
+    // Check session dismissal for the active user (or guest when signed out)
+    if (sessionStorage.getItem(sessionKey) === 'true') {
       return true;
     }
 
     return false;
-  }, [campaignId, permanentKey, sessionKey]);
+  }, [permanentKey, sessionKey]);
 
-  // Mark permanently finished in localStorage (never again)
+  // Mark permanently finished in localStorage (never again for this user)
   const markCompletedPermanently = useCallback(() => {
     dismissedRef.current = true;
     if (typeof window !== 'undefined') {
       localStorage.setItem(permanentKey, 'true');
-      localStorage.setItem(`ssbd_notice_done_${campaignId}`, 'true');
-      localStorage.setItem(`ssbd_notice_done_${campaignId}_guest`, 'true');
     }
     setVisible(false);
-  }, [permanentKey, campaignId]);
+  }, [permanentKey]);
 
   // Mark dismissed for this session only (will show once next login if unfinished)
   const markDismissedForSession = useCallback(() => {
     dismissedRef.current = true;
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(sessionKey, 'true');
-      sessionStorage.setItem(`ssbd_notice_session_${campaignId}`, 'true');
-      sessionStorage.setItem(`ssbd_notice_session_${campaignId}_guest`, 'true');
     }
     setVisible(false);
-  }, [sessionKey, campaignId]);
+  }, [sessionKey]);
 
   // Copy link handler with clipboard copy, UI feedback, and telemetry tracking
   const handleCopyLink = useCallback(
@@ -342,15 +330,20 @@ export default function UserNoticeModal({
     if (!dismissible) return;
     dismissedRef.current = true;
     setVisible(false);
-    // User clicked continue to trade / cross: mark permanently so they never see it again!
-    markCompletedPermanently();
+    // For image/announcement banners, dismissing via X or Continue to Trade completes the view;
+    // for questionnaires, suppress for the current login session so the user isn't nagged repeatedly.
+    if (variant === 'questionnaire') {
+      markDismissedForSession();
+    } else {
+      markCompletedPermanently();
+    }
     sendTelemetry('dismiss', {
       reason: 'cross_clicked_to_continue',
       variant,
       label: 'Cross (X) / Continue to Trade',
     });
     if (onDismiss) onDismiss();
-  }, [dismissible, markCompletedPermanently, sendTelemetry, variant, onDismiss]);
+  }, [dismissible, variant, markDismissedForSession, markCompletedPermanently, sendTelemetry, onDismiss]);
 
   // Handle Escape key to dismiss
   useEffect(() => {

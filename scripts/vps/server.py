@@ -47,6 +47,11 @@ DATA_DIR = os.path.join(SCRIPT_DIR, "data")
 FUNDAMENTALS_FILE = os.path.join(DATA_DIR, "fundamentals.json")
 CURSOR_FILE = os.path.join(DATA_DIR, "crawler_cursor.json")
 
+BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+)
+
 # In-memory cached fundamentals with mtime tracking
 _cached_fundamentals = {}
 _cached_fundamentals_mtime = 0
@@ -54,7 +59,7 @@ _cached_fundamentals_mtime = 0
 app = FastAPI(
     title="StockSimulatorBD VPS Daemon",
     description="High-performance background synchronization and fundamentals cache engine",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 # Enable CORS for Next.js frontend and edge calls
@@ -252,6 +257,25 @@ _market_news_cache = None
 _market_news_time = 0
 
 
+def _fetch_dse_json(urls: list[str], timeout: float = 10.0) -> dict:
+    last_err = None
+    for url in urls:
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": BROWSER_USER_AGENT,
+                    "Accept": "application/json",
+                    "Referer": "https://new.dsebd.org/",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            last_err = e
+    raise RuntimeError(f"Failed fetching DSE JSON across mirrors: {last_err}")
+
+
 @app.get("/api/market_overview")
 def api_market_overview():
     """Returns official real-time DSE indices (DSEX, DS30, DSES), market breadth, and turnover totals."""
@@ -264,18 +288,16 @@ def api_market_overview():
         )
 
     try:
-        req = urllib.request.Request(
+        data = _fetch_dse_json([
             "https://new.dsebd.org/api/live/market",
-            headers={"User-Agent": "StockSimulatorBD-VPS/1.0"},
+            "https://www.dsebd.org/api/live/market",
+        ])
+        _market_overview_cache = data
+        _market_overview_time = now
+        return JSONResponse(
+            content=data,
+            headers={"Cache-Control": "public, max-age=15, s-maxage=15", "X-Cache": "MISS"},
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            _market_overview_cache = data
-            _market_overview_time = now
-            return JSONResponse(
-                content=data,
-                headers={"Cache-Control": "public, max-age=15, s-maxage=15", "X-Cache": "MISS"},
-            )
     except Exception as e:
         logger.error("market_overview fetch failed: %s", e)
         if _market_overview_cache:
@@ -284,8 +306,8 @@ def api_market_overview():
 
 
 @app.get("/api/market_news")
-def api_market_news(symbol: Optional[str] = Query(None, description="Optional stock ticker to filter")):
-    """Returns live 500-item DSE corporate disclosures & PSI news, optionally filtered by symbol."""
+def api_market_news(symbol: Optional[str] = Query(None, description="Optional stock ticker(s) to filter, comma-separated")):
+    """Returns live 500-item DSE corporate disclosures & PSI news, optionally filtered by symbol(s) and merged with cached company disclosures."""
     global _market_news_cache, _market_news_time
     now = time.time()
     data = None
@@ -293,25 +315,75 @@ def api_market_news(symbol: Optional[str] = Query(None, description="Optional st
         data = _market_news_cache
     else:
         try:
-            req = urllib.request.Request(
+            data = _fetch_dse_json([
                 "https://new.dsebd.org/api/live/news",
-                headers={"User-Agent": "StockSimulatorBD-VPS/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                _market_news_cache = data
-                _market_news_time = now
+                "https://www.dsebd.org/api/live/news",
+            ])
+            _market_news_cache = data
+            _market_news_time = now
         except Exception as e:
             logger.error("market_news fetch failed: %s", e)
             if _market_news_cache:
                 data = _market_news_cache
             else:
-                raise HTTPException(status_code=502, detail=f"Failed to fetch market news: {str(e)}")
+                data = {"rows": []}
 
-    news_rows = data.get("rows", [])
+    news_rows = list(data.get("rows", []))
     if symbol:
-        sym_clean = symbol.strip().upper()
-        news_rows = [item for item in news_rows if str(item.get("code") or "").upper() == sym_clean]
+        target_symbols = [s.strip().upper() for s in symbol.split(",") if s.strip()]
+        target_set = set(target_symbols)
+        filtered_live = [
+            item for item in news_rows
+            if str(item.get("code") or "").upper() in target_set
+        ]
+
+        # Enrich with cached company announcements from fundamentals.json so symbols outside
+        # the global 500-item recent rolling window still return their official DSE disclosures.
+        def _numeric_id(val: object) -> int:
+            digits = "".join(ch for ch in str(val or "") if ch.isdigit())
+            return int(digits) if digits else 0
+
+        fundamentals = get_cached_fundamentals()
+        seen_num_ids = {_numeric_id(item.get("id")) for item in filtered_live if _numeric_id(item.get("id")) > 0}
+        seen_keys = {
+            (str(item.get("code") or "").upper(), str(item.get("date") or ""), str(item.get("summary") or item.get("title") or ""))
+            for item in filtered_live
+        }
+        merged = list(filtered_live)
+        for sym in target_symbols:
+            fund_entry = fundamentals.get(sym)
+            if not isinstance(fund_entry, dict):
+                continue
+            comp_name = fund_entry.get("name") or sym
+            announcements = fund_entry.get("recentAnnouncements") or fund_entry.get("disclosures") or []
+            for disc in announcements:
+                if not isinstance(disc, dict):
+                    continue
+                disc_id = str(disc.get("id") or "")
+                num_id = _numeric_id(disc_id)
+                if num_id > 0 and num_id in seen_num_ids:
+                    continue
+                raw_summary = disc.get("summary") or disc.get("title") or "Corporate Disclosure"
+                summary_with_code = raw_summary if raw_summary.upper().startswith(f"{sym}:") else f"{sym}: {raw_summary}"
+                key = (sym, str(disc.get("date") or ""), summary_with_code)
+                if key in seen_keys:
+                    continue
+                if num_id > 0:
+                    seen_num_ids.add(num_id)
+                seen_keys.add(key)
+                merged.append({
+                    "id": disc_id or f"{sym}-{disc.get('date', '')}-{len(merged)}",
+                    "code": sym,
+                    "name": comp_name,
+                    "type": disc.get("type") or "Disclosure",
+                    "summary": summary_with_code,
+                    "body": disc.get("body") or "",
+                    "date": disc.get("date") or "",
+                    "filedAt": disc.get("filedAt") or disc.get("date") or "",
+                })
+
+        merged.sort(key=lambda item: _numeric_id(item.get("id")), reverse=True)
+        news_rows = merged
 
     return JSONResponse(
         content={
@@ -321,7 +393,6 @@ def api_market_news(symbol: Optional[str] = Query(None, description="Optional st
         },
         headers={"Cache-Control": "public, max-age=60, s-maxage=120"},
     )
-
 
 
 # ── Crawler Management ────────────────────────────────────────────────────────
@@ -343,7 +414,6 @@ def api_trigger_crawler(
     if symbol:
         cmd.extend(["--symbol", symbol])
 
-    # Run in background via Popen so HTTP request returns immediately
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     logger.info("Triggered crawler background execution: %s", " ".join(cmd))
 

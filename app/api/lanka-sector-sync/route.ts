@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 function buildSyncUrl(): string {
   if (process.env.LANKA_SECTOR_SYNC_URL) return process.env.LANKA_SECTOR_SYNC_URL;
-  // Production: Vercel routes /api/lanka_sector_sync to the Python function.
-  const base = `https://${process.env.VERCEL_URL}`;
+  const envUrl = process.env.PYTHON_API_URL?.trim();
+  const base = envUrl
+    ? envUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '')
+    : 'https://dse.shahoriar.bd';
   return `${base}/api/lanka_sector_sync`;
 }
 
@@ -64,6 +69,7 @@ export async function GET(request: NextRequest) {
   try {
     const pythonRes = await fetch(scrapeUrl, {
       headers: { 'User-Agent': 'StockSimulatorBD-LankaSectorSync/1.0' },
+      signal: AbortSignal.timeout(25000),
     });
 
     if (!pythonRes.ok) {

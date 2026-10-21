@@ -49,7 +49,13 @@ export async function POST(request: NextRequest) {
     // Inspects accountTier and bossUntil directly in Firestore via Admin SDK
     const nowMs = Date.now();
     const bossUntilMs = userData.bossUntil ? (typeof userData.bossUntil.toMillis === 'function' ? userData.bossUntil.toMillis() : Number(userData.bossUntil)) : 0;
-    const isBoss = userData.accountTier === 'Boss' || bossUntilMs > nowMs;
+    const isBoss =
+      userData.isGodMode === true ||
+      userData.role === 'admin' ||
+      userData.admin === true ||
+      decodedToken.admin === true ||
+      bossUntilMs > nowMs ||
+      (userData.accountTier === 'Boss' && !userData.bossUntil);
 
     if (!isBoss) {
       return NextResponse.json(

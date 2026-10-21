@@ -97,6 +97,7 @@ function DisclaimerModal({ onAgreed }: { onAgreed: () => void }) {
       onAgreed();
     } catch (err: any) {
       setError(err.message || 'Could not record your agreement. Please try again.');
+    } finally {
       setSubmitting(false);
     }
   };

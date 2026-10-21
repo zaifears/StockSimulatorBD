@@ -214,13 +214,13 @@ export default function MarketOverviewBanner({ onSelectStock }: Props) {
                 <span>
                   Turnover:{' '}
                   <strong className="text-gray-900 dark:text-gray-100 font-mono font-bold">
-                    ৳{totals.turnover?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Cr
+                    ৳{((totals.turnover || 0) / 10).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr
                   </strong>
                 </span>
                 <span>
                   Volume:{' '}
                   <strong className="text-gray-900 dark:text-gray-100 font-mono font-bold">
-                    {(totals.volume / 10_000_000).toFixed(2)} Cr
+                    {((totals.volume || 0) / 10_000_000).toFixed(2)} Cr
                   </strong>
                 </span>
                 <span className="hidden xs:inline sm:inline">

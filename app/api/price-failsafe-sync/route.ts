@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
-import { isMarketOpenServer } from '@/lib/utils/marketHours';
+import { isMarketOpenCorroborated } from '@/lib/utils/marketHours';
 import { sendAdminAlertEmail } from '@/lib/resendAdmin';
+
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
 function buildSyncUrl(): string {
   if (process.env.LANKA_PRICE_SYNC_URL) return process.env.LANKA_PRICE_SYNC_URL;
-  const base = `https://${process.env.VERCEL_URL}`;
+  const envUrl = process.env.PYTHON_API_URL?.trim();
+  const base = envUrl
+    ? envUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '')
+    : 'https://dse.shahoriar.bd';
   return `${base}/api/lanka_price_sync`;
 }
 
@@ -77,7 +83,10 @@ export async function GET(request: NextRequest) {
   const ageMs = primaryLastUpdated ? now.getTime() - new Date(primaryLastUpdated).getTime() : Infinity;
   const isStale = !(ageMs <= STALE_THRESHOLD_MS);
 
-  const marketOpen = isMarketOpenServer(now);
+  const { open: marketOpen } = isMarketOpenCorroborated(
+    { marketStatus: latestData?.marketStatus, lastUpdated: primaryLastUpdated },
+    now
+  );
 
   // Outside trading hours, staleness doesn't mean anything — the primary may
   // legitimately not be writing at all. Leave any existing failsafe state
@@ -157,6 +166,7 @@ export async function GET(request: NextRequest) {
   try {
     const pythonRes = await fetch(buildSyncUrl(), {
       headers: { 'User-Agent': 'StockSimulatorBD-PriceFailsafeSync/1.0' },
+      signal: AbortSignal.timeout(25000),
     });
 
     if (!pythonRes.ok) {

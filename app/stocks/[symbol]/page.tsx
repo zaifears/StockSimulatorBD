@@ -364,7 +364,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
             </section>
 
             {/* Audited Company Fundamentals & Valuation */}
-            <CompanyFundamentalsCard symbol={stock.symbol} />
+            <CompanyFundamentalsCard symbol={stock.symbol} currentPrice={basePrice > 0 ? basePrice : undefined} />
 
             {/* Official DSE Corporate Disclosures & News */}
             <StockNewsSection symbol={stock.symbol} />

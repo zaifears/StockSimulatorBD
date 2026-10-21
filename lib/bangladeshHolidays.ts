@@ -124,8 +124,9 @@ const BD_HOLIDAYS: Record<number, Holiday[]> = {
     // Durga Puja was listed as 2026-09-20 — a Sunday, which is a normal DSE
     // trading day — and is actually a month later. Another blocked-session
     // waiting to happen.
-    { date: '2026-10-20', name: 'Mahanabami', localName: 'মহানবমী', type: 'religious' },
-    { date: '2026-10-21', name: 'Durga Puja', localName: 'দুর্গাপূজা', type: 'religious' },
+    { date: '2026-10-20', name: 'Mahanabami (Durga Puja)', localName: 'মহানবমী', type: 'religious' },
+    { date: '2026-10-21', name: 'Durga Puja (Bijoya Dashami)', localName: 'দুর্গাপূজা (বিজয়া দশমী)', type: 'religious' },
+    { date: '2026-10-22', name: 'Durga Puja Holiday', localName: 'দুর্গাপূজা ছুটি', type: 'religious' },
     { date: '2026-12-16', name: 'Victory Day', localName: 'বিজয় দিবস', type: 'national' },
     { date: '2026-12-25', name: 'Christmas', localName: 'বড়দিন', type: 'religious' },
   ],
@@ -231,6 +232,21 @@ export async function getUpcomingHolidays(): Promise<string[]> {
   const next = await getBangladeshHolidays(currentYear + 1);
   
   return [...current, ...next];
+}
+
+/**
+ * Special Government & DSE Working Days (Make-up Saturdays)
+ * When the Bangladesh Government declares an extended executive-order holiday
+ * (e.g., around Eid or Durga Puja), specific Saturdays are designated as
+ * official working days where banks and the Dhaka Stock Exchange conduct
+ * full normal trading sessions (10:00 AM - 2:15 PM BST).
+ */
+export const BD_SPECIAL_WORKING_DAYS: Record<string, string> = {
+  '2026-10-17': 'Special Working Saturday (Durga Puja Make-up Session)',
+};
+
+export function isSpecialWorkingDay(dateStr: string): boolean {
+  return Boolean(BD_SPECIAL_WORKING_DAYS[dateStr]);
 }
 
 /**

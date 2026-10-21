@@ -2,7 +2,7 @@
 // Calculates the authoritative next DSE market opening session and
 // generates calendar invitations and alarms (Google Calendar URL, Apple Calendar .ics).
 
-import { getHolidayDetails } from '@/lib/bangladeshHolidays';
+import { getHolidayDetails, isSpecialWorkingDay } from '@/lib/bangladeshHolidays';
 import { SITE_URL } from '@/lib/siteUrl';
 
 export interface NextMarketSession {
@@ -52,7 +52,7 @@ export function getNextMarketOpen(now: Date = new Date(), holidays: string[] = [
   );
 
   const todayStr = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(curDate).padStart(2, '0')}`;
-  const isTradingDay = dayOfWeek !== 5 && dayOfWeek !== 6;
+  const isTradingDay = (dayOfWeek !== 5 && dayOfWeek !== 6) || isSpecialWorkingDay(todayStr);
   const isHolidayToday = holidaySet.has(todayStr);
 
   // Market session is 10:00 to 14:15 Dhaka time (04:00 to 08:15 UTC)
@@ -79,7 +79,7 @@ export function getNextMarketOpen(now: Date = new Date(), holidays: string[] = [
       const candDate = candBd.getUTCDate();
       const candDateStr = `${candYear}-${String(candMonth + 1).padStart(2, '0')}-${String(candDate).padStart(2, '0')}`;
 
-      const isWeekend = candDay === 5 || candDay === 6;
+      const isWeekend = (candDay === 5 || candDay === 6) && !isSpecialWorkingDay(candDateStr);
       const isHoliday = holidaySet.has(candDateStr);
 
       if (!isWeekend && !isHoliday) {

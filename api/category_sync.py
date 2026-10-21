@@ -16,11 +16,10 @@ from http.server import BaseHTTPRequestHandler
 #
 # Upgraded with modern DSE architecture:
 # - Primary Engine (Instant Single-Pass): Queries https://new.dsebd.org/api/live/prices
+#   (with automatic mirror failover to https://www.dsebd.org/api/live/prices)
 #   where market categories (A, B, N, Z) are available for all instruments in a single
 #   high-speed CloudFront-cached JSON response (< 200ms).
-# - Fallback Engine (Multi-Threaded Classic): Scrapes each classic HTML board
-#   (https://www.dsebd.org/latest_share_price_scroll_group.php?group=X) via
-#   ThreadPoolExecutor across A/B/G/N/Z boards if the modern API is unreachable.
+# - Fallback Engine (Multi-Threaded Classic): Legacy HTML fallback if needed.
 # - Government Securities Filter: Automatically filters out Treasury Bonds (GOVDBT/TBond).
 # ==============================================================================
 
@@ -28,6 +27,7 @@ CATEGORIES = ["A", "B", "G", "N", "Z"]
 MIN_TOTAL_SYMBOLS = 200
 
 NEW_DSE_API_URL = "https://new.dsebd.org/api/live/prices"
+MAIN_DSE_API_URL = "https://www.dsebd.org/api/live/prices"
 NEW_DSE_PAGE_URL = "https://new.dsebd.org/markets/latest-share-price"
 
 USER_AGENT = (
@@ -65,13 +65,14 @@ def is_government_security(code, asset_type="", sector="", board=""):
 
 
 # ------------------------------------------------------------------------------
-# Modern Single-Pass Engine (new.dsebd.org)
+# Modern Single-Pass Engine (new.dsebd.org / www.dsebd.org)
 # ------------------------------------------------------------------------------
 
-def fetch_categories_from_new_dse(timeout=15.0):
+def fetch_categories_from_new_dse(api_url=None, timeout=15.0):
+    target_api = api_url or NEW_DSE_API_URL
     ctx = _create_ssl_context()
     req = urllib.request.Request(
-        NEW_DSE_API_URL,
+        target_api,
         headers={
             'User-Agent': USER_AGENT,
             'Accept': 'application/json',
@@ -124,7 +125,7 @@ def fetch_categories_from_new_dse(timeout=15.0):
 
 
 # ------------------------------------------------------------------------------
-# Classic Multi-Threaded HTML Engine (dsebd.org)
+# Classic Multi-Threaded HTML Engine (Legacy Fallback)
 # ------------------------------------------------------------------------------
 
 class CategoryTableParser(HTMLParser):
@@ -204,24 +205,34 @@ def fetch_all_categories_classic() -> dict:
 
 def get_categories(source="auto"):
     if source == "new":
-        res = fetch_categories_from_new_dse()
-        res["source"] = "new-dse-single-pass"
-        return res
+        try:
+            res = fetch_categories_from_new_dse(api_url=NEW_DSE_API_URL)
+            res["source"] = "new-dse-single-pass"
+            return res
+        except Exception:
+            res = fetch_categories_from_new_dse(api_url=MAIN_DSE_API_URL)
+            res["source"] = "new-dse-main-domain"
+            return res
 
     if source == "classic":
         res = fetch_all_categories_classic()
         res["source"] = "classic-dse-multi-thread"
         return res
 
-    # Auto mode: try fast modern API first, seamlessly fall back to classic if needed
+    # Auto mode: try fast modern API on new.dsebd.org, then www.dsebd.org mirror
     try:
-        res = fetch_categories_from_new_dse()
+        res = fetch_categories_from_new_dse(api_url=NEW_DSE_API_URL)
         res["source"] = "new-dse-single-pass"
         return res
-    except Exception as e:
-        res = fetch_all_categories_classic()
-        res["source"] = f"classic-dse-fallback (new failed: {str(e)[:80]})"
-        return res
+    except Exception as e_new:
+        try:
+            res = fetch_categories_from_new_dse(api_url=MAIN_DSE_API_URL)
+            res["source"] = "new-dse-main-domain"
+            return res
+        except Exception:
+            res = fetch_all_categories_classic()
+            res["source"] = f"classic-dse-fallback (new failed: {str(e_new)[:80]})"
+            return res
 
 
 class handler(BaseHTTPRequestHandler):

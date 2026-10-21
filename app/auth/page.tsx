@@ -102,7 +102,15 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setHasExistingSession(true)
-        const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/profile'
+        const queryRedirect =
+          typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('redirect')
+            : null
+        const safeQueryRedirect =
+          queryRedirect && queryRedirect.startsWith('/') && !queryRedirect.startsWith('//')
+            ? queryRedirect
+            : null
+        const redirectPath = safeQueryRedirect || sessionStorage.getItem('redirectAfterLogin') || '/profile'
         sessionStorage.removeItem('redirectAfterLogin')
         router.push(redirectPath)
       }

@@ -33,22 +33,28 @@ export async function GET() {
   }
 
   // Fallback to direct DSE API if VPS is unreachable
-  try {
-    const directRes = await fetch('https://new.dsebd.org/api/live/market', {
-      headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' },
-      next: { revalidate: 15 },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (directRes.ok) {
-      const data = await directRes.json();
-      return NextResponse.json(data, {
+  for (const dseUrl of ['https://new.dsebd.org/api/live/market', 'https://www.dsebd.org/api/live/market']) {
+    try {
+      const directRes = await fetch(dseUrl, {
         headers: {
-          'Cache-Control': 'public, max-age=15, s-maxage=15, stale-while-revalidate=30',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+          'Referer': 'https://new.dsebd.org/',
         },
+        next: { revalidate: 15 },
+        signal: AbortSignal.timeout(6000),
       });
+      if (directRes.ok) {
+        const data = await directRes.json();
+        return NextResponse.json(data, {
+          headers: {
+            'Cache-Control': 'public, max-age=15, s-maxage=15, stale-while-revalidate=30',
+          },
+        });
+      }
+    } catch (directErr) {
+      console.error(`[market-overview] Direct DSE fallback (${dseUrl}) failed:`, directErr);
     }
-  } catch (directErr) {
-    console.error('[market-overview] Direct DSE fallback also failed:', directErr);
   }
 
   return NextResponse.json(

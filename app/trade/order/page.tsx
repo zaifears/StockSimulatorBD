@@ -31,7 +31,7 @@ function OrderScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
-    marketInfo, simulatorState, isMarketOpen,
+    marketInfo, simulatorState, loading, isMarketOpen,
     executeTrade, transactionStatus, transactionMessage, resetTransaction,
   } = useSharedSimulator();
 
@@ -96,17 +96,21 @@ function OrderScreen() {
     ? 'Market is closed'
     : !symbol
       ? 'Pick a stock to trade'
-      : !isTraded
-        ? 'This stock has not traded today'
-        : quantity <= 0
-          ? 'Enter a quantity'
-          : orderType === 'BUY' && !canAfford
-            ? `Insufficient balance — need ৳${estimate.net.toFixed(2)}`
-            : orderType === 'SELL' && !hasEnoughShares
-              ? saleable === 0 && holding
-                ? 'All shares locked until tomorrow (T+1)'
-                : `Only ${saleable} share${saleable === 1 ? '' : 's'} eligible to sell`
-              : undefined;
+      : !stock
+        ? loading
+          ? 'Loading market quote…'
+          : 'Unrecognized stock symbol — select a valid DSE stock'
+        : !isTraded
+          ? 'This stock has not traded today'
+          : quantity <= 0
+            ? 'Enter a quantity'
+            : orderType === 'BUY' && !canAfford
+              ? `Insufficient balance — need ৳${estimate.net.toFixed(2)}`
+              : orderType === 'SELL' && !hasEnoughShares
+                ? saleable === 0 && holding
+                  ? 'All shares locked until tomorrow (T+1)'
+                  : `Only ${saleable} share${saleable === 1 ? '' : 's'} eligible to sell`
+                : undefined;
 
   const canSubmit = !blockReason && transactionStatus !== 'processing';
 
@@ -223,6 +227,20 @@ function OrderScreen() {
       </button>
 
       {/* Quote card */}
+      {symbol && !loading && !stock && (
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/60 rounded-xl p-4 mb-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between gap-3">
+          <span>
+            <strong>{symbol}</strong> is not a recognized DSE ticker on the active market board.
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowPicker(true)}
+            className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold shrink-0 hover:bg-rose-700 transition-colors"
+          >
+            Choose Stock
+          </button>
+        </div>
+      )}
       {symbol && stock && (
         <div className="bg-white dark:bg-[#16202D] border border-gray-200/80 dark:border-gray-800 rounded-xl p-4 mb-3 shadow-xs">
           <div className="flex items-baseline justify-between mb-3">

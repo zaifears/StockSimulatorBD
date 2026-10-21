@@ -11,7 +11,7 @@
 // straight to that same file's getHolidayDetails(), which is synchronous and
 // reads the local BD_HOLIDAYS dataset directly — no network dependency in
 // the authoritative path.
-import { getHolidayDetails } from '@/lib/bangladeshHolidays';
+import { getHolidayDetails, isSpecialWorkingDay } from '@/lib/bangladeshHolidays';
 
 export function isMarketOpenServer(now: Date = new Date()): boolean {
   // Mirrors the client's preview-mode override.
@@ -26,7 +26,7 @@ export function isMarketOpenServer(now: Date = new Date()): boolean {
   const year = bdTime.getUTCFullYear();
   const dateStr = `${year}-${String(bdTime.getUTCMonth() + 1).padStart(2, '0')}-${String(bdTime.getUTCDate()).padStart(2, '0')}`;
 
-  if (dayOfWeek === 5 || dayOfWeek === 6) return false; // Friday & Saturday weekend
+  if ((dayOfWeek === 5 || dayOfWeek === 6) && !isSpecialWorkingDay(dateStr)) return false; // Friday & Saturday weekend (unless special working Saturday)
 
   const holidayDates = [...getHolidayDetails(year), ...getHolidayDetails(year + 1)].map((h) => h.date);
   if (holidayDates.includes(dateStr)) return false;
@@ -112,34 +112,42 @@ export function isMarketOpenCorroborated(
     return { open: true, reason: 'preview-mode' };
   }
 
-  // The weekend and the clock are certain, so they bind first and DSE's
-  // banner never gets to override them. Only the holiday list — the guessed,
-  // hand-maintained part — is subject to correction below. (Without this,
-  // a stale or stuck "Open" reading would authorise trading against a frozen
-  // board all weekend.)
+  // The trading-hours clock (10:00-14:15 Dhaka time) always binds first so a
+  // stuck "Open" banner can never extend a session past closing.
   const bdTime = new Date(now.getTime() + 6 * 60 * 60 * 1000);
-  const dayOfWeek = bdTime.getUTCDay();
-  if (dayOfWeek === 5 || dayOfWeek === 6) return { open: false, reason: 'weekend' };
-
   const hour = bdTime.getUTCHours();
   const minute = bdTime.getUTCMinutes();
   const withinHours = hour >= 10 && (hour < 14 || (hour === 14 && minute <= 15));
   if (!withinHours) return { open: false, reason: 'outside-hours' };
 
+  const dayOfWeek = bdTime.getUTCDay();
+  const year = bdTime.getUTCFullYear();
+  const dateStr = `${year}-${String(bdTime.getUTCMonth() + 1).padStart(2, '0')}-${String(bdTime.getUTCDate()).padStart(2, '0')}`;
+  const isWeekend = (dayOfWeek === 5 || dayOfWeek === 6) && !isSpecialWorkingDay(dateStr);
+
+  // DSE's own fresh status (<= 20 minutes old) from new.dsebd.org/api/live/prices
+  // (session.isOpen) outranks both the holiday calendar AND the weekend rule.
+  // When the Bangladesh Government / DSE declares a special working Saturday
+  // (such as Saturday 2026-10-17 ahead of Durga Puja), a fresh "Open" reading
+  // from DSE lets trading proceed without being blocked by dayOfWeek === 6.
+  // Conversely, on a normal weekend, either no fresh sync exists (dseOpen === null,
+  // falling back to isWeekend -> closed) or DSE reports "Closed" (dseOpen === false).
   const dseOpen = getDseReportedOpen(input, now);
-  // No usable reading — fall back to the calendar alone, i.e. exactly the
-  // pre-existing behaviour.
   if (dseOpen === null) {
+    if (isWeekend) return { open: false, reason: 'weekend' };
     const calendarOpen = isMarketOpenServer(now);
     return { open: calendarOpen, reason: calendarOpen ? 'calendar-open' : 'calendar-closed' };
   }
 
   if (!dseOpen) return { open: false, reason: 'dse-reports-closed' };
 
-  // Past the weekend and hours gates, the calendar can only still be
-  // "closed" because of a holiday entry — which DSE just contradicted.
+  const calendarOpen = isMarketOpenServer(now);
   return {
     open: true,
-    reason: isMarketOpenServer(now) ? 'dse-open' : 'dse-open-overrides-calendar-holiday',
+    reason: calendarOpen
+      ? 'dse-open'
+      : isWeekend
+        ? 'dse-open-overrides-weekend'
+        : 'dse-open-overrides-calendar-holiday',
   };
 }

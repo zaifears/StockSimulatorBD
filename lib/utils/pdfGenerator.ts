@@ -6,7 +6,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { PortfolioItem, Stock } from '@/hooks/useSimulator';
-import type { PortfolioTotals } from '@/lib/utils/portfolio';
+import { getSaleableQuantity, getValuationPrice, type PortfolioTotals } from '@/lib/utils/portfolio';
 
 export interface StatementTicket {
   ticketId: string;
@@ -171,22 +171,15 @@ export async function generatePortfolioPdf(data: StatementData) {
   portfolio.forEach((item) => {
     const stock = stockBySymbol.get(item.symbol);
     const category = stock?.category || 'A';
-    const ltp = (stock?.ltp && stock.ltp > 0) ? stock.ltp : (stock?.ycp ?? item.averageBuyPrice);
+    const ltp = getValuationPrice(stock) || item.averageBuyPrice;
     const totalCost = item.totalCost || item.quantity * item.averageBuyPrice;
     const marketVal = item.quantity * ltp;
     const pnl = marketVal - totalCost;
     const pnlPct = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
     const mktWeight = totals.currentValue > 0 ? (marketVal / totals.currentValue) * 100 : 0;
 
-    // Mature shares vs immature (T+1 calculation)
-    const nowTs = Date.now();
-    const saleable = (item.lots || []).reduce((acc: number, lot: any) => {
-      const lotDateStr = lot.date || lot.purchaseDate;
-      const lotDate = lotDateStr ? new Date(lotDateStr).getTime() : 0;
-      const shares = (lot.shares ?? lot.quantity ?? 0) as number;
-      const isMature = nowTs - lotDate > 18 * 3600 * 1000;
-      return isMature ? acc + shares : acc;
-    }, 0);
+    // Mature shares vs immature (authoritative DSE T+1 Dhaka calendar-day calculation)
+    const saleable = getSaleableQuantity(item);
     const lockIn = Math.max(0, item.quantity - saleable);
 
     const rowObj = {
@@ -194,7 +187,7 @@ export async function generatePortfolioPdf(data: StatementData) {
       category,
       totalQty: item.quantity,
       lockIn,
-      saleable: saleable > 0 ? saleable : item.quantity,
+      saleable,
       avgCost: item.averageBuyPrice,
       totalCost,
       marketRate: ltp,

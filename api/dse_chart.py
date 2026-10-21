@@ -1,40 +1,102 @@
 import json
-import urllib.request
+import re
 import ssl
-from html.parser import HTMLParser
+import urllib.request
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
-from datetime import datetime, timedelta
 
-class DSEArchiveParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.in_td = False
-        self.current_row = []
-        self.table_data = []
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+)
 
-    def handle_starttag(self, tag, attrs):
-        if tag == 'td':
-            self.in_td = True
+COMPANY_BASE_URLS = [
+    "https://new.dsebd.org/company",
+    "https://www.dsebd.org/company",
+]
 
-    def handle_endtag(self, tag):
-        if tag == 'td':
-            self.in_td = False
-        elif tag == 'tr':
-            if len(self.current_row) >= 10:
-                self.table_data.append(self.current_row)
-            self.current_row = []
 
-    def handle_data(self, data):
-        if self.in_td:
-            text = data.strip().replace(',', '')
-            # The "Trading Code" cell wraps its text in a nested <a>; the
-            # whitespace text nodes on either side of that <a> would each
-            # append an empty entry here, shifting every later column
-            # index by +2. Skipping empty entries keeps one row = one
-            # <td> regardless of nested markup in any cell.
-            if text:
-                self.current_row.append(text)
+def _create_ssl_context():
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
+def fetch_from_modern_dse(symbol: str, base_url: str = "https://new.dsebd.org/company") -> list:
+    """Extracts daily candles from modern DSE company page RSC flight stream."""
+    url = f"{base_url}/{symbol.upper()}"
+    ctx = _create_ssl_context()
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Referer": "https://new.dsebd.org/",
+        },
+    )
+
+    with urllib.request.urlopen(req, context=ctx, timeout=12.0) as resp:
+        html = resp.read().decode("utf-8", errors="replace")
+
+    chunks = re.findall(r'self\.__next_f\.push\(\[1,\s*"(.*?)"\]\)', html, re.DOTALL)
+    full_flight = ""
+    for c in chunks:
+        try:
+            unescaped = json.loads('"' + c + '"')
+            full_flight += unescaped
+        except Exception:
+            full_flight += c
+
+    match = re.search(r'\[\{\"t\":[^\]]*?\"date\":\"\d{4}-\d{2}-\d{2}\"[^\]]*?\}\]', full_flight)
+    if not match:
+        matches = re.findall(r'(\[\{\"t\":[^\}]*?\"date\":.*?\])', full_flight)
+        if matches:
+            raw_candles = json.loads(matches[0])
+        else:
+            return []
+    else:
+        raw_candles = json.loads(match.group(0))
+
+    candles = []
+    for item in raw_candles:
+        date_str = item.get("date")
+        if not date_str:
+            continue
+
+        open_val = float(item.get("open", 0.0) or 0.0)
+        high_val = float(item.get("high", 0.0) or 0.0)
+        low_val = float(item.get("low", 0.0) or 0.0)
+        close_val = float(item.get("price", 0.0) or item.get("close", 0.0) or 0.0)
+        volume_val = int(float(item.get("volume", 0) or 0))
+
+        if volume_val <= 0 and open_val <= 0:
+            continue
+
+        candles.append({
+            "date": date_str,
+            "open": open_val,
+            "high": high_val,
+            "low": low_val,
+            "close": close_val,
+            "volume": volume_val,
+        })
+
+    return candles
+
+
+def get_chart_data(symbol: str) -> list:
+    last_error = None
+    for base_url in COMPANY_BASE_URLS:
+        try:
+            candles = fetch_from_modern_dse(symbol, base_url=base_url)
+            if candles:
+                return candles
+        except Exception as e:
+            last_error = e
+    if last_error:
+        raise last_error
+    return []
+
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -46,70 +108,19 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            end_date = datetime.today()
-            start_date = end_date - timedelta(days=90)
-            
-            start_str = start_date.strftime('%Y-%m-%d')
-            end_str = end_date.strftime('%Y-%m-%d')
-            
-            url = f"https://www.dsebd.org/day_end_archive.php?startDate={start_str}&endDate={end_str}&inst={symbol.upper()}&archive=data"
-            
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            
-            with urllib.request.urlopen(req, context=ctx, timeout=8.0) as response:
-                html = response.read().decode('utf-8', errors='ignore')
-                
-            parser = DSEArchiveParser()
-            parser.feed(html)
-            
-            chart_data = []
-            
-            for row in parser.table_data:
-                try:
-                    date_str = row[1]
-                    if "-" not in date_str:
-                        continue
-                    
-                    # DSE Archive columns (verified against the live table header):
-                    # 0:#, 1:Date, 2:Code, 3:LTP, 4:High, 5:Low, 6:Open, 7:Close,
-                    # 8:YCP, 9:Trade, 10:Value(mn), 11:Volume
-                    volume = int(float(row[11])) if len(row) > 11 and row[11] not in ['--', '', '0'] else 0
-                    # Days with zero volume (holidays / no trades in range) carry
-                    # a stale YCP as "close" with everything else blank — that
-                    # produces a degenerate candle (a huge wick to 0). Skip them;
-                    # the client only wants days that actually traded.
-                    if volume <= 0:
-                        continue
-
-                    chart_data.append({
-                        'date': date_str,
-                        'open': float(row[6]) if row[6] not in ['--', '', '0'] else 0,
-                        'high': float(row[4]) if row[4] not in ['--', '', '0'] else 0,
-                        'low': float(row[5]) if row[5] not in ['--', '', '0'] else 0,
-                        'close': float(row[7]) if row[7] not in ['--', '', '0'] else 0,
-                        'volume': volume
-                    })
-                except (IndexError, ValueError):
-                    continue
-
+            chart_data = get_chart_data(symbol)
             if not chart_data:
                 self.send_error_response(404, "No data found")
                 return
-                
-            chart_data.reverse()
-            self.send_success_response(chart_data)
 
+            self.send_success_response(chart_data)
         except Exception as e:
             self.send_error_response(500, f"Scraper Error: {str(e)}")
 
     def send_success_response(self, data):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*') 
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
 

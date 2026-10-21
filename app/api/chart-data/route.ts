@@ -43,12 +43,14 @@ export async function GET(request: Request) {
     const docSnap = await docRef.get();
     const now     = Date.now();
 
+    let cachedChartData: unknown[] | null = null;
     if (docSnap.exists) {
       const data         = docSnap.data()!;
       const hasData      = Array.isArray(data.chartData) && data.chartData.length > 0;
       const isStale      = !hasData || (now - (data.lastUpdated || 0)) > THREE_MIN_MS;
       const isDeadlocked = data.isScraping && (now - (data.lockTime || 0)) > DEADLOCK_MS;
 
+      if (hasData) cachedChartData = data.chartData;
       if (!isStale) return NextResponse.json(data.chartData);
       if (data.isScraping && !isDeadlocked && hasData) return NextResponse.json(data.chartData);
     }
@@ -88,6 +90,10 @@ export async function GET(request: Request) {
 
     } catch (scrapeError: any) {
       await docRef.set({ isScraping: false, lockTime: 0 }, { merge: true }).catch(() => {});
+      if (cachedChartData) {
+        console.warn(`[Gatekeeper] Fresh scrape failed for ${symbol} (${scrapeError.message}); returning cached chart data.`);
+        return NextResponse.json(cachedChartData);
+      }
       throw scrapeError;
     }
 

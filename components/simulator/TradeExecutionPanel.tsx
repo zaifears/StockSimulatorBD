@@ -6,6 +6,7 @@ import Link from 'next/link';
 import NotTradedInfo from './trade/NotTradedInfo';
 import MarketClosedModal from '@/components/market/MarketClosedModal';
 import { getNextMarketOpen } from '@/lib/utils/marketSchedule';
+import { COMMISSION_RATE, moneyAdd, moneyMultiply, moneySubtract, roundMoney } from '@/lib/utils/money';
 
 interface TradeExecutionPanelProps {
   symbol: string;
@@ -16,6 +17,8 @@ interface TradeExecutionPanelProps {
   lastClose?: number;
   availableBalance: number;
   currentHoldings: number;
+  /** Mature shares eligible to sell today under the DSE T+1 settlement rule. */
+  saleableHoldings?: number;
   isMarketOpen: boolean;
   isAuthenticated: boolean;
   onExecute: (type: 'BUY' | 'SELL', quantity: number) => Promise<void>;
@@ -30,6 +33,7 @@ export default function TradeExecutionPanel({
   lastClose,
   availableBalance,
   currentHoldings,
+  saleableHoldings,
   isMarketOpen,
   isAuthenticated,
   onExecute
@@ -40,19 +44,20 @@ export default function TradeExecutionPanel({
 
   const nextSession = useMemo(() => getNextMarketOpen(), []);
 
-  // 0.4% standard DSE broker commission
-  const BROKER_FEE_RATE = 0.004;
+  // 0.4% standard DSE broker commission (matched to server money math)
   const qtyNum = parseInt(quantity) || 0;
+  const effectiveSaleable = saleableHoldings ?? currentHoldings;
+  const lockedHoldings = Math.max(0, currentHoldings - effectiveSaleable);
 
-  const grossValue = qtyNum * currentPrice;
-  const commission = grossValue * BROKER_FEE_RATE;
+  const grossValue = moneyMultiply(currentPrice, qtyNum);
+  const commission = roundMoney(grossValue * COMMISSION_RATE);
 
-  const totalBuyCost = grossValue + commission;
-  const totalSellRevenue = grossValue - commission;
+  const totalBuyCost = moneyAdd(grossValue, commission);
+  const totalSellRevenue = moneySubtract(grossValue, commission);
 
   // Logic checks
-  const canBuy = qtyNum > 0 && isTraded && totalBuyCost <= availableBalance;
-  const canSell = qtyNum > 0 && isTraded && qtyNum <= currentHoldings;
+  const canBuy = qtyNum > 0 && isTraded && currentPrice > 0 && totalBuyCost <= availableBalance;
+  const canSell = qtyNum > 0 && isTraded && currentPrice > 0 && qtyNum <= effectiveSaleable;
   const isInputDisabled = submittingType !== null || !isMarketOpen || !isAuthenticated;
 
   const handleTrade = async (type: 'BUY' | 'SELL') => {
@@ -121,6 +126,11 @@ export default function TradeExecutionPanel({
           <div className="text-right">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Your Shares</p>
             <p className="font-mono font-bold text-lg text-gray-900 dark:text-white tabular-nums">{currentHoldings}</p>
+            {lockedHoldings > 0 && (
+              <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                {effectiveSaleable} saleable · {lockedHoldings} T+1 locked
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -238,6 +248,11 @@ export default function TradeExecutionPanel({
       {!isAuthenticated ? (
         <Link
           href="/auth"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+            }
+          }}
           className="w-full py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all active:scale-95 flex items-center justify-center"
         >
           Log In to Trade

@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
 import { formatDateToDDMMYYYY } from '@/lib/dateFormatter';
+import { isSpecialWorkingDay } from '@/lib/bangladeshHolidays';
 
 interface MarketCalendarProps {
   holidays: string[];
@@ -45,7 +46,7 @@ export default function MarketCalendar({ holidays }: MarketCalendarProps) {
     const month = String(testDate.getMonth() + 1).padStart(2, '0');
     const dayStr = String(day).padStart(2, '0');
     const dateStr = `${year}-${month}-${dayStr}`;
-    if (dayOfWeek === 5 || dayOfWeek === 6) return false;
+    if ((dayOfWeek === 5 || dayOfWeek === 6) && !isSpecialWorkingDay(dateStr)) return false;
     if (holidays.includes(dateStr)) return false;
     return true;
   };

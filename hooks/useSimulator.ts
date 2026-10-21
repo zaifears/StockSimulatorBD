@@ -9,7 +9,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUpcomingHolidays } from '@/lib/bangladeshHolidays';
+import { getUpcomingHolidays, isSpecialWorkingDay } from '@/lib/bangladeshHolidays';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
 // =====================================================
@@ -118,6 +118,41 @@ export const useSimulator = () => {
   const ensureStateAttempted = useRef(false);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
   const [sectorMap, setSectorMap] = useState<Record<string, string>>({});
+  const categoryMapRef = useRef<Record<string, string>>({});
+  const sectorMapRef = useRef<Record<string, string>>({});
+  const marketInfoRef = useRef<MarketInfo | null>(null);
+
+  useEffect(() => {
+    categoryMapRef.current = categoryMap;
+    setMarketInfo((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        stocks: prev.stocks.map((s) => ({
+          ...s,
+          category: categoryMap[s.symbol] || s.category,
+        })),
+      };
+    });
+  }, [categoryMap]);
+
+  useEffect(() => {
+    sectorMapRef.current = sectorMap;
+    setMarketInfo((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        stocks: prev.stocks.map((s) => ({
+          ...s,
+          sector: sectorMap[s.symbol] || s.sector,
+        })),
+      };
+    });
+  }, [sectorMap]);
+
+  useEffect(() => {
+    marketInfoRef.current = marketInfo;
+  }, [marketInfo]);
 
   // ── 1. Load Bangladesh Holidays ──
   useEffect(() => {
@@ -149,21 +184,36 @@ export const useSimulator = () => {
 
         if (snapshot.exists() && isMounted) {
           const data = snapshot.data() as MarketInfo;
-          const mergedStocks = data.stocks.map(stock => {
+          const rawStocks = Array.isArray(data.stocks) ? data.stocks : [];
+          // Normalize turnover (`value`): older DSE new-API snapshots stored `valueMn`
+          // in millions of BDT (where total market turnover across 390+ stocks is ~3,000-15,000)
+          // instead of raw BDT (~3,000,000,000+). Detect and scale to raw BDT automatically.
+          const totalRawValue = rawStocks.reduce(
+            (sum, s) => sum + (typeof s.value === 'number' && Number.isFinite(s.value) ? s.value : 0),
+            0
+          );
+          const valueScale = totalRawValue > 0 && totalRawValue < 500_000 ? 1_000_000 : 1;
+
+          const mergedStocks = rawStocks.map(stock => {
             const calculatedChangePercent = stock.changePercent !== undefined 
               ? stock.changePercent 
               : (stock.ltp - stock.change > 0 ? (stock.change / (stock.ltp - stock.change)) * 100 : 0);
-              
+            const normalizedValue =
+              typeof stock.value === 'number' && Number.isFinite(stock.value)
+                ? Math.round(stock.value * valueScale * 100) / 100
+                : stock.value;
+
             return {
               ...stock,
+              value: normalizedValue,
               changePercent: calculatedChangePercent,
-              category: categoryMap[stock.symbol] || stock.category,
-              sector: sectorMap[stock.symbol] || stock.sector
+              category: categoryMapRef.current[stock.symbol] || stock.category,
+              sector: sectorMapRef.current[stock.symbol] || stock.sector
             };
           });
           setMarketInfo({ ...data, stocks: mergedStocks });
           setNextUpdateIn(180); // Reset timer on successful fetch
-        } else if (isMounted && !marketInfo) {
+        } else if (isMounted && !marketInfoRef.current) {
           setMarketInfo({ stocks: [], lastUpdated: new Date().toISOString(), totalStocks: 0 });
         }
       } catch (err) {
@@ -200,7 +250,7 @@ export const useSimulator = () => {
       clearInterval(timerId); 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, db, categoryMap, sectorMap]);
+  }, [user, db]);
 
   // ── 3. Categories Listener ──
   useEffect(() => {
@@ -241,13 +291,14 @@ export const useSimulator = () => {
       stateUnsubscribe.current = onSnapshot(stateRef, async (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as Omit<SimulatorState, 'totalCurrentValue' | 'totalGainLoss' | 'gainLossPercent'>;
+          const currentStocks = marketInfoRef.current?.stocks || [];
           setSimulatorState(prev => ({
             ...data,
             portfolio: data.portfolio || [],
             realizedGainLoss: data.realizedGainLoss || 0,
-            totalCurrentValue: calculatePortfolioValue(data.portfolio || [], marketInfo?.stocks || []),
-            totalGainLoss: calculateGainLoss(data.portfolio || [], marketInfo?.stocks || []),
-            gainLossPercent: calculateGainLossPercent(data.portfolio || [], marketInfo?.stocks || [])
+            totalCurrentValue: calculatePortfolioValue(data.portfolio || [], currentStocks),
+            totalGainLoss: calculateGainLoss(data.portfolio || [], currentStocks),
+            gainLossPercent: calculateGainLossPercent(data.portfolio || [], currentStocks)
           }));
         } else if (!snapshot.metadata.fromCache && !ensureStateAttempted.current) {
           // Only treat this as a genuinely new user once Firestore has
@@ -274,7 +325,19 @@ export const useSimulator = () => {
     }
 
     return () => { if (stateUnsubscribe.current) stateUnsubscribe.current(); };
-  }, [user, db, marketInfo]);
+  }, [user, db]);
+
+  // Recompute derived portfolio valuations when live market prices update
+  // without tearing down the simulator/state Firestore listener.
+  useEffect(() => {
+    if (!marketInfo) return;
+    setSimulatorState(prev => ({
+      ...prev,
+      totalCurrentValue: calculatePortfolioValue(prev.portfolio, marketInfo.stocks),
+      totalGainLoss: calculateGainLoss(prev.portfolio, marketInfo.stocks),
+      gainLossPercent: calculateGainLossPercent(prev.portfolio, marketInfo.stocks),
+    }));
+  }, [marketInfo]);
 
   // ── 5. Math Calculations ──
   // Bug fixed 2026-08-24: this used to skip any holding whose stock had
@@ -324,24 +387,22 @@ export const useSimulator = () => {
     
     const dateStr = `${bdTime.getUTCFullYear()}-${String(bdTime.getUTCMonth() + 1).padStart(2, '0')}-${String(bdTime.getUTCDate()).padStart(2, '0')}`;
 
-    if (dayOfWeek === 5 || dayOfWeek === 6) return false;
-
     const withinHours = hour >= 10 && (hour < 14 || (hour === 14 && minute <= 15));
     if (!withinHours) return false;
 
     // DSE's own "Market Status", captured by api/market_sync.py off the same
-    // board we scrape for prices, outranks the holiday calendar whenever it's
-    // present and fresh — mirroring isMarketOpenCorroborated() on the server
-    // (lib/utils/marketHours.ts) so the Buy button and the trade API agree.
-    // They previously disagreed: the client resolved holidays via
-    // /api/holidays (Google Calendar) while the server used the local
-    // hardcoded list, so a bad local date showed an enabled Buy button that
-    // failed on submit with "Market is closed".
+    // board we scrape for prices, outranks both the holiday calendar and the
+    // weekend rule whenever it's present and fresh (<= 20m) — mirroring
+    // isMarketOpenCorroborated() on the server (lib/utils/marketHours.ts) so
+    // the Buy button and the trade API always agree, including on government-
+    // declared working Saturdays (e.g. 2026-10-17).
     const dseOpen = getDseReportedOpen({
       marketStatus: marketInfo?.marketStatus,
       lastUpdated: marketInfo?.lastUpdated,
     }, now);
     if (dseOpen !== null) return dseOpen;
+
+    if ((dayOfWeek === 5 || dayOfWeek === 6) && !isSpecialWorkingDay(dateStr)) return false;
 
     return !bangladeshHolidays.includes(dateStr);
   }, [bangladeshHolidays, marketInfo?.marketStatus, marketInfo?.lastUpdated]);
@@ -373,10 +434,11 @@ export const useSimulator = () => {
       throw new Error('Invalid Quantity');
     }
 
-    const stock = marketInfo.stocks.find(s => s.symbol === symbol);
-    if (!stock || stock.ltp <= 0) {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    const stock = marketInfo.stocks.find(s => s.symbol === normalizedSymbol);
+    if (!stock || stock.traded === false || stock.ltp <= 0) {
       setTransactionStatus('error');
-      setTransactionMessage('Stock not found or invalid price');
+      setTransactionMessage('This stock has not traded today or has no live price available.');
       throw new Error('Invalid Stock');
     }
 

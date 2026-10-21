@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
 export const useProfile = () => {
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser, loading: authLoading, logout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,9 +56,9 @@ export const useProfile = () => {
   }, [router, authUser, authLoading]);
 
   const handleLogout = useCallback(async () => {
-    await signOut(auth);
+    await logout();
     router.push('/');
-  }, [router]);
+  }, [logout, router]);
 
   const handleSave = useCallback(async () => {
     if (!user || !formData.name) return;

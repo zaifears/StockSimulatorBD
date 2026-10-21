@@ -41,11 +41,12 @@ export interface NewsItem {
   id: string;
   code: string;
   name?: string;
+  title?: string;
   sector?: string;
   type?: string;
   date?: string;
   time?: string;
-  summary: string;
+  summary?: string;
   body?: string;
   filedAt?: string;
 }
@@ -256,12 +257,13 @@ function BossActiveNewsRadar({
     [portfolio]
   );
 
-  // Fetch full market news feed (cached at Edge for 120s)
+  // Fetch market news feed for owned symbols (merges live DSE feed + cached fundamentals disclosures)
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/market-news');
+      const query = ownedSymbols.length > 0 ? `?symbol=${encodeURIComponent(ownedSymbols.join(','))}` : '';
+      const res = await fetch(`/api/market-news${query}`);
       if (res.ok) {
         const json = await res.json();
         setAllNews(json.news || []);
@@ -278,7 +280,8 @@ function BossActiveNewsRadar({
 
   useEffect(() => {
     fetchNews();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownedSymbols.join(',')]);
 
   // Filter news matching user's owned portfolio holdings
   const portfolioNews = useMemo(() => {
@@ -291,7 +294,7 @@ function BossActiveNewsRadar({
       if (ownedSet.has(itemCode)) return true;
 
       // Secondary check: does summary start with an owned ticker?
-      const summaryUpper = (item.summary || '').toUpperCase();
+      const summaryUpper = (item.summary || item.title || '').toUpperCase();
       for (const sym of ownedSymbols) {
         if (summaryUpper.startsWith(`${sym}:`) || summaryUpper.startsWith(`${sym} `)) {
           return true;
@@ -303,11 +306,11 @@ function BossActiveNewsRadar({
 
   // Categorize helper
   const getCategory = (item: NewsItem): 'dividend' | 'psi' | 'earnings' | 'agm' | 'general' => {
-    const text = `${item.type || ''} ${item.summary || ''} ${item.body || ''}`.toLowerCase();
+    const text = `${item.type || ''} ${item.title || ''} ${item.summary || ''} ${item.body || ''}`.toLowerCase();
     if (text.includes('dividend') || text.includes('record date') || text.includes('cash div') || text.includes('stock div')) {
       return 'dividend';
     }
-    if (text.includes('price sensitive') || (item.summary || '').toUpperCase().includes('PSI')) {
+    if (text.includes('price sensitive') || (item.summary || item.title || '').toUpperCase().includes('PSI')) {
       return 'psi';
     }
     if (text.includes('financial') || text.includes('eps') || text.includes('quarter') || text.includes('half yearly') || text.includes('audited') || text.includes('navps')) {
@@ -323,9 +326,10 @@ function BossActiveNewsRadar({
   const filteredNews = useMemo(() => {
     return portfolioNews.filter((item) => {
       const itemCode = (item.code || '').trim().toUpperCase();
+      const headlineUpper = (item.summary || item.title || '').toUpperCase();
 
       // Holding filter
-      if (selectedHolding !== 'all' && itemCode !== selectedHolding && !item.summary.toUpperCase().startsWith(selectedHolding)) {
+      if (selectedHolding !== 'all' && itemCode !== selectedHolding && !headlineUpper.startsWith(selectedHolding)) {
         return false;
       }
 
@@ -482,7 +486,7 @@ function BossActiveNewsRadar({
           </button>
           {ownedSymbols.map((sym) => {
             const countForSym = portfolioNews.filter(
-              (n) => (n.code || '').toUpperCase() === sym || n.summary.toUpperCase().startsWith(sym)
+              (n) => (n.code || '').toUpperCase() === sym || (n.summary || n.title || '').toUpperCase().startsWith(sym)
             ).length;
 
             return (
@@ -654,38 +658,41 @@ function BossActiveNewsRadar({
 
                 {/* Headline Summary */}
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug break-words">
-                  {item.summary}
+                  {item.title || item.summary || 'Corporate Disclosure'}
                 </h3>
 
                 {/* Disclosure Body */}
-                {item.body && (
-                  <div className="space-y-1.5">
-                    <p
-                      className={`text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-sans ${
-                        isExpanded ? 'whitespace-pre-line' : 'line-clamp-2'
-                      }`}
-                    >
-                      {item.body}
-                    </p>
-                    {item.body.length > 120 && (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(item.id)}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline pt-0.5"
+                {(item.body || (item.title && item.summary && item.summary !== item.title ? item.summary : undefined)) && (() => {
+                  const detailBody = item.body || item.summary || '';
+                  return (
+                    <div className="space-y-1.5">
+                      <p
+                        className={`text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-sans ${
+                          isExpanded ? 'whitespace-pre-line' : 'line-clamp-2'
+                        }`}
                       >
-                        {isExpanded ? (
-                          <>
-                            Show Less <ChevronUp className="w-3 h-3" />
-                          </>
-                        ) : (
-                          <>
-                            Read Full Filing <ChevronDown className="w-3 h-3" />
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
+                        {detailBody}
+                      </p>
+                      {detailBody.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(item.id)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline pt-0.5"
+                        >
+                          {isExpanded ? (
+                            <>
+                              Show Less <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              Read Full Filing <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Footer Quick Actions */}
                 <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60 flex flex-wrap items-center justify-between gap-2">

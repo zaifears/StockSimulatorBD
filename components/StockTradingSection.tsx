@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSimulator } from '@/hooks/useSimulator';
 import { useAuth } from '@/contexts/AuthContext';
 import TradeExecutionPanel from '@/components/simulator/TradeExecutionPanel';
+import { getSaleableQuantity } from '@/lib/utils/portfolio';
 
 interface StockTradingSectionProps {
   symbol: string;
@@ -63,6 +64,7 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
   // Extract user holdings for this asset
   const portfolioItem = simulatorState.portfolio.find(p => p.symbol.toUpperCase() === symbol.toUpperCase());
   const currentHoldings = portfolioItem ? portfolioItem.quantity : 0;
+  const saleableHoldings = portfolioItem ? getSaleableQuantity(portfolioItem) : 0;
 
   return (
     <div className="space-y-4">
@@ -73,6 +75,7 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
         lastClose={lastClose}
         availableBalance={simulatorState.balance}
         currentHoldings={currentHoldings}
+        saleableHoldings={saleableHoldings}
         isMarketOpen={isMarketOpen()}
         isAuthenticated={!!user} // Tells the panel if the user is logged in
         onExecute={(type, qty) => executeTrade(symbol, type, qty)}

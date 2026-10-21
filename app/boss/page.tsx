@@ -278,6 +278,9 @@ export default function BossPage() {
   const handleRedeemPromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('redirectAfterLogin', '/boss#payment');
+      }
       router.push('/auth?redirect=/boss#payment');
       return;
     }
@@ -347,6 +350,9 @@ export default function BossPage() {
     const trimmedPhone = whatsappNumber.trim();
 
     if (!user) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('redirectAfterLogin', '/boss#payment');
+      }
       router.push('/auth?redirect=/boss#payment');
       return;
     }
@@ -526,7 +532,7 @@ export default function BossPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>৳100k Demo Cash + 10k Bonus</span>
+                    <span>৳10,000 Starting Demo Capital</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -868,6 +874,11 @@ export default function BossPage() {
                 </p>
                 <Link
                   href="/auth?redirect=/boss#payment"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('redirectAfterLogin', '/boss#payment');
+                    }
+                  }}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-105 text-gray-950 font-black text-xs shadow-md transition-all active:scale-95"
                 >
                   <LogIn className="w-4 h-4" />

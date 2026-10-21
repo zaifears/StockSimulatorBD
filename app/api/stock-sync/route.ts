@@ -4,21 +4,22 @@ import { getAdminDb } from '@/lib/firebaseAdmin';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-function getBaseUrl(request: NextRequest): string {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  const host = request.headers.get('host') || 'localhost:3000';
-  const proto = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-  return `${proto}://${host}`;
+function getPythonApiBase(): string {
+  const envUrl = process.env.PYTHON_API_URL?.trim();
+  if (envUrl) {
+    return envUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  }
+  return 'https://dse.shahoriar.bd';
 }
 
-function buildSyncUrl(request: NextRequest): string {
+function buildSyncUrl(): string {
   if (process.env.MARKET_SYNC_URL) return process.env.MARKET_SYNC_URL;
-  return `${getBaseUrl(request)}/api/market_sync`;
+  return `${getPythonApiBase()}/api/market_sync`;
 }
 
-function buildLankaFailsafeUrl(request: NextRequest): string {
+function buildLankaFailsafeUrl(): string {
   if (process.env.LANKA_PRICE_SYNC_URL) return process.env.LANKA_PRICE_SYNC_URL;
-  return `${getBaseUrl(request)}/api/lanka_price_sync`;
+  return `${getPythonApiBase()}/api/lanka_price_sync`;
 }
 
 export async function GET(request: NextRequest) {
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Scrape Primary (DSE) ──────────────────────────────────────────────────
-  const scrapeUrl = buildSyncUrl(request);
+  const scrapeUrl = buildSyncUrl();
   console.log(`[stock-sync] Fetching primary DSE: ${scrapeUrl}`);
 
   let marketData: unknown[] | null = null;
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
   try {
     const pythonRes = await fetch(scrapeUrl, {
       headers: { 'User-Agent': 'StockSimulatorBD-Sync/1.0' },
-      // No explicit timeout here — Vercel's 60s maxDuration is the hard ceiling
+      signal: AbortSignal.timeout(25000),
     });
 
     if (!pythonRes.ok) {
@@ -94,12 +95,13 @@ export async function GET(request: NextRequest) {
 
   // ── Automatic Fallback to LankaBangla if Primary Failed ──────────────────
   if (!marketData) {
-    const failsafeUrl = buildLankaFailsafeUrl(request);
+    const failsafeUrl = buildLankaFailsafeUrl();
     console.log(`[stock-sync] Fetching fallback backup: ${failsafeUrl}`);
 
     try {
       const failsafeRes = await fetch(failsafeUrl, {
         headers: { 'User-Agent': 'StockSimulatorBD-SyncFallback/1.0' },
+        signal: AbortSignal.timeout(25000),
       });
 
       if (!failsafeRes.ok) {
@@ -165,16 +167,21 @@ export async function GET(request: NextRequest) {
       `[stock-sync] ✓ Wrote ${marketData.length} stocks to ${appId} (source: ${source}, DSE status: ${marketStatus ?? 'unknown'})`
     );
 
-    return NextResponse.json({
-      success:     true,
-      source,
-      message:     source === 'dse'
-        ? `Successfully synced ${marketData.length} stocks from DSE.`
-        : `Primary DSE failed (${primaryError}); successfully synced ${marketData.length} stocks from LankaBangla backup.`,
-      marketStatus,
-      appId,
-      timestamp:   new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        success:     true,
+        source,
+        message:     source === 'dse'
+          ? `Successfully synced ${marketData.length} stocks from DSE.`
+          : `Primary DSE failed (${primaryError}); successfully synced ${marketData.length} stocks from LankaBangla backup.`,
+        marketStatus,
+        appId,
+        timestamp:   new Date().toISOString(),
+      },
+      {
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+      }
+    );
 
   } catch (err: any) {
     console.error('[stock-sync] Firestore write failed:', err.message);

@@ -9,28 +9,29 @@ from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler
 
 # ==============================================================================
-# DSE Market Sync (Dual-Engine Primary Scraper)
+# DSE Market Sync (Modern DSE Default + Multi-Domain Failover)
 #
-# Supports both:
-# 1. Classic DSE board (https://www.dsebd.org/latest_share_price_scroll_l.php)
-# 2. Modern DSE platform (https://new.dsebd.org/markets/latest-share-price)
-#    via its live feed (https://new.dsebd.org/api/live/prices).
+# Official DSE Platform:
+# 1. Primary: https://new.dsebd.org/api/live/prices
+# 2. Mirror:  https://www.dsebd.org/api/live/prices (main domain cutover)
+# 3. Legacy:  https://www.dsebd.org/latest_share_price_scroll_l.php (retired / 410)
 #
 # Key Features:
-# - Automatic dual-engine failover: if one platform encounters an outage,
-#   network timeout, or low-stock anomaly (< 50 items), the scraper seamlessly
-#   falls back to the alternative engine before erroring out.
-# - Government Securities Filter: The new DSE platform lists all 634 instruments
-#   including 215 Government Securities (Treasury Bonds, e.g. TB10Y...). These
-#   are strictly filtered out to maintain pure equity and corporate trading parity.
-# - Output schema parity: Exact key/type congruence with app/api/stock-sync/route.ts
-#   and the trading engine (symbol, ltp, high, low, close, ycp, change,
-#   changePercent, trade, value, volume, traded).
+# - Default engine is now the modern DSE JSON API (new.dsebd.org/api/live/prices).
+# - Automatic failover across new.dsebd.org and www.dsebd.org JSON feeds.
+# - Government Securities Filter: Strictly filters out all 215 Treasury Bonds
+#   (assetType: GOVDBT, sector: TBond, board: YIELDDBT, code prefix TB) to
+#   maintain pure equity and corporate trading parity.
+# - Value (Turnover) unit normalization: Converts DSE's millions-of-BDT value
+#   field into raw BDT (x 1,000,000) to match lanka_price_sync.py and UI fmtCompact().
+# - Real-time session state: Extracts exchange matching engine status ("Open" / "Closed")
+#   from session.isOpen, including on government-declared working Saturdays.
 # ==============================================================================
 
 CLASSIC_DSE_URL = "https://www.dsebd.org/latest_share_price_scroll_l.php"
 NEW_DSE_BASE_URL = "https://new.dsebd.org"
 NEW_DSE_API_URL = "https://new.dsebd.org/api/live/prices"
+MAIN_DSE_API_URL = "https://www.dsebd.org/api/live/prices"
 NEW_DSE_PAGE_URL = "https://new.dsebd.org/markets/latest-share-price"
 
 DEFAULT_NEW_COLS = [
@@ -45,7 +46,7 @@ USER_AGENT = (
 )
 
 # ------------------------------------------------------------------------------
-# Classic DSE Helpers & Parser
+# Classic DSE Helpers & Parser (Legacy Fallback Only)
 # ------------------------------------------------------------------------------
 
 MARKET_STATUS_RE = re.compile(r'Market\s*Status\s*:\s*([A-Za-z][A-Za-z \-]{0,30})', re.I)
@@ -90,7 +91,8 @@ class DSEMarketParser(HTMLParser):
                         ycp = float(self.current_row[6]) if self.current_row[6] not in ['--', ''] else 0.0
                         change = float(self.current_row[7]) if self.current_row[7] not in ['--', ''] else 0.0
                         trade = float(self.current_row[8]) if self.current_row[8] not in ['--', ''] else 0.0
-                        value = float(self.current_row[9]) if self.current_row[9] not in ['--', ''] else 0.0
+                        value_mn = float(self.current_row[9]) if self.current_row[9] not in ['--', ''] else 0.0
+                        value = round(value_mn * 1_000_000, 2)
                         volume = float(self.current_row[10]) if len(self.current_row) > 10 and self.current_row[10] not in ['--', ''] else 0.0
 
                         changePercent = round((change / ycp) * 100, 2) if ycp > 0 else 0.0
@@ -119,7 +121,7 @@ class DSEMarketParser(HTMLParser):
 
 
 # ------------------------------------------------------------------------------
-# Modern DSE Helpers & Parser (new.dsebd.org)
+# Modern DSE Helpers & Parser (new.dsebd.org / www.dsebd.org)
 # ------------------------------------------------------------------------------
 
 def is_government_security(code, asset_type="", sector="", board=""):
@@ -193,11 +195,12 @@ def parse_new_dse_payload(data, exclude_gov=True, public_only=False):
             close = float(row[close_idx]) if len(row) > close_idx and row[close_idx] not in ("--", "", None) else 0.0
             ycp = float(row[ycp_idx]) if len(row) > ycp_idx and row[ycp_idx] not in ("--", "", None) else 0.0
             trade = float(row[trades_idx]) if len(row) > trades_idx and row[trades_idx] not in ("--", "", None) else 0.0
-            value = float(row[value_idx]) if len(row) > value_idx and row[value_idx] not in ("--", "", None) else 0.0
+            value_mn = float(row[value_idx]) if len(row) > value_idx and row[value_idx] not in ("--", "", None) else 0.0
+            # Convert DSE value (in millions of BDT) to raw BDT (x 1,000,000)
+            value = round(value_mn * 1_000_000, 2)
             volume = float(row[volume_idx]) if len(row) > volume_idx and row[volume_idx] not in ("--", "", None) else 0.0
             raw_pct = float(row[percent_idx]) if len(row) > percent_idx and row[percent_idx] not in ("--", "", None) else 0.0
 
-            # Match exact calculation parity with classic scraper:
             # When traded: change = (ltp - ycp) if ltp > 0 else (close - ycp)
             if trade > 0 or ltp > 0:
                 change = round(ltp - ycp, 2) if ltp > 0 else round(close - ycp, 2)
@@ -270,9 +273,9 @@ def fetch_new_dse(api_url=None, exclude_gov=True, public_only=False, timeout=20.
     return stocks, market_status
 
 
-def fetch_classic_dse(page_url=None, timeout=30.0):
+def fetch_classic_dse(page_url=None, timeout=15.0):
     """
-    Fetches live market data from classic DSE scroll page.
+    Fetches live market data from classic DSE scroll page (legacy fallback).
     """
     target_page = page_url or CLASSIC_DSE_URL
     ctx = _create_ssl_context()
@@ -299,13 +302,12 @@ def fetch_classic_dse(page_url=None, timeout=30.0):
 
 def scrape_market(source="auto", custom_url=None, exclude_gov=True, public_only=False):
     """
-    High-level scraper dispatcher with resilient dual-engine auto-failover.
+    High-level scraper dispatcher with modern DSE (new.dsebd.org) as default
+    and multi-domain failover (www.dsebd.org/api/live/prices).
     """
     # 1. Custom URL explicitly targeting new or classic
     if custom_url:
-        if "new.dsebd.org" in custom_url:
-            # If the user passed the page URL (e.g. /markets/latest-share-price),
-            # route to the underlying API endpoint
+        if "new.dsebd.org" in custom_url or "/api/live/prices" in custom_url:
             target_api = NEW_DSE_API_URL if "markets/latest-share-price" in custom_url else custom_url
             stocks, status = fetch_new_dse(api_url=target_api, exclude_gov=exclude_gov, public_only=public_only)
             return stocks, status, "new-dse-custom"
@@ -315,31 +317,42 @@ def scrape_market(source="auto", custom_url=None, exclude_gov=True, public_only=
 
     # 2. Explicit source request
     if source == "new":
-        stocks, status = fetch_new_dse(exclude_gov=exclude_gov, public_only=public_only)
-        return stocks, status, "new-dse"
+        try:
+            stocks, status = fetch_new_dse(api_url=NEW_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
+            return stocks, status, "new-dse"
+        except Exception:
+            stocks, status = fetch_new_dse(api_url=MAIN_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
+            return stocks, status, "new-dse-main-domain"
 
     if source == "classic":
         stocks, status = fetch_classic_dse()
         return stocks, status, "classic-dse"
 
-    # 3. Auto mode: check environment preference or try primary with seamless failover
-    prefer_new = os.environ.get("DSE_PREFER_NEW", "").lower() in ("1", "true", "yes")
+    # 3. Auto mode: new.dsebd.org is now the official default (old PHP site returns HTTP 410 Gone)
+    prefer_new = os.environ.get("DSE_PREFER_NEW", "true").lower() not in ("0", "false", "no")
 
     if prefer_new:
         try:
-            stocks, status = fetch_new_dse(exclude_gov=exclude_gov, public_only=public_only)
+            stocks, status = fetch_new_dse(api_url=NEW_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
             return stocks, status, "new-dse"
-        except Exception as e:
-            # Failover to classic
-            stocks, status = fetch_classic_dse()
-            return stocks, status, f"classic-dse-fallback (new failed: {str(e)[:100]})"
+        except Exception as e_new:
+            # First failover: try modern JSON API on main www.dsebd.org domain
+            try:
+                stocks, status = fetch_new_dse(api_url=MAIN_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
+                return stocks, status, "new-dse-main-domain"
+            except Exception as e_main:
+                # Last resort failover to classic
+                try:
+                    stocks, status = fetch_classic_dse()
+                    return stocks, status, f"classic-dse-fallback (new failed: {str(e_new)[:80]})"
+                except Exception:
+                    raise RuntimeError(f"Modern DSE endpoints failed (new: {e_new}; main: {e_main})")
     else:
         try:
             stocks, status = fetch_classic_dse()
             return stocks, status, "classic-dse"
         except Exception as e:
-            # Failover to new
-            stocks, status = fetch_new_dse(exclude_gov=exclude_gov, public_only=public_only)
+            stocks, status = fetch_new_dse(api_url=NEW_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
             return stocks, status, f"new-dse-fallback (classic failed: {str(e)[:100]})"
 
 
@@ -350,7 +363,6 @@ def scrape_market(source="auto", custom_url=None, exclude_gov=True, public_only=
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
-            # Parse query parameters
             parsed = urllib.parse.urlparse(self.path)
             query = urllib.parse.parse_qs(parsed.query)
 
@@ -360,11 +372,9 @@ class handler(BaseHTTPRequestHandler):
             if not source:
                 source = os.environ.get("DSE_SCRAPE_SOURCE", "auto").lower()
 
-            # Gov securities exclusion (defaults to True)
             exclude_gov_param = query.get("exclude_gov", ["true"])[0].lower()
             exclude_gov = exclude_gov_param not in ("false", "0", "no")
 
-            # Public only filter (defaults to False to match LankaBangla & company roster)
             public_only_param = query.get("public_only", ["false"])[0].lower()
             public_only = public_only_param in ("true", "1", "yes")
 

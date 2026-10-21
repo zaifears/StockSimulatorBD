@@ -153,8 +153,11 @@ export async function POST(req: NextRequest) {
       const maxUsesPerUser = typeof promo.maxUsesPerUser === 'number' && promo.maxUsesPerUser > 0 ? promo.maxUsesPerUser : 1;
       const userData = userSnap.exists ? userSnap.data() : null;
       const userPromoRedemptions = userData?.promoRedemptions || {};
+      const legacyDotFieldCount = userData?.[`promoRedemptions.${code}`];
       const userRedemptionCount = typeof userPromoRedemptions[code] === 'number'
         ? userPromoRedemptions[code]
+        : typeof legacyDotFieldCount === 'number'
+        ? legacyDotFieldCount
         : (userData?.redeemedPromoCodes && Array.isArray(userData.redeemedPromoCodes) && userData.redeemedPromoCodes.includes(code) ? 1 : 0);
 
       if (userRedemptionCount >= maxUsesPerUser) {
@@ -209,7 +212,7 @@ export async function POST(req: NextRequest) {
             lastPromoRedeemedAt: nowIso,
             promoCodeRedeemedAt: nowIso,
             redeemedPromoCodes: FieldValue.arrayUnion(code),
-            [`promoRedemptions.${code}`]: FieldValue.increment(1),
+            promoRedemptions: { [code]: FieldValue.increment(1) },
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -297,7 +300,7 @@ export async function POST(req: NextRequest) {
             lastPromoRedeemedAt: nowIso,
             promoCodeRedeemedAt: nowIso,
             redeemedPromoCodes: FieldValue.arrayUnion(code),
-            [`promoRedemptions.${code}`]: FieldValue.increment(1),
+            promoRedemptions: { [code]: FieldValue.increment(1) },
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }

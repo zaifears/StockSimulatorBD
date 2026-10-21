@@ -7,19 +7,36 @@ import logging
 import re
 import ssl
 import urllib.request
-from datetime import datetime, timedelta
-from html.parser import HTMLParser
 
 logger = logging.getLogger("dse_chart")
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
+COMPANY_BASE_URLS = [
+    "https://new.dsebd.org/company",
+    "https://www.dsebd.org/company",
+]
 
-def fetch_from_new_dse(symbol: str) -> list[dict]:
-    """Extracts daily candles from new DSE company page RSC flight stream."""
-    url = f"https://new.dsebd.org/company/{symbol.upper()}"
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
 
-    with urllib.request.urlopen(req, timeout=12.0) as resp:
+def _create_ssl_context():
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
+def fetch_from_new_dse(symbol: str, base_url: str = "https://new.dsebd.org/company") -> list[dict]:
+    """Extracts daily candles from modern DSE company page RSC flight stream."""
+    url = f"{base_url}/{symbol.upper()}"
+    ctx = _create_ssl_context()
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Referer": "https://new.dsebd.org/",
+        },
+    )
+
+    with urllib.request.urlopen(req, context=ctx, timeout=12.0) as resp:
         html = resp.read().decode("utf-8", errors="replace")
 
     chunks = re.findall(r'self\.__next_f\.push\(\[1,\s*"(.*?)"\]\)', html, re.DOTALL)
@@ -70,12 +87,13 @@ def fetch_from_new_dse(symbol: str) -> list[dict]:
 
 
 def get_chart_data(symbol: str, days: int = 90) -> list[dict]:
-    """Primary chart data fetcher using modern DSE company data."""
-    try:
-        candles = fetch_from_new_dse(symbol)
-        if candles:
-            return candles
-    except Exception as e:
-        logger.warning("[%s] Chart fetch failed: %s", symbol, e)
+    """Primary chart data fetcher using modern DSE company data with mirror failover."""
+    for base_url in COMPANY_BASE_URLS:
+        try:
+            candles = fetch_from_new_dse(symbol, base_url=base_url)
+            if candles:
+                return candles
+        except Exception as e:
+            logger.warning("[%s] Chart fetch failed on %s: %s", symbol, base_url, e)
 
     return []
