@@ -12,6 +12,7 @@ import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, handleSocialSignInResult } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { updateUserCount } from '@/lib/utils/updateStats';
+import { isBossActive, isBossExpired } from '@/lib/tier';
 
 // ✅ localStorage cache interface
 interface CachedUserData {
@@ -329,10 +330,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             } else {
               // Existing user: check tier and backfill accountTier if missing
-              const activeBoss = (userData?.accountTier === 'Boss') || (typeof userData?.bossUntil === 'number' && userData.bossUntil > Date.now());
+              const now = Date.now();
+              const activeBoss = isBossActive(userData, now);
               const currentTier = activeBoss ? 'Boss' : 'Bro';
               setAccountTier(currentTier);
               setIsBoss(activeBoss);
+
+              // 🔄 Auto-downgrade in DB if user's subscription expired but DB is still marked 'Boss'
+              if (userData?.accountTier === 'Boss' && isBossExpired(userData, now)) {
+                user.getIdToken().then((token) => {
+                  fetch('/api/auth/sync-tier', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }).catch((err) => console.warn('⚠️ Tier auto-downgrade sync error:', err));
+                });
+              }
 
               if (!userData.accountTier) {
                 await setDoc(userDocRef, { accountTier: currentTier }, { merge: true });
@@ -396,12 +411,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!snap.exists()) return;
         const data = snap.data();
         const now = Date.now();
-        const activeBoss =
-          data?.accountTier === 'Boss' ||
-          (typeof data?.bossUntil === 'number' && data.bossUntil > now);
+        const activeBoss = isBossActive(data, now);
         const tier: 'Boss' | 'Bro' = activeBoss ? 'Boss' : 'Bro';
         setAccountTier(tier);
         setIsBoss(activeBoss);
+
+        // 🔄 Real-time auto-downgrade sync if expired while session is open
+        if (data?.accountTier === 'Boss' && isBossExpired(data, now)) {
+          user.getIdToken().then((token) => {
+            fetch('/api/auth/sync-tier', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+            }).catch((err) => console.warn('⚠️ Real-time tier auto-downgrade sync error:', err));
+          });
+        }
       },
       (err) => {
         // Permission denied or network error — fail silently; the value from

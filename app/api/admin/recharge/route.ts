@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { verifyAdminAccess } from '@/lib/utils/adminVerification';
+import { isBossActive, isBossExpired } from '@/lib/tier';
 
 // Ensure Firebase Admin is initialized with full credentials
 import '@/lib/firebaseAdmin';
@@ -144,7 +145,15 @@ export async function POST(req: NextRequest) {
       const userDoc = await transaction.get(userDocRef);
       const userData = userDoc.exists ? userDoc.data() : null;
       const now = Date.now();
-      isBossUser = userData?.accountTier === 'Boss' || (typeof userData?.bossUntil === 'number' && userData.bossUntil > now);
+      isBossUser = isBossActive(userData, now);
+
+      // Auto-downgrade expired Boss user during recharge transaction
+      if (userData?.accountTier === 'Boss' && isBossExpired(userData, now)) {
+        transaction.update(userDocRef, {
+          accountTier: 'Bro',
+          lastDowngradedAt: new Date(now).toISOString(),
+        });
+      }
 
       if (isBossUser) {
         bonusCoins = Math.round(baseCoins * 0.10);

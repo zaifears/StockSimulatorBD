@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { verifyAdminAccess } from '@/lib/utils/adminVerification';
+import { isBossActive, isBossExpired, isBossLifetime, parseBossUntilMs } from '@/lib/tier';
+import { autoDowngradeExpiredBossUsers } from '@/lib/serverTier';
 import '@/lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
@@ -87,6 +89,10 @@ export async function GET(req: NextRequest) {
     const view = searchParams.get('view')?.trim();
     if (view === 'active' || searchParams.get('status') === 'active') {
       const nowMs = Date.now();
+
+      // 🔄 Auto-downgrade any expired Boss users before building the active directory
+      await autoDowngradeExpiredBossUsers(db);
+
       const bossTierSnap = await db.collection('users').where('accountTier', '==', 'Boss').get();
 
       const userMap = new Map<string, any>();
@@ -108,14 +114,12 @@ export async function GET(req: NextRequest) {
 
       const activeUsers: any[] = [];
       for (const [uid, u] of userMap.entries()) {
-        const bossUntilMs = u.bossUntil
-          ? typeof u.bossUntil === 'number'
-            ? u.bossUntil
-            : typeof u.bossUntil.toMillis === 'function'
-            ? u.bossUntil.toMillis()
-            : Date.parse(u.bossUntil) || 0
-          : 0;
+        // 🔒 Strict validation: Do not include expired users in active directory
+        if (!isBossActive(u, nowMs)) {
+          continue;
+        }
 
+        const bossUntilMs = parseBossUntilMs(u.bossUntil);
         const daysRemaining = bossUntilMs > nowMs ? Math.max(1, Math.ceil((bossUntilMs - nowMs) / 86400000)) : null;
         const plan = u.lastBossPlan || (daysRemaining && daysRemaining > 150 ? 'Semester Boss (185 Days)' : 'Monthly Boss (31 Days)');
         const isTrial = Boolean(plan.toLowerCase().includes('trial') || plan.toLowerCase().includes('7 day'));
@@ -131,7 +135,7 @@ export async function GET(req: NextRequest) {
           bossSince: u.bossSince ? (typeof u.bossSince.toDate === 'function' ? u.bossSince.toDate().toISOString() : u.bossSince) : null,
           expiresAt: bossUntilMs > 0 ? new Date(bossUntilMs).toISOString() : null,
           daysRemaining,
-          isLifetimeOrUnlimited: bossUntilMs === 0 || bossUntilMs == null,
+          isLifetimeOrUnlimited: isBossLifetime(u),
           isTrial,
           redeemedPromoCodes: Array.isArray(u.redeemedPromoCodes) ? u.redeemedPromoCodes : [],
           createdAt: u.createdAt || null,
@@ -163,15 +167,9 @@ export async function GET(req: NextRequest) {
       const expiredUsers: any[] = [];
       for (const docSnap of usersSnap.docs) {
         const u = docSnap.data();
-        const bossUntilMs = u.bossUntil
-          ? typeof u.bossUntil === 'number'
-            ? u.bossUntil
-            : typeof u.bossUntil.toMillis === 'function'
-            ? u.bossUntil.toMillis()
-            : Date.parse(u.bossUntil) || 0
-          : 0;
+        const bossUntilMs = parseBossUntilMs(u.bossUntil);
 
-        const isCurrentlyBoss = u.accountTier === 'Boss' && bossUntilMs > nowMs;
+        const isCurrentlyBoss = isBossActive(u, nowMs);
         if (isCurrentlyBoss) continue;
 
         const hadBoss = Boolean(
@@ -229,6 +227,9 @@ export async function GET(req: NextRequest) {
     // ─────────────────────────────────────────────
     // 4. STATS SUMMARY
     // ─────────────────────────────────────────────
+    // 🔄 Auto-downgrade any expired Boss users so stats counts are exact
+    await autoDowngradeExpiredBossUsers(db);
+
     const [pendingSnap, approvedSnap, rejectedSnap, activeBossSnap] = await Promise.all([
       db.collection('boss_requests').where('status', '==', 'pending').count().get(),
       db.collection('boss_requests').where('status', '==', 'approved').count().get(),

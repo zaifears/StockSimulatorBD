@@ -7,6 +7,7 @@ import { sendAdminAlertEmail } from '@/lib/resendAdmin';
 import { sendTelegramRechargeAlert, pingUptimeKumaPush } from '@/lib/telegramAdmin';
 import { getAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
 import { checkPersistentRateLimit } from '@/lib/utils/persistentRateLimit';
+import { isBossActive } from '@/lib/tier';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || SITE_URL;
 
@@ -131,9 +132,7 @@ export async function POST(request: NextRequest) {
     // Check Boss tier directly from Firestore user doc for bonus calculation parity
     const userSnap = await db.collection('users').doc(uid).get();
     const userData = userSnap.data();
-    const isUserBoss =
-      userData?.accountTier === 'Boss' ||
-      (typeof userData?.bossUntil === 'number' && userData.bossUntil > Date.now());
+    const isUserBoss = isBossActive(userData);
     const finalCoins = isUserBoss ? Math.round(authoritativeCoins * 1.1) : authoritativeCoins;
     const bonusCoins = isUserBoss ? finalCoins - authoritativeCoins : 0;
 

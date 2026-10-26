@@ -9,6 +9,7 @@ import Link from 'next/link';
 import AppShell from '@/components/app/AppShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
+import { isBossActive } from '@/lib/tier';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
   Crown, Shield, Check, ArrowRight, Sparkles, Coins, PieChart,
@@ -52,7 +53,7 @@ function ProfileTierScreen() {
   // Calculate days remaining if bossUntil is set
   const now = Date.now();
   const bossUntil = userData?.bossUntil || 0;
-  const isCurrentlyBoss = isBoss || (typeof bossUntil === 'number' && bossUntil > now);
+  const isCurrentlyBoss = isBossActive(userData, now);
   const daysRemaining = bossUntil > now ? Math.ceil((bossUntil - now) / (1000 * 60 * 60 * 24)) : 0;
 
   const formattedExpiry = bossUntil > 0
