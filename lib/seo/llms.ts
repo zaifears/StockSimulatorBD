@@ -4,7 +4,7 @@
 // Automatically derives canonical domain from SITE_URL, preventing migration breakages.
 
 import { SITE_URL, absoluteUrl } from '@/lib/siteUrl';
-import { getAllDseStocks } from '@/lib/dseStocks';
+import { getAllDseStocks, TOP_STATIC_DSE_SYMBOLS } from '@/lib/dseStocks';
 import { getBlogPosts } from '@/lib/contentful-blog';
 
 /**
@@ -42,8 +42,13 @@ StockSimulatorBD (${SITE_URL}) is an educational paper-trading platform designed
 - [Privacy & Policy](${absoluteUrl('/policy')}): Terms of use, privacy commitments, and virtual currency disclaimers
 - [Full LLM Specification](${absoluteUrl('/llms-full.txt')}): Comprehensive technical context and entity dictionary
 
-## Stock Research
-Individual stock pages are available at \`${absoluteUrl('/stocks')}/[symbol]\` (e.g. \`${absoluteUrl('/stocks/gp')}\`, \`${absoluteUrl('/stocks/batbc')}\`). Each page contains chart history, key ratios, trading volume, and company categorization.
+## Stock Research & Audited Fundamentals
+Individual stock pages are available at \`${absoluteUrl('/stocks')}/[symbol]\` (e.g. \`${absoluteUrl('/stocks/gp')}\`, \`${absoluteUrl('/stocks/batbc')}\`, \`${absoluteUrl('/stocks/squrpharma')}\`, \`${absoluteUrl('/stocks/bracbank')}\`). Every stock page is server-rendered with:
+- Audited Price-to-Earnings (P/E) ratio, Annual EPS (BDT), and NAVPS (Book Value per Share)
+- Dividend Yield %, 52-week High/Low trading range, and 10-year Cash & Stock Dividend declaration history
+- Shareholding Ownership Pattern (% Sponsor/Director, % Institute, % Government, % Foreign, % Public)
+- Official DSE Corporate Disclosures & Price Sensitive Information (PSI) news filings
+- Interactive candlestick price history chart and risk-free DSE paper trading panel
 
 ## Key Market Facts & Quick Reference
 - **DSE Trading Hours**: Continuous trading session runs Sunday through Thursday from 10:00 AM to 2:15 PM BST (UTC+6). Post-closing session runs from 2:15 PM to 2:30 PM BST. The exchange is closed on Friday, Saturday, and officially gazetted Bangladesh holidays.
@@ -77,9 +82,14 @@ export async function generateLlmsFullTxt(): Promise<string> {
     ? `\n### DOMAIN MIGRATION STATUS\nActive Canonical: ${SITE_URL}\nFormer Domain: https://www.stocksimulator.tech (Permanently 301-redirected)\n`
     : `\n### CANONICAL DOMAIN\nCanonical Origin: ${SITE_URL}\nTarget Future Origin: https://stocksimulator.shahoriar.bd\n`;
 
-  const topStocksSnippet = stocks
-    .slice(0, 40)
-    .map((s) => `- [${s.symbol}](${absoluteUrl(`/stocks/${encodeURIComponent(s.symbol.toLowerCase())}`)}): ${s.name}`)
+  const topSet = new Set(TOP_STATIC_DSE_SYMBOLS);
+  const prioritizedStocks = [
+    ...stocks.filter((s) => topSet.has(s.symbol.toUpperCase())),
+    ...stocks.filter((s) => !topSet.has(s.symbol.toUpperCase())),
+  ];
+  const topStocksSnippet = prioritizedStocks
+    .slice(0, 60)
+    .map((s) => `- [${s.symbol}](${absoluteUrl(`/stocks/${encodeURIComponent(s.symbol.toLowerCase())}`)}): ${s.name} — Live DSE share price, audited P/E, EPS, NAVPS, dividend history & chart`)
     .join('\n');
 
   const blogSnippet = blogPosts
