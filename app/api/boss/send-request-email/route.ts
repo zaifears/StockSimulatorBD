@@ -153,8 +153,8 @@ export async function POST(request: NextRequest) {
     let destinationAccount = 'bKash Personal (01865333143)';
     if (paymentTab === 'banglaqr' || paymentMethod?.toLowerCase().includes('banglaqr')) {
       destinationAccount = 'BanglaQR Interoperable Code (StockSimulatorBD)';
-    } else if (paymentMethod?.toLowerCase().includes('bank') || paymentMethod?.toLowerCase().includes('scb') || (paymentTab === 'other' && emailData.bkashNumber === '18246161201')) {
-      destinationAccount = 'Standard Chartered Bank PLC (A/C: 18246161201, Branch: Motijheel)';
+    } else if (paymentMethod?.toLowerCase().includes('bank') || paymentMethod?.toLowerCase().includes('ebl') || (paymentTab === 'other' && emailData.bkashNumber === '8208250002314')) {
+      destinationAccount = 'Eastern Bank PLC (A/C: 8208250002314, Branch: Gulshan Branch, Dhaka, Routing: 095261562)';
     } else if (paymentTab === 'bkash_pay' || paymentMethod?.toLowerCase().includes('payment')) {
       destinationAccount = 'bKash Merchant / Make Payment (01581401895)';
     } else if (paymentMethod?.toLowerCase().includes('other mfs') || paymentMethod?.toLowerCase().includes('nagad') || paymentMethod?.toLowerCase().includes('rocket') || paymentMethod?.toLowerCase().includes('cellfin')) {
@@ -165,8 +165,8 @@ export async function POST(request: NextRequest) {
 
     const isBank = Boolean(
       paymentMethod?.toLowerCase().includes('bank') ||
-      paymentMethod?.toLowerCase().includes('scb') ||
-      (paymentTab === 'other' && emailData.bkashNumber === '18246161201')
+      paymentMethod?.toLowerCase().includes('ebl') ||
+      (paymentTab === 'other' && emailData.bkashNumber === '8208250002314')
     );
 
     const emailPromise = sendAdminAlertEmail({
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
                   <strong>🏦 Bank Transfer Notice:</strong> Trader reported Sending Bank & Reference:<br/>
                   ${bankName ? `<div style="margin-top: 4px;"><strong>Bank:</strong> <span style="font-weight: 800; color: #1e3a8a;">${bankName}</span></div>` : ''}
                   <code style="font-weight: bold; background: white; padding: 4px 8px; border-radius: 4px; color: #0f172a; font-size: 13px; display: inline-block; margin-top: 4px; border: 1px solid #93c5fd;">${transactionId}</code><br/>
-                  Please check your <strong>Standard Chartered Bank PLC</strong> account/app to confirm receipt of <strong>৳ ${amount}</strong> before activating Boss tier.
+                  Please check your <strong>Eastern Bank PLC</strong> account/app to confirm receipt of <strong>৳ ${amount}</strong> before activating Boss tier.
                 </div>
               ` : ''}
             </div>

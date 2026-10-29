@@ -227,7 +227,7 @@ const FAQS = [
   },
   {
     q: 'Why ৳20 or ৳99 instead of a recurring monthly subscription?',
-    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via bKash (Send Money or Payment), Nagad, Rocket, Cellfin, or Bank Transfer (Standard Chartered Bank NPSB), and it simply expires when the time is up.',
+    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via BanglaQR, bKash (Send Money or Payment), Nagad, Rocket, Cellfin, or Bank Transfer (Eastern Bank PLC NPSB), and it simply expires when the time is up.',
   },
   {
     q: 'What happens when my Boss membership expires?',
@@ -239,7 +239,7 @@ const FAQS = [
   },
   {
     q: 'Which payment methods are accepted for Boss Tier?',
-    a: 'We accept bKash Send Money (01865333143), bKash Make Payment (01581401895), Other MFS (Cellfin, Nagad, Rocket - 01865333143), and direct Bank Transfer to Standard Chartered Bank PLC via NPSB (instant confirmation) or BEFTN.',
+    a: 'We accept BanglaQR (Recommended for all Bank & MFS apps), Other MFS (Cellfin, Nagad, Rocket - 01865333143), direct Bank Transfer to Eastern Bank PLC (A/C: 8208250002314, Gulshan Branch, Dhaka, Routing: 095261562) via NPSB (instant confirmation) or BEFTN, bKash Make Payment (01581401895), and bKash Send Money (01865333143).',
   },
   {
     q: 'Can I export my portfolio PDF on my phone?',

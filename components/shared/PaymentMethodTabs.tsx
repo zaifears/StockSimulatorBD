@@ -2,9 +2,8 @@
 
 // components/shared/PaymentMethodTabs.tsx
 // High-conversion, interactive payment instructions supporting:
-// 1. BanglaQR (Primary / Recommended - Interoperable QR for all Banks & MFS)
-// 2. bKash (Secondary - Payment Merchant & Personal Send Money with QR codes)
-// 3. Other Payment (Cellfin, Nagad, Rocket & Standard Chartered Bank NPSB)
+// 1. BanglaQR (Recommended - Interoperable QR for all Banks & MFS)
+// 2. Bank & MFS (Cellfin, Nagad & Rocket; Eastern Bank PLC Transfer; bKash Make Payment & Send Money)
 // Used across /boss#payment and /coins.
 
 import React, { useState } from 'react';
@@ -66,9 +65,11 @@ export const PAYMENT_DETAILS = {
   },
   bank: {
     title: 'MD AL SHAHORIAR HOSSAIN',
-    bankName: 'Standard Chartered Bank PLC',
-    accountNumber: '18246161201',
-    branch: 'Motijheel',
+    bankName: 'Eastern Bank PLC',
+    accountNumber: '8208250002314',
+    branch: 'Gulshan Branch, Dhaka',
+    routingNumber: '095261562',
+    swiftCode: 'EBLDBDDHXXX',
     mode: 'NPSB (Instant)',
     note: 'If you use BEFTN, transaction confirmation could take up to 1 working day. NPSB is recommended for instant confirmation.',
   },
@@ -97,7 +98,7 @@ function StylizedQrFallback({
       <div className="flex items-center justify-between w-full text-[10px] font-mono uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
         <span>Scan & Pay</span>
         <span
-          className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+          className={`px-1.5 py-0.5 rounded text-[10px] font-black ${
             isPink
               ? 'bg-pink-500/20 text-pink-700 dark:text-pink-300'
               : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
@@ -181,23 +182,23 @@ export default function PaymentMethodTabs({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* 2 Main Tabs Header: BanglaQR (Recommended) & Bank & MFS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 bg-gray-100 dark:bg-[#111620] rounded-2xl border border-gray-200 dark:border-gray-800">
+      <div className="grid grid-cols-2 gap-2 p-1.5 bg-gray-100 dark:bg-[#111620] rounded-2xl border border-gray-200 dark:border-gray-800">
         {/* Tab 1: BanglaQR (Recommended) */}
         <button
           type="button"
           onClick={() => onTabChange('banglaqr', 'BanglaQR')}
-          className={`flex flex-col items-center justify-center text-center p-3 rounded-xl transition-all relative ${
+          className={`flex flex-col items-center justify-center text-center p-2.5 sm:p-3 min-h-[54px] rounded-xl transition-all relative active:scale-[0.98] ${
             normalizedTab === 'banglaqr'
               ? 'bg-white dark:bg-[#1B2230] text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-200 dark:border-emerald-900/60 ring-2 ring-emerald-500/20'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/60 dark:hover:bg-white/5'
           }`}
         >
           <div className="flex items-center gap-1.5">
-            <QrCode className="w-4 h-4 shrink-0 text-emerald-500" />
+            <QrCode className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <span className="font-black text-xs sm:text-sm">BanglaQR</span>
           </div>
-          <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black leading-none mt-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] font-black leading-none mt-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
             Recommended
           </span>
         </button>
@@ -214,12 +215,12 @@ export default function PaymentMethodTabs({
                   : 'bKash Send Money (Personal)'
               );
             } else if (effectiveMfsSubTab === 'bank') {
-              onTabChange('other', 'Bank Transfer (Standard Chartered)');
+              onTabChange('other', 'Bank Transfer (Eastern Bank PLC)');
             } else {
               onTabChange('other', 'Other MFS (Nagad/Rocket/Cellfin)');
             }
           }}
-          className={`flex flex-col items-center justify-center text-center p-3 rounded-xl transition-all relative ${
+          className={`flex flex-col items-center justify-center text-center p-2.5 sm:p-3 min-h-[54px] rounded-xl transition-all relative active:scale-[0.98] ${
             normalizedTab === 'other'
               ? 'bg-white dark:bg-[#1B2230] text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-900/60 ring-2 ring-blue-500/20'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/60 dark:hover:bg-white/5'
@@ -229,7 +230,7 @@ export default function PaymentMethodTabs({
             <Building2 className="w-4 h-4 shrink-0" />
             <span className="font-extrabold text-xs sm:text-sm">Bank &amp; MFS</span>
           </div>
-          <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold leading-none mt-1 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+          <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] font-bold leading-none mt-1 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
             Other Payment Methods
           </span>
         </button>
@@ -403,7 +404,7 @@ export default function PaymentMethodTabs({
                 setMfsSubTab('mfs');
                 onTabChange('other', 'Other MFS (Nagad/Rocket/Cellfin)');
               }}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
+              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] active:scale-[0.98] ${
                 effectiveMfsSubTab === 'mfs'
                   ? 'bg-white dark:bg-[#1f2737] text-orange-600 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-900/60'
                   : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
@@ -416,9 +417,9 @@ export default function PaymentMethodTabs({
               type="button"
               onClick={() => {
                 setMfsSubTab('bank');
-                onTabChange('other', 'Bank Transfer (Standard Chartered)');
+                onTabChange('other', 'Bank Transfer (Eastern Bank PLC)');
               }}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
+              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] active:scale-[0.98] ${
                 effectiveMfsSubTab === 'bank'
                   ? 'bg-white dark:bg-[#1f2737] text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-900/60'
                   : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
@@ -438,7 +439,7 @@ export default function PaymentMethodTabs({
                     : 'bKash Send Money (Personal)'
                 );
               }}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
+              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] active:scale-[0.98] ${
                 effectiveMfsSubTab === 'bkash'
                   ? 'bg-white dark:bg-[#1f2737] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60'
                   : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
@@ -456,9 +457,9 @@ export default function PaymentMethodTabs({
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <div className="flex -space-x-1.5">
-                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-[9px] text-white font-black flex items-center justify-center">C</span>
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-[9px] text-white font-black flex items-center justify-center">N</span>
-                      <span className="w-5 h-5 rounded-full bg-purple-600 text-[9px] text-white font-black flex items-center justify-center">R</span>
+                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-[10px] text-white font-black flex items-center justify-center">C</span>
+                      <span className="w-5 h-5 rounded-full bg-orange-600 text-[10px] text-white font-black flex items-center justify-center">N</span>
+                      <span className="w-5 h-5 rounded-full bg-purple-600 text-[10px] text-white font-black flex items-center justify-center">R</span>
                     </div>
                     <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">
                       Cellfin, Nagad &amp; Rocket (Send Money)
@@ -551,18 +552,22 @@ export default function PaymentMethodTabs({
             </div>
           )}
 
-          {/* Sub-View 2: Standard Chartered Bank Account Details */}
+          {/* Sub-View 2: Eastern Bank PLC Account Details */}
           {effectiveMfsSubTab === 'bank' && (
             <div className="rounded-2xl overflow-hidden shadow-sm border border-blue-200 dark:border-blue-900/50 bg-white dark:bg-[#161c28]">
-              <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-950/30 dark:via-[#161c28] border-b border-blue-100 dark:border-blue-900/30">
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-transparent dark:from-blue-950/30 dark:via-[#161c28] border-b border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-start sm:items-center justify-between flex-wrap gap-2.5">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/20 flex items-center justify-center shrink-0">
+                      <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
                     <div>
-                      <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">
-                        Standard Chartered Bank PLC
+                      <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white leading-tight">
+                        {PAYMENT_DETAILS.bank.bankName}
                       </h3>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400">Direct Bank Transfer (NPSB / BEFTN)</span>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                        Direct Bank Transfer (NPSB / BEFTN / RTGS)
+                      </span>
                     </div>
                   </div>
                   <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold leading-none bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
@@ -571,44 +576,44 @@ export default function PaymentMethodTabs({
                 </div>
               </div>
 
-              {/* Bank Details Grid */}
+              {/* Bank Details 6-Box Grid (2x3 on sm+, stacked on mobile) */}
               <div className="p-4 sm:p-5 space-y-3 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* A/C Title */}
-                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
+                  {/* 1. Account Title */}
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide block">
-                        Account Title
+                        Account Name
                       </span>
-                      <span className="font-bold text-gray-900 dark:text-white text-xs truncate block mt-0.5">
+                      <span className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm break-words block mt-0.5 leading-snug">
                         {PAYMENT_DETAILS.bank.title}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.title, 'bank_title')}
-                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
-                      title="Copy Account Title"
+                      className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
+                      title="Copy Account Name"
                     >
-                      {copiedKey === 'bank_title' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey === 'bank_title' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       <span className="text-[11px]">{copiedKey === 'bank_title' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
 
-                  {/* Account Number */}
-                  <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
+                  {/* 2. Account Number */}
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/25 border border-blue-200 dark:border-blue-900/50 flex items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide block">
                         Account Number
                       </span>
-                      <span className="font-mono font-black text-sm text-blue-900 dark:text-blue-200 tracking-wider truncate block mt-0.5">
+                      <span className="font-mono tabular-nums font-black text-sm sm:text-base text-blue-900 dark:text-blue-200 tracking-wider block mt-0.5">
                         {PAYMENT_DETAILS.bank.accountNumber}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.accountNumber, 'bank_acc')}
-                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
+                      className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
                       title="Copy Account Number"
                     >
                       {copiedKey === 'bank_acc' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -616,67 +621,109 @@ export default function PaymentMethodTabs({
                     </button>
                   </div>
 
-                  {/* Bank Name */}
-                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
+                  {/* 3. Bank Name */}
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide block">
                         Bank Name
                       </span>
-                      <span className="font-bold text-gray-900 dark:text-white text-xs truncate block mt-0.5">
+                      <span className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm break-words block mt-0.5 leading-snug">
                         {PAYMENT_DETAILS.bank.bankName}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.bankName, 'bank_name')}
-                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
+                      className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
                       title="Copy Bank Name"
                     >
-                      {copiedKey === 'bank_name' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey === 'bank_name' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       <span className="text-[11px]">{copiedKey === 'bank_name' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
 
-                  {/* Branch */}
-                  <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
+                  {/* 4. Branch */}
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide block">
                         Branch
                       </span>
-                      <span className="font-bold text-gray-900 dark:text-white text-xs truncate block mt-0.5">
+                      <span className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm break-words block mt-0.5 leading-snug">
                         {PAYMENT_DETAILS.bank.branch}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleCopy(PAYMENT_DETAILS.bank.branch, 'bank_branch')}
-                      className="shrink-0 px-2.5 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1"
+                      className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
                       title="Copy Branch"
                     >
-                      {copiedKey === 'bank_branch' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey === 'bank_branch' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       <span className="text-[11px]">{copiedKey === 'bank_branch' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+
+                  {/* 5. Routing Number */}
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide block">
+                        Routing Number
+                      </span>
+                      <span className="font-mono tabular-nums font-black text-xs sm:text-sm text-gray-900 dark:text-white tracking-wider block mt-0.5">
+                        {PAYMENT_DETAILS.bank.routingNumber}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(PAYMENT_DETAILS.bank.routingNumber, 'bank_routing')}
+                      className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
+                      title="Copy Routing Number"
+                    >
+                      {copiedKey === 'bank_routing' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span className="text-[11px]">{copiedKey === 'bank_routing' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+
+                  {/* 6. SWIFT Code */}
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide block">
+                        SWIFT Code
+                      </span>
+                      <span className="font-mono tabular-nums font-black text-xs sm:text-sm text-gray-900 dark:text-white tracking-wider block mt-0.5">
+                        {PAYMENT_DETAILS.bank.swiftCode}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(PAYMENT_DETAILS.bank.swiftCode, 'bank_swift')}
+                      className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
+                      title="Copy SWIFT Code"
+                    >
+                      {copiedKey === 'bank_swift' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span className="text-[11px]">{copiedKey === 'bank_swift' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Amount to Transfer */}
-                <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                <div className="p-3 sm:p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2.5">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide block">
                       Transfer Amount
                     </span>
-                    <span className="font-mono font-black text-sm text-gray-900 dark:text-white block mt-0.5">
+                    <span className="font-mono tabular-nums font-black text-sm sm:text-base text-gray-900 dark:text-white block mt-0.5">
                       {formattedAmount}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopy(amount.toFixed(2), 'bank_amt')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all active:scale-95"
+                    className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all active:scale-95"
                   >
                     {copiedKey === 'bank_amt' ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>Copied</span>
                       </>
                     ) : (
