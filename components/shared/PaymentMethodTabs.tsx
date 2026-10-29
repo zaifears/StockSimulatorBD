@@ -28,7 +28,7 @@ import {
 
 export type PaymentTabId = 'banglaqr' | 'bkash' | 'other' | 'bkash_send' | 'bkash_pay';
 export type BkashSubTabId = 'payment' | 'personal';
-export type OtherSubTabId = 'mfs' | 'bank';
+export type OtherSubTabId = 'mfs' | 'bank' | 'bkash';
 
 export interface PaymentMethodTabsProps {
   amount: number;
@@ -42,7 +42,7 @@ export interface PaymentMethodTabsProps {
 export const PAYMENT_DETAILS = {
   banglaqr: {
     tabLabel: 'BanglaQR',
-    badge: 'Primary / Recommended',
+    badge: 'Recommended',
     imagePath: '/payment/banglaqr.png',
   },
   bkashPayment: {
@@ -157,13 +157,14 @@ export default function PaymentMethodTabs({
 
   const formattedAmount = `${amount.toFixed(2)} BDT`;
 
-  // Normalizes effective tab
-  const normalizedTab: 'banglaqr' | 'bkash' | 'other' =
-    activeTab === 'banglaqr'
-      ? 'banglaqr'
-      : activeTab === 'bkash' || activeTab === 'bkash_pay' || activeTab === 'bkash_send'
+  // Normalizes effective top-level tab: BanglaQR vs Bank & MFS ('other')
+  const normalizedTab: 'banglaqr' | 'other' =
+    activeTab === 'banglaqr' ? 'banglaqr' : 'other';
+
+  const effectiveMfsSubTab: OtherSubTabId =
+    activeTab === 'bkash' || activeTab === 'bkash_pay' || activeTab === 'bkash_send'
       ? 'bkash'
-      : 'other';
+      : mfsSubTab;
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -179,9 +180,9 @@ export default function PaymentMethodTabs({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* 3 Main Tabs Header */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-gray-100 dark:bg-[#111620] rounded-2xl border border-gray-200 dark:border-gray-800">
-        {/* Tab 1: BanglaQR (Primary / Recommended) */}
+      {/* 2 Main Tabs Header: BanglaQR (Recommended) & Bank & MFS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 bg-gray-100 dark:bg-[#111620] rounded-2xl border border-gray-200 dark:border-gray-800">
+        {/* Tab 1: BanglaQR (Recommended) */}
         <button
           type="button"
           onClick={() => onTabChange('banglaqr', 'BanglaQR')}
@@ -197,46 +198,26 @@ export default function PaymentMethodTabs({
           </div>
           <span className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black leading-none mt-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Primary Method
+            Recommended
           </span>
         </button>
 
-        {/* Tab 2: bKash (Secondary - Payment & Personal) */}
+        {/* Tab 2: Bank & MFS (Cellfin, Nagad & Rocket; Bank Transfer; bKash) */}
         <button
           type="button"
           onClick={() => {
-            onTabChange(
-              'bkash',
-              bkashSubTab === 'payment'
-                ? 'bKash Make Payment (Merchant)'
-                : 'bKash Send Money (Personal)'
-            );
-          }}
-          className={`flex flex-col items-center justify-center text-center p-3 rounded-xl transition-all relative ${
-            normalizedTab === 'bkash'
-              ? 'bg-white dark:bg-[#1B2230] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60 ring-2 ring-pink-500/20'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/60 dark:hover:bg-white/5'
-          }`}
-        >
-          <div className="flex items-center gap-1.5">
-            <Send className="w-4 h-4 shrink-0" />
-            <span className="font-extrabold text-xs sm:text-sm">bKash</span>
-          </div>
-          <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold leading-none mt-1 bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300">
-            Payment & Personal
-          </span>
-        </button>
-
-        {/* Tab 3: Other Payment (Bank, Other MFS) */}
-        <button
-          type="button"
-          onClick={() => {
-            onTabChange(
-              'other',
-              mfsSubTab === 'bank'
-                ? 'Bank Transfer (Standard Chartered)'
-                : 'Other MFS (Nagad/Rocket/Cellfin)'
-            );
+            if (effectiveMfsSubTab === 'bkash') {
+              onTabChange(
+                bkashSubTab === 'payment' ? 'bkash_pay' : 'bkash_send',
+                bkashSubTab === 'payment'
+                  ? 'bKash Make Payment (Merchant)'
+                  : 'bKash Send Money (Personal)'
+              );
+            } else if (effectiveMfsSubTab === 'bank') {
+              onTabChange('other', 'Bank Transfer (Standard Chartered)');
+            } else {
+              onTabChange('other', 'Other MFS (Nagad/Rocket/Cellfin)');
+            }
           }}
           className={`flex flex-col items-center justify-center text-center p-3 rounded-xl transition-all relative ${
             normalizedTab === 'other'
@@ -246,16 +227,16 @@ export default function PaymentMethodTabs({
         >
           <div className="flex items-center gap-1.5">
             <Building2 className="w-4 h-4 shrink-0" />
-            <span className="font-extrabold text-xs sm:text-sm">Other Payment</span>
+            <span className="font-extrabold text-xs sm:text-sm">Bank &amp; MFS</span>
           </div>
           <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold leading-none mt-1 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
-            Bank & Other MFS
+            Other Payment Methods
           </span>
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: BanglaQR (Primary Method - All Banks & MFS)                         */}
+      {/* TAB 1: BanglaQR (Recommended - All Banks & MFS)                           */}
       {/* ========================================================================= */}
       {normalizedTab === 'banglaqr' && (
         <div className="rounded-2xl overflow-hidden shadow-sm border border-emerald-500/30 bg-gradient-to-br from-[#0c4a34] via-[#064e3b] to-[#043d2e] text-white">
@@ -268,7 +249,7 @@ export default function PaymentMethodTabs({
               </span>
             </div>
             <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black leading-none bg-emerald-400 text-gray-950">
-              Primary • Scan With Any App
+              Recommended • Scan With Any App
             </span>
           </div>
 
@@ -410,287 +391,12 @@ export default function PaymentMethodTabs({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: bKash (Secondary Method - Payment & Personal Sub-Tabs)             */}
-      {/* ========================================================================= */}
-      {normalizedTab === 'bkash' && (
-        <div className="space-y-3">
-          {/* bKash Sub-Selector: Make Payment (Merchant) vs Send Money (Personal) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 bg-gray-100 dark:bg-[#161c28] rounded-xl border border-gray-200 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={() => {
-                setBkashSubTab('payment');
-                onTabChange('bkash', 'bKash Make Payment (Merchant)');
-              }}
-              className={`w-full flex items-center justify-between sm:justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
-                bkashSubTab === 'payment'
-                  ? 'bg-white dark:bg-[#1f2737] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-4 h-4 shrink-0" />
-                <span>1. Make Payment (Merchant QR)</span>
-              </div>
-              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 font-black">
-                Payment
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setBkashSubTab('personal');
-                onTabChange('bkash', 'bKash Send Money (Personal)');
-              }}
-              className={`w-full flex items-center justify-between sm:justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
-                bkashSubTab === 'personal'
-                  ? 'bg-white dark:bg-[#1f2737] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Send className="w-4 h-4 shrink-0" />
-                <span>2. Send Money (Personal)</span>
-              </div>
-              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-800 font-black">
-                Personal
-              </span>
-            </button>
-          </div>
-
-          {/* Sub-View 1: bKash Make Payment */}
-          {bkashSubTab === 'payment' && (
-            <div className="rounded-2xl overflow-hidden shadow-sm border border-[#D12053]/30 bg-gradient-to-br from-[#C41A4E] to-[#990D37] text-white">
-              {/* Header strip */}
-              <div className="px-4 sm:px-6 py-3.5 bg-black/15 flex items-center justify-between border-b border-white/10 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-white" />
-                  <span className="text-xs font-black tracking-wider uppercase">
-                    bKash Make Payment (Merchant)
-                  </span>
-                </div>
-                <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black leading-none bg-white/20 backdrop-blur-sm">
-                  TrxID Required
-                </span>
-              </div>
-
-              {/* QR + Instruction Layout */}
-              <div className="p-4 sm:p-5">
-                <div className="p-4 rounded-2xl bg-white dark:bg-[#151c27] text-gray-900 dark:text-gray-100 border border-pink-300 dark:border-pink-900/40 shadow-sm flex flex-col md:flex-row items-center justify-between gap-5 mb-4">
-                  {/* QR Image Box */}
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className="relative group p-2.5 bg-white rounded-2xl border-2 border-[#D12053] shadow-md">
-                      {imageErrorMap['/payment/bkash-payment.png'] ? (
-                        <StylizedQrFallback
-                          title="bKash Merchant QR"
-                          subText="Scan & Choose 'Make Payment'"
-                          brandColor="pink"
-                        />
-                      ) : (
-                        <div
-                          onClick={() =>
-                            setActiveZoomModal({
-                              src: '/payment/bkash-payment.png',
-                              title: 'bKash Merchant Payment QR',
-                              variant: 'qr',
-                              brand: 'bkash',
-                              caption: 'Scan with bKash app from "Make Payment" to complete.',
-                            })
-                          }
-                          className="relative w-52 sm:w-60 aspect-[800/1060] overflow-hidden rounded-xl bg-white flex items-center justify-center cursor-pointer group"
-                          title="Click to enlarge"
-                        >
-                          <Image
-                            src="/payment/bkash-payment.png"
-                            alt="bKash Payment QR"
-                            width={800}
-                            height={1060}
-                            priority
-                            className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform"
-                            onError={() => handleImageError('/payment/bkash-payment.png')}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setActiveZoomModal({
-                            src: '/payment/bkash-payment.png',
-                            title: 'bKash Merchant Payment QR',
-                            variant: 'qr',
-                            brand: 'bkash',
-                            caption: 'Scan with bKash app from "Make Payment" to complete.',
-                          })
-                        }
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-700 dark:text-pink-400 hover:underline bg-pink-50 dark:bg-pink-950/40 px-2.5 py-1 rounded-lg border border-pink-200 dark:border-pink-800"
-                      >
-                        <Maximize2 className="w-3 h-3" />
-                        <span>View / Enlarge QR</span>
-                      </button>
-                      <a
-                        href="/payment/bkash-payment.png"
-                        download="StockSimulatorBD_bKash_Payment.png"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:underline bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700"
-                      >
-                        <span>Download</span>
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Manual Copy Details */}
-                  <div className="flex-1 space-y-3 w-full text-xs">
-                    <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
-                          bKash Merchant Number
-                        </span>
-                        <span className="font-mono text-base font-black text-gray-900 dark:text-white block">
-                          {PAYMENT_DETAILS.bkashPayment.number}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(PAYMENT_DETAILS.bkashPayment.number, 'pay_num')}
-                        className="px-3 py-1.5 rounded-lg bg-[#D12053] hover:bg-[#b01040] text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm"
-                      >
-                        {copiedKey === 'pay_num' ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedKey === 'pay_num' ? 'Copied' : 'Copy'}</span>
-                      </button>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
-                          Exact Amount to Pay
-                        </span>
-                        <span className="font-mono text-base font-black text-emerald-600 dark:text-emerald-400 block">
-                          {formattedAmount}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(amount.toFixed(2), 'pay_amt')}
-                        className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1"
-                      >
-                        {copiedKey === 'pay_amt' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedKey === 'pay_amt' ? 'Copied' : 'Copy'}</span>
-                      </button>
-                    </div>
-
-                    <ol className="space-y-1.5 text-gray-600 dark:text-gray-300 text-[11px] pt-1">
-                      <li>• Open bKash app or dial <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded">*247#</code></li>
-                      <li>• Select <strong>&ldquo;Make Payment&rdquo;</strong> (or scan the Merchant QR)</li>
-                      <li>• Enter Merchant number <strong>{PAYMENT_DETAILS.bkashPayment.number}</strong> & amount <strong>{formattedAmount}</strong></li>
-                      <li>• Put the <strong>Transaction ID (TrxID)</strong> in the box below (Mandatory)</li>
-                      <li>• Optional: Add your WhatsApp number for faster communication</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sub-View 2: bKash Send Money (Personal - QR Hidden per user request) */}
-          {bkashSubTab === 'personal' && (
-            <div className="rounded-2xl overflow-hidden shadow-sm border border-[#D12053]/30 bg-gradient-to-br from-[#D12053] to-[#B01040] text-white">
-              {/* Header strip */}
-              <div className="px-4 sm:px-6 py-3.5 bg-black/15 flex items-center justify-between border-b border-white/10 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-white" />
-                  <span className="text-xs font-black tracking-wider uppercase">
-                    bKash Send Money (Personal)
-                  </span>
-                </div>
-                <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black leading-none bg-white/20 backdrop-blur-sm">
-                  Personal Number • Direct Send
-                </span>
-              </div>
-
-              {/* Clean No-QR Layout */}
-              <div className="p-4 sm:p-5">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#151c27] text-gray-900 dark:text-gray-100 border border-pink-300 dark:border-pink-900/40 shadow-sm space-y-4 mb-4">
-                  {/* Notice Alert */}
-                  <div className="p-3 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-800/60 text-pink-900 dark:text-pink-200 text-xs flex items-start gap-2.5">
-                    <Smartphone className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0 mt-0.5" />
-                    <div className="leading-relaxed">
-                      <strong className="font-bold">Personal Account Transfer:</strong> bKash does not provide QR codes for personal accounts anymore. Please use <strong>&ldquo;Send Money&rdquo;</strong> in your bKash app or dial <code className="bg-pink-100 dark:bg-pink-900/50 px-1 py-0.5 rounded font-mono font-bold">*247#</code> directly to our personal number below.
-                    </div>
-                  </div>
-
-                  {/* Manual Copy Details Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
-                          bKash Personal Number
-                        </span>
-                        <span className="font-mono text-base sm:text-lg font-black text-gray-900 dark:text-white block mt-0.5">
-                          {PAYMENT_DETAILS.bkashSendMoney.number}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(PAYMENT_DETAILS.bkashSendMoney.number, 'send_num')}
-                        className="px-3 py-2 rounded-lg bg-[#D12053] hover:bg-[#b01040] text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
-                      >
-                        {copiedKey === 'send_num' ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-                        <span>{copiedKey === 'send_num' ? 'Copied' : 'Copy Number'}</span>
-                      </button>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
-                          Exact Amount to Send
-                        </span>
-                        <span className="font-mono text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
-                          {formattedAmount}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(amount.toFixed(2), 'send_amt')}
-                        className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
-                      >
-                        {copiedKey === 'send_amt' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                        <span>{copiedKey === 'send_amt' ? 'Copied' : 'Copy Amount'}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Step-by-Step Instructions */}
-                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80">
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2">
-                      Step-by-Step Instructions:
-                    </span>
-                    <ol className="space-y-1.5 text-gray-700 dark:text-gray-300 text-xs">
-                      <li>• Open your bKash app or dial <code className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">*247#</code></li>
-                      <li>• Select <strong>&ldquo;Send Money&rdquo;</strong></li>
-                      <li>• Enter Personal Number <strong>{PAYMENT_DETAILS.bkashSendMoney.number}</strong></li>
-                      <li>• Enter Amount <strong>{formattedAmount}</strong></li>
-                      <li>• Enter your bKash PIN to confirm transfer</li>
-                      <li>• Copy the <strong>Transaction ID (TrxID)</strong> from confirmation SMS or app receipt</li>
-                      <li>• Paste TrxID in the box below (Mandatory). Optional: add your WhatsApp number for ease.</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 3: Other Payment (Bank, Other MFS)                                    */}
+      {/* TAB 2: Bank & MFS (Cellfin, Nagad & Rocket; Bank Transfer; bKash)         */}
       {/* ========================================================================= */}
       {normalizedTab === 'other' && (
         <div className="space-y-4">
-          {/* Sub-selector: Other MFS vs Bank Account */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 bg-gray-100 dark:bg-[#161c28] rounded-xl border border-gray-200 dark:border-gray-800">
+          {/* 3 Sub-Tabs under Bank & MFS: Cellfin, Nagad & Rocket; Bank Transfer; bKash */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-gray-100 dark:bg-[#161c28] rounded-xl border border-gray-200 dark:border-gray-800">
             <button
               type="button"
               onClick={() => {
@@ -698,13 +404,13 @@ export default function PaymentMethodTabs({
                 onTabChange('other', 'Other MFS (Nagad/Rocket/Cellfin)');
               }}
               className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
-                mfsSubTab === 'mfs'
+                effectiveMfsSubTab === 'mfs'
                   ? 'bg-white dark:bg-[#1f2737] text-orange-600 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-900/60'
                   : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               <Smartphone className="w-4 h-4 shrink-0" />
-              <span>Cellfin, Nagad & Rocket</span>
+              <span>Cellfin, Nagad &amp; Rocket</span>
             </button>
             <button
               type="button"
@@ -713,18 +419,38 @@ export default function PaymentMethodTabs({
                 onTabChange('other', 'Bank Transfer (Standard Chartered)');
               }}
               className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
-                mfsSubTab === 'bank'
+                effectiveMfsSubTab === 'bank'
                   ? 'bg-white dark:bg-[#1f2737] text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-900/60'
                   : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               <Building2 className="w-4 h-4 shrink-0" />
-              <span>Bank Transfer (NPSB)</span>
+              <span>Bank Transfer</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMfsSubTab('bkash');
+                onTabChange(
+                  bkashSubTab === 'payment' ? 'bkash_pay' : 'bkash_send',
+                  bkashSubTab === 'payment'
+                    ? 'bKash Make Payment (Merchant)'
+                    : 'bKash Send Money (Personal)'
+                );
+              }}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
+                effectiveMfsSubTab === 'bkash'
+                  ? 'bg-white dark:bg-[#1f2737] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <Send className="w-4 h-4 shrink-0" />
+              <span>bKash</span>
             </button>
           </div>
 
           {/* Sub-View 1: Other MFS (Cellfin, Nagad, Rocket) */}
-          {mfsSubTab === 'mfs' && (
+          {effectiveMfsSubTab === 'mfs' && (
             <div className="rounded-2xl overflow-hidden shadow-sm border border-orange-200 dark:border-orange-900/40 bg-white dark:bg-[#161c28]">
               <div className="p-4 sm:p-5 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent dark:from-orange-950/30 dark:via-[#161c28] border-b border-orange-100 dark:border-orange-900/30">
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -735,7 +461,7 @@ export default function PaymentMethodTabs({
                       <span className="w-5 h-5 rounded-full bg-purple-600 text-[9px] text-white font-black flex items-center justify-center">R</span>
                     </div>
                     <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">
-                      Cellfin, Nagad & Rocket (Send Money)
+                      Cellfin, Nagad &amp; Rocket (Send Money)
                     </h3>
                   </div>
                   <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold leading-none bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">
@@ -826,7 +552,7 @@ export default function PaymentMethodTabs({
           )}
 
           {/* Sub-View 2: Standard Chartered Bank Account Details */}
-          {mfsSubTab === 'bank' && (
+          {effectiveMfsSubTab === 'bank' && (
             <div className="rounded-2xl overflow-hidden shadow-sm border border-blue-200 dark:border-blue-900/50 bg-white dark:bg-[#161c28]">
               <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-950/30 dark:via-[#161c28] border-b border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-start sm:items-center justify-between flex-wrap gap-2.5">
@@ -970,6 +696,279 @@ export default function PaymentMethodTabs({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Sub-View 3: bKash (with 2 Subtabs: Make Payment & Send Money) */}
+          {effectiveMfsSubTab === 'bkash' && (
+            <div className="space-y-3">
+              {/* bKash Sub-Selector: Make Payment (Merchant) vs Send Money (Personal) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 bg-gray-100 dark:bg-[#161c28] rounded-xl border border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBkashSubTab('payment');
+                    onTabChange('bkash_pay', 'bKash Make Payment (Merchant)');
+                  }}
+                  className={`w-full flex items-center justify-between sm:justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
+                    bkashSubTab === 'payment'
+                      ? 'bg-white dark:bg-[#1f2737] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 shrink-0" />
+                    <span>1. Make Payment (Merchant QR)</span>
+                  </div>
+                  <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 font-black">
+                    Payment
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBkashSubTab('personal');
+                    onTabChange('bkash_send', 'bKash Send Money (Personal)');
+                  }}
+                  className={`w-full flex items-center justify-between sm:justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition-all min-h-[44px] ${
+                    bkashSubTab === 'personal'
+                      ? 'bg-white dark:bg-[#1f2737] text-pink-600 dark:text-pink-400 shadow-sm border border-pink-200 dark:border-pink-900/60'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4 shrink-0" />
+                    <span>2. Send Money (Personal)</span>
+                  </div>
+                  <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-800 font-black">
+                    Personal
+                  </span>
+                </button>
+              </div>
+
+              {/* Sub-View 3A: bKash Make Payment */}
+              {bkashSubTab === 'payment' && (
+                <div className="rounded-2xl overflow-hidden shadow-sm border border-[#D12053]/30 bg-gradient-to-br from-[#C41A4E] to-[#990D37] text-white">
+                  {/* Header strip */}
+                  <div className="px-4 sm:px-6 py-3.5 bg-black/15 flex items-center justify-between border-b border-white/10 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-white" />
+                      <span className="text-xs font-black tracking-wider uppercase">
+                        bKash Make Payment (Merchant)
+                      </span>
+                    </div>
+                    <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black leading-none bg-white/20 backdrop-blur-sm">
+                      TrxID Required
+                    </span>
+                  </div>
+
+                  {/* QR + Instruction Layout */}
+                  <div className="p-4 sm:p-5">
+                    <div className="p-4 rounded-2xl bg-white dark:bg-[#151c27] text-gray-900 dark:text-gray-100 border border-pink-300 dark:border-pink-900/40 shadow-sm flex flex-col md:flex-row items-center justify-between gap-5 mb-4">
+                      {/* QR Image Box */}
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="relative group p-2.5 bg-white rounded-2xl border-2 border-[#D12053] shadow-md">
+                          {imageErrorMap['/payment/bkash-payment.png'] ? (
+                            <StylizedQrFallback
+                              title="bKash Merchant QR"
+                              subText="Scan & Choose 'Make Payment'"
+                              brandColor="pink"
+                            />
+                          ) : (
+                            <div
+                              onClick={() =>
+                                setActiveZoomModal({
+                                  src: '/payment/bkash-payment.png',
+                                  title: 'bKash Merchant Payment QR',
+                                  variant: 'qr',
+                                  brand: 'bkash',
+                                  caption: 'Scan with bKash app from "Make Payment" to complete.',
+                                })
+                              }
+                              className="relative w-52 sm:w-60 aspect-[800/1060] overflow-hidden rounded-xl bg-white flex items-center justify-center cursor-pointer group"
+                              title="Click to enlarge"
+                            >
+                              <Image
+                                src="/payment/bkash-payment.png"
+                                alt="bKash Payment QR"
+                                width={800}
+                                height={1060}
+                                priority
+                                className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform"
+                                onError={() => handleImageError('/payment/bkash-payment.png')}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-2.5 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveZoomModal({
+                                src: '/payment/bkash-payment.png',
+                                title: 'bKash Merchant Payment QR',
+                                variant: 'qr',
+                                brand: 'bkash',
+                                caption: 'Scan with bKash app from "Make Payment" to complete.',
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-700 dark:text-pink-400 hover:underline bg-pink-50 dark:bg-pink-950/40 px-2.5 py-1 rounded-lg border border-pink-200 dark:border-pink-800"
+                          >
+                            <Maximize2 className="w-3 h-3" />
+                            <span>View / Enlarge QR</span>
+                          </button>
+                          <a
+                            href="/payment/bkash-payment.png"
+                            download="StockSimulatorBD_bKash_Payment.png"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:underline bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700"
+                          >
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Manual Copy Details */}
+                      <div className="flex-1 space-y-3 w-full text-xs">
+                        <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                              bKash Merchant Number
+                            </span>
+                            <span className="font-mono text-base font-black text-gray-900 dark:text-white block">
+                              {PAYMENT_DETAILS.bkashPayment.number}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(PAYMENT_DETAILS.bkashPayment.number, 'pay_num')}
+                            className="px-3 py-1.5 rounded-lg bg-[#D12053] hover:bg-[#b01040] text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm"
+                          >
+                            {copiedKey === 'pay_num' ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedKey === 'pay_num' ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                              Exact Amount to Pay
+                            </span>
+                            <span className="font-mono text-base font-black text-emerald-600 dark:text-emerald-400 block">
+                              {formattedAmount}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(amount.toFixed(2), 'pay_amt')}
+                            className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1"
+                          >
+                            {copiedKey === 'pay_amt' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedKey === 'pay_amt' ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+
+                        <ol className="space-y-1.5 text-gray-600 dark:text-gray-300 text-[11px] pt-1">
+                          <li>• Open bKash app or dial <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded">*247#</code></li>
+                          <li>• Select <strong>&ldquo;Make Payment&rdquo;</strong> (or scan the Merchant QR)</li>
+                          <li>• Enter Merchant number <strong>{PAYMENT_DETAILS.bkashPayment.number}</strong> &amp; amount <strong>{formattedAmount}</strong></li>
+                          <li>• Put the <strong>Transaction ID (TrxID)</strong> in the box below (Mandatory)</li>
+                          <li>• Optional: Add your WhatsApp number for faster communication</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-View 3B: bKash Send Money (Personal - QR Hidden per user request) */}
+              {bkashSubTab === 'personal' && (
+                <div className="rounded-2xl overflow-hidden shadow-sm border border-[#D12053]/30 bg-gradient-to-br from-[#D12053] to-[#B01040] text-white">
+                  {/* Header strip */}
+                  <div className="px-4 sm:px-6 py-3.5 bg-black/15 flex items-center justify-between border-b border-white/10 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-white" />
+                      <span className="text-xs font-black tracking-wider uppercase">
+                        bKash Send Money (Personal)
+                      </span>
+                    </div>
+                    <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black leading-none bg-white/20 backdrop-blur-sm">
+                      Personal Number • Direct Send
+                    </span>
+                  </div>
+
+                  {/* Clean No-QR Layout */}
+                  <div className="p-4 sm:p-5">
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#151c27] text-gray-900 dark:text-gray-100 border border-pink-300 dark:border-pink-900/40 shadow-sm space-y-4 mb-4">
+                      {/* Notice Alert */}
+                      <div className="p-3 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-800/60 text-pink-900 dark:text-pink-200 text-xs flex items-start gap-2.5">
+                        <Smartphone className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0 mt-0.5" />
+                        <div className="leading-relaxed">
+                          <strong className="font-bold">Personal Account Transfer:</strong> bKash does not provide QR codes for personal accounts anymore. Please use <strong>&ldquo;Send Money&rdquo;</strong> in your bKash app or dial <code className="bg-pink-100 dark:bg-pink-900/50 px-1 py-0.5 rounded font-mono font-bold">*247#</code> directly to our personal number below.
+                        </div>
+                      </div>
+
+                      {/* Manual Copy Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                              bKash Personal Number
+                            </span>
+                            <span className="font-mono text-base sm:text-lg font-black text-gray-900 dark:text-white block mt-0.5">
+                              {PAYMENT_DETAILS.bkashSendMoney.number}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(PAYMENT_DETAILS.bkashSendMoney.number, 'send_num')}
+                            className="px-3 py-2 rounded-lg bg-[#D12053] hover:bg-[#b01040] text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                          >
+                            {copiedKey === 'send_num' ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                            <span>{copiedKey === 'send_num' ? 'Copied' : 'Copy Number'}</span>
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                              Exact Amount to Send
+                            </span>
+                            <span className="font-mono text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                              {formattedAmount}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(amount.toFixed(2), 'send_amt')}
+                            className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
+                          >
+                            {copiedKey === 'send_amt' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                            <span>{copiedKey === 'send_amt' ? 'Copied' : 'Copy Amount'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Step-by-Step Instructions */}
+                      <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2">
+                          Step-by-Step Instructions:
+                        </span>
+                        <ol className="space-y-1.5 text-gray-700 dark:text-gray-300 text-xs">
+                          <li>• Open your bKash app or dial <code className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">*247#</code></li>
+                          <li>• Select <strong>&ldquo;Send Money&rdquo;</strong></li>
+                          <li>• Enter Personal Number <strong>{PAYMENT_DETAILS.bkashSendMoney.number}</strong></li>
+                          <li>• Enter Amount <strong>{formattedAmount}</strong></li>
+                          <li>• Enter your bKash PIN to confirm transfer</li>
+                          <li>• Copy the <strong>Transaction ID (TrxID)</strong> from confirmation SMS or app receipt</li>
+                          <li>• Paste TrxID in the box below (Mandatory). Optional: add your WhatsApp number for ease.</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
