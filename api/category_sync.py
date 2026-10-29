@@ -1,3 +1,4 @@
+import gzip
 import json
 import os
 import ssl
@@ -40,11 +41,18 @@ MAX_ATTEMPTS_PER_CATEGORY = 3
 RETRY_BACKOFF_SECONDS = 1.5
 
 
+_SSL_CONTEXT = ssl.create_default_context()
+
+
 def _create_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+    return _SSL_CONTEXT
+
+
+def _read_response_text(resp) -> str:
+    raw = resp.read()
+    if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+        raw = gzip.decompress(raw)
+    return raw.decode("utf-8", errors="ignore")
 
 
 def is_government_security(code, asset_type="", sector="", board=""):
@@ -76,11 +84,12 @@ def fetch_categories_from_new_dse(api_url=None, timeout=15.0):
         headers={
             'User-Agent': USER_AGENT,
             'Accept': 'application/json',
+            'Accept-Encoding': 'gzip',
             'Referer': NEW_DSE_PAGE_URL
         }
     )
     with urllib.request.urlopen(req, context=ctx, timeout=timeout) as res:
-        content = res.read().decode('utf-8', errors='ignore')
+        content = _read_response_text(res)
         data = json.loads(content)
 
     cols = data.get("cols", [])

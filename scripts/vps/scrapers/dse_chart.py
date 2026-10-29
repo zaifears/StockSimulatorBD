@@ -2,6 +2,7 @@
 dse_chart.py - DSE Chart Scraper module for VPS daemon
 """
 
+import gzip
 import json
 import logging
 import re
@@ -16,12 +17,21 @@ COMPANY_BASE_URLS = [
     "https://www.dsebd.org/company",
 ]
 
+_SSL_CONTEXT = ssl.create_default_context()
+NEXT_F_RE = re.compile(r'self\.__next_f\.push\(\[1,\s*"(.*?)"\]\)', re.DOTALL)
+CANDLE_RE = re.compile(r'\[\{\"t\":[^\]]*?\"date\":\"\d{4}-\d{2}-\d{2}\"[^\]]*?\}\]')
+CANDLE_FALLBACK_RE = re.compile(r'(\[\{\"t\":[^\}]*?\"date\":.*?\])')
+
 
 def _create_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+    return _SSL_CONTEXT
+
+
+def _read_response_text(resp) -> str:
+    raw = resp.read()
+    if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+        raw = gzip.decompress(raw)
+    return raw.decode("utf-8", errors="replace")
 
 
 def fetch_from_new_dse(symbol: str, base_url: str = "https://new.dsebd.org/company") -> list[dict]:
@@ -32,32 +42,46 @@ def fetch_from_new_dse(symbol: str, base_url: str = "https://new.dsebd.org/compa
         url,
         headers={
             "User-Agent": USER_AGENT,
+            "Accept-Encoding": "gzip",
             "Referer": "https://new.dsebd.org/",
         },
     )
 
     with urllib.request.urlopen(req, context=ctx, timeout=12.0) as resp:
-        html = resp.read().decode("utf-8", errors="replace")
+        html = _read_response_text(resp)
 
-    chunks = re.findall(r'self\.__next_f\.push\(\[1,\s*"(.*?)"\]\)', html, re.DOTALL)
-    full_flight = ""
+    raw_candles = None
+    chunks = NEXT_F_RE.findall(html)
+    # Fast path: only unescape the chunk that actually contains the candle series
     for c in chunks:
-        try:
-            unescaped = json.loads('"' + c + '"')
-            full_flight += unescaped
-        except Exception:
-            full_flight += c
+        if '\\"date\\":\\"' in c and '\\"t\\":' in c:
+            try:
+                u = json.loads('"' + c + '"')
+                m = CANDLE_RE.search(u)
+                if m:
+                    raw_candles = json.loads(m.group(0))
+                    break
+            except Exception:
+                pass
 
-    # Search for candle list in unescaped stream: [{"t":"...", "date":"YYYY-MM-DD", ...}]
-    match = re.search(r'\[\{\"t\":[^\]]*?\"date\":\"\d{4}-\d{2}-\d{2}\"[^\]]*?\}\]', full_flight)
-    if not match:
-        matches = re.findall(r'(\[\{\"t\":[^\}]*?\"date\":.*?\])', full_flight)
-        if matches:
-            raw_candles = json.loads(matches[0])
+    if raw_candles is None:
+        parts = []
+        for c in chunks:
+            try:
+                parts.append(json.loads('"' + c + '"'))
+            except Exception:
+                parts.append(c)
+        full_flight = "".join(parts)
+
+        match = CANDLE_RE.search(full_flight)
+        if not match:
+            matches = CANDLE_FALLBACK_RE.findall(full_flight)
+            if matches:
+                raw_candles = json.loads(matches[0])
+            else:
+                return []
         else:
-            return []
-    else:
-        raw_candles = json.loads(match.group(0))
+            raw_candles = json.loads(match.group(0))
 
     candles = []
     for item in raw_candles:

@@ -11,10 +11,12 @@ Designed to run via systemd timer at 3:00 AM BST on the Oracle VPS.
 """
 
 import argparse
+import gzip
 import json
 import logging
 import os
 import re
+import ssl
 import sys
 import time
 import urllib.request
@@ -64,10 +66,14 @@ def get_active_symbols():
         try:
             req = urllib.request.Request(
                 api_url,
-                headers={"User-Agent": USER_AGENT, "Referer": "https://new.dsebd.org/"},
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept-Encoding": "gzip",
+                    "Referer": "https://new.dsebd.org/",
+                },
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+            with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=15) as resp:
+                data = json.loads(_read_response_text(resp))
 
             symbols = []
             raw_stocks = (data.get("rows") or data.get("data") or []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
@@ -95,40 +101,72 @@ def get_active_symbols():
     return sorted(list(set(TOP_SYMBOLS_FALLBACK)))
 
 
+_SSL_CONTEXT = ssl.create_default_context()
+NEXT_F_RE = re.compile(r'self\.__next_f\.push\(\[1,\s*"(.*?)"\]\)', re.DOTALL)
+
+
+def _read_response_text(resp) -> str:
+    raw = resp.read()
+    if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+        raw = gzip.decompress(raw)
+    return raw.decode("utf-8", errors="replace")
+
+
+def _extract_json_around_market_cap(text: str) -> dict | None:
+    idx = text.find('"marketCap":')
+    if idx == -1:
+        return None
+    start = text.rfind("{", 0, idx)
+    if start == -1:
+        return None
+    depth = 0
+    for i in range(start, len(text)):
+        ch = text[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                data = json.loads(text[start : i + 1])
+                return data if isinstance(data, dict) else None
+    return None
+
+
 def extract_rsc_fundamentals(html: str) -> dict | None:
     """Extracts the rich company data object from Next.js RSC Flight chunks."""
     try:
-        chunks = re.findall(r'self\.__next_f\.push\(\[1,\s*"(.*?)"\]\)', html, re.DOTALL)
+        # Fast path: C-level substring lookup for the single RSC push chunk holding marketCap
+        mc_pos = html.find('\\"marketCap\\":')
+        if mc_pos != -1:
+            push_start = html.rfind("self.__next_f.push([1,", 0, mc_pos)
+            script_end = html.find(")</script>", mc_pos)
+            if script_end == -1:
+                script_end = html.find("])\n", mc_pos)
+            if push_start != -1 and script_end != -1:
+                q_start = html.find('"', push_start + 22)
+                q_end = html.rfind('"', q_start + 1, script_end + 1)
+                if q_start != -1 and q_end > q_start:
+                    try:
+                        unescaped = json.loads(html[q_start : q_end + 1])
+                        res = _extract_json_around_market_cap(unescaped)
+                        if res:
+                            return res
+                    except Exception:
+                        pass
+
+        # Fallback: full multi-chunk concatenation if payload spans multiple chunks
+        chunks = NEXT_F_RE.findall(html)
         if not chunks:
             return None
 
-        full_flight = ""
+        parts = []
         for c in chunks:
             try:
-                unescaped = json.loads('"' + c + '"')
-                full_flight += unescaped
+                parts.append(json.loads('"' + c + '"'))
             except Exception:
-                full_flight += c
+                parts.append(c)
 
-        idx = full_flight.find('"marketCap":')
-        if idx == -1:
-            return None
-
-        start = full_flight.rfind("{", 0, idx)
-        depth = 0
-        end = -1
-        for i in range(start, len(full_flight)):
-            if full_flight[i] == "{":
-                depth += 1
-            elif full_flight[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    end = i + 1
-                    break
-
-        if start != -1 and end != -1:
-            data = json.loads(full_flight[start:end])
-            return data
+        return _extract_json_around_market_cap("".join(parts))
     except Exception as e:
         logger.debug("RSC extraction failed: %s", e)
 
@@ -142,11 +180,15 @@ def crawl_symbol(symbol: str, retries: int = 3) -> dict | None:
         url = f"{base_url}/{symbol}"
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": USER_AGENT, "Referer": "https://new.dsebd.org/"},
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept-Encoding": "gzip",
+                "Referer": "https://new.dsebd.org/",
+            },
         )
         try:
-            with urllib.request.urlopen(req, timeout=12) as resp:
-                html = resp.read().decode("utf-8", errors="replace")
+            with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=12) as resp:
+                html = _read_response_text(resp)
 
             data = extract_rsc_fundamentals(html)
             if data and data.get("code"):

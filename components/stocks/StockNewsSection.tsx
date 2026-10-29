@@ -6,7 +6,7 @@ import { Newspaper, BellRing, Crown, ExternalLink, ShieldAlert, Sparkles, Clock 
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchVpsWithFallback } from '@/lib/vpsClient';
 
-interface NewsItem {
+export interface NewsItem {
   id: string;
   code: string;
   name?: string;
@@ -22,15 +22,23 @@ interface NewsItem {
 interface Props {
   symbol: string;
   isBoss?: boolean;
+  initialData?: NewsItem[] | null;
 }
 
-export default function StockNewsSection({ symbol, isBoss }: Props) {
+export default function StockNewsSection({ symbol, isBoss, initialData }: Props) {
   const { isBoss: authIsBoss } = useAuth();
   const effectiveIsBoss = isBoss ?? authIsBoss;
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitial = Array.isArray(initialData);
+  const [news, setNews] = useState<NewsItem[]>(hasInitial ? (initialData ?? []) : []);
+  const [loading, setLoading] = useState(!hasInitial);
 
   useEffect(() => {
+    if (Array.isArray(initialData)) {
+      setNews(initialData);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     async function loadNews() {
@@ -58,7 +66,7 @@ export default function StockNewsSection({ symbol, isBoss }: Props) {
     return () => {
       mounted = false;
     };
-  }, [symbol]);
+  }, [symbol, initialData]);
 
   return (
     <section

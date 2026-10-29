@@ -10,6 +10,7 @@ to the always-on Oracle VPS daemon while maintaining 100% Firestore schema parit
   - app/api/internal/crawler-telemetry/route.ts
 """
 
+import hmac
 import json
 import logging
 import math
@@ -849,7 +850,10 @@ STANDARD_BOTS = {
     "OAI-SearchBot",
     "ChatGPT-User",
     "ClaudeBot",
+    "Claude-SearchBot",
     "PerplexityBot",
+    "Perplexity-User",
+    "Bytespider",
     "Applebot",
     "Applebot-Extended",
     "CCBot",
@@ -863,7 +867,9 @@ def handle_crawler_telemetry(body: dict[str, Any], headers: dict[str, str]) -> t
         return {"error": "Telemetry secret not configured"}, 500
 
     incoming_secret = headers.get("x-crawler-telemetry-secret")
-    if not incoming_secret or incoming_secret != secret:
+    if not incoming_secret or not hmac.compare_digest(
+        incoming_secret.encode("utf-8"), secret.encode("utf-8")
+    ):
         return {"error": "Unauthorized internal telemetry call"}, 401
 
     bot_name = body.get("botName")

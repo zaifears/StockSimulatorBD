@@ -2,7 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { getAllDseStocks as fetchAllStocks, getStockLatestPrice, TOP_STATIC_DSE_SYMBOLS, type DseStock } from '@/lib/dseStocks';
+import {
+  getAllDseStocks as fetchAllStocks,
+  getStockLatestPrice,
+  getStockFundamentals,
+  getStockNews,
+  TOP_STATIC_DSE_SYMBOLS,
+  type DseStock,
+} from '@/lib/dseStocks';
 import { classifyInstrument, getInstrumentProfile, pickFitting } from '@/lib/dseInstrumentTypes';
 import StockChart from '@/components/StockChart';
 import StockTradingSection from '@/components/StockTradingSection';
@@ -184,7 +191,12 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
     notFound();
   }
 
-  const basePrice = await getStockLatestPrice(stock.symbol);
+  const [basePrice, fundamentals, initialNews] = await Promise.all([
+    getStockLatestPrice(stock.symbol),
+    getStockFundamentals(stock.symbol),
+    getStockNews(stock.symbol),
+  ]);
+  const effectivePrice = basePrice > 0 ? basePrice : (fundamentals?.price ?? 0);
   const profile = getInstrumentProfile(stock.symbol, stock.name);
   const related = getRelatedStocks(stock, stocks);
   const pageUrl = `${BASE_URL}${stockHref(stock.symbol)}`;
@@ -192,19 +204,50 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
   const named = stock.nameKnown;
   const brand = named ? getCleanBrandName(stock.name) : '';
 
+  const metricParts: string[] = [];
+  if (effectivePrice > 0) metricParts.push(`reference share price of ৳${effectivePrice.toFixed(1)}`);
+  if (fundamentals?.pe != null) metricParts.push(`audited P/E ratio of ${fundamentals.pe.toFixed(2)}`);
+  if (fundamentals?.eps != null) metricParts.push(`annual EPS of ৳${fundamentals.eps.toFixed(2)}`);
+  if (fundamentals?.nav != null) metricParts.push(`NAVPS (book value) of ৳${fundamentals.nav.toFixed(2)}`);
+  if (fundamentals?.dividendYield != null) metricParts.push(`dividend yield of ${fundamentals.dividendYield.toFixed(2)}%`);
+  if (fundamentals?.weekLow52 != null && fundamentals?.weekHigh52 != null) {
+    metricParts.push(`52-week trading range of ৳${fundamentals.weekLow52.toFixed(1)} to ৳${fundamentals.weekHigh52.toFixed(1)}`);
+  }
+
+  const latestDiv = fundamentals?.dividendHistory?.[0];
+  const latestDivText = latestDiv
+    ? ` In ${latestDiv.year}, ${stock.symbol} declared ${[
+        latestDiv.cash ? `${latestDiv.cash}% cash` : '',
+        latestDiv.stock ? `${latestDiv.stock}% stock` : '',
+      ]
+        .filter(Boolean)
+        .join(' and ') || 'no'} dividend.`
+    : '';
+
+  const sectorCategoryNote = [
+    fundamentals?.sector ? `${fundamentals.sector} sector` : '',
+    fundamentals?.category ? `Category ${fundamentals.category}` : '',
+    fundamentals?.listingYear ? `listed in ${fundamentals.listingYear}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   const faqs = [
     named
       ? {
           q: `What is the DSE ticker symbol for ${stock.name}?`,
-          a: `${stock.name} trades on the Dhaka Stock Exchange under the ticker ${stock.symbol}. You use that symbol to look the ${profile.label} up on the exchange, with a broker, or inside the StockSimulatorBD practice terminal.`,
+          a: `${stock.name} trades on the Dhaka Stock Exchange under the ticker ${stock.symbol}${sectorCategoryNote ? ` (${sectorCategoryNote})` : ''}. You use that symbol to look the ${profile.label} up on the exchange, with a broker, or inside the StockSimulatorBD practice terminal.`,
         }
       : {
           q: `What is ${stock.symbol}?`,
-          a: `${stock.symbol} is a security listed on the Dhaka Stock Exchange. You use that ticker to look it up on the exchange, with a broker, or inside the StockSimulatorBD practice terminal.`,
+          a: `${stock.symbol} is a security listed on the Dhaka Stock Exchange${sectorCategoryNote ? ` (${sectorCategoryNote})` : ''}. You use that ticker to look it up on the exchange, with a broker, or inside the StockSimulatorBD practice terminal.`,
         },
     {
       q: `Where can I view ${stock.symbol}'s audited P/E ratio, EPS, and dividend history?`,
-      a: `Audited valuation metrics for ${stock.symbol}—including Price-to-Earnings (P/E) ratio, Annual EPS, Net Asset Value Per Share (NAVPS), and historical dividend declarations—are published directly on this StockSimulatorBD page derived from official Dhaka Stock Exchange company filings.`,
+      a:
+        metricParts.length > 0
+          ? `According to Dhaka Stock Exchange disclosures published on this StockSimulatorBD page, ${stock.symbol} has a ${metricParts.join(', ')}.${latestDivText}`
+          : `Audited valuation metrics for ${stock.symbol}—including Price-to-Earnings (P/E) ratio, Annual EPS, Net Asset Value Per Share (NAVPS), and historical dividend declarations—are published directly on this StockSimulatorBD page derived from official Dhaka Stock Exchange company filings.`,
     },
     {
       q: `Can I practice trading ${stock.symbol} without real money?`,
@@ -246,12 +289,23 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
         exchangeSymbol: 'DSE',
         currency: 'BDT',
         url: pageUrl,
-        category: profile.badge,
+        category: fundamentals?.sector ? `${profile.badge} (${fundamentals.sector})` : profile.badge,
         description: named
-          ? `${stock.name} (${stock.symbol}) equity security listed on the Dhaka Stock Exchange. View live candlestick price chart, audited P/E ratio, annual EPS, dividend history, and practice paper trading risk-free.`
+          ? `${stock.name} (${stock.symbol}) equity security listed on the Dhaka Stock Exchange.${metricParts.length > 0 ? ` Key metrics: ${metricParts.join(', ')}.` : ''} View live candlestick price chart, audited P/E ratio, annual EPS, dividend history, and practice paper trading risk-free.`
           : `${stock.symbol} equity security listed on the Dhaka Stock Exchange.`,
+        ...(effectivePrice > 0
+          ? {
+              offers: {
+                '@type': 'Offer',
+                price: effectivePrice.toFixed(2),
+                priceCurrency: 'BDT',
+                url: pageUrl,
+              },
+            }
+          : {}),
         provider: {
           '@type': 'Organization',
+          '@id': `${BASE_URL}/#organization`,
           name: 'StockSimulatorBD',
           url: BASE_URL,
           logo: `${BASE_URL}/favicon.svg`,
@@ -266,7 +320,8 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
               alternateName: brand,
               tickerSymbol: `DSE:${stock.symbol}`,
               url: pageUrl,
-              description: `${stock.name} (${stock.symbol}) is a publicly traded corporation on the Dhaka Stock Exchange.`,
+              ...(fundamentals?.listingYear ? { foundingDate: String(fundamentals.listingYear) } : {}),
+              description: `${stock.name} (${stock.symbol}) is a publicly traded corporation on the Dhaka Stock Exchange${sectorCategoryNote ? ` (${sectorCategoryNote})` : ''}.`,
             },
           ]
         : []),
@@ -374,10 +429,14 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
             </section>
 
             {/* Audited Company Fundamentals & Valuation */}
-            <CompanyFundamentalsCard symbol={stock.symbol} currentPrice={basePrice > 0 ? basePrice : undefined} />
+            <CompanyFundamentalsCard
+              symbol={stock.symbol}
+              currentPrice={effectivePrice > 0 ? effectivePrice : undefined}
+              initialData={fundamentals}
+            />
 
             {/* Official DSE Corporate Disclosures & News */}
-            <StockNewsSection symbol={stock.symbol} />
+            <StockNewsSection symbol={stock.symbol} initialData={initialNews} />
 
             {/* Trading rules for this symbol */}
             <section
@@ -458,7 +517,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
               buried under supplementary content; on desktop it's the sticky
               sidebar beside that same content, same as before. */}
           <div className="lg:sticky lg:top-6 space-y-6">
-            <StockTradingSection symbol={stock.symbol} fallbackPrice={basePrice} />
+            <StockTradingSection symbol={stock.symbol} fallbackPrice={effectivePrice} />
 
             <section className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg">
               <h2 className="text-xl font-bold mb-2 tracking-tight">

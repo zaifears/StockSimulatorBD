@@ -1,3 +1,4 @@
+import gzip
 import html
 import json
 import ssl
@@ -113,6 +114,15 @@ class DataMatrixPriceParser(HTMLParser):
         self.cell_values = {}
         self.stocks = []
 
+    def feed(self, data: str) -> None:
+        idx = data.find("TableDataMatrix")
+        if idx != -1:
+            t_start = data.rfind("<table", 0, idx)
+            t_end = data.find("</table>", idx)
+            if t_start != -1 and t_end != -1:
+                data = data[t_start : t_end + 8]
+        super().feed(data)
+
     def handle_starttag(self, tag, attrs):
         if tag == "table":
             if dict(attrs).get("id") == "TableDataMatrix":
@@ -187,20 +197,27 @@ class DataMatrixPriceParser(HTMLParser):
             self.cell_text_parts.append(data)
 
 
+_LANKA_SSL_CONTEXT = ssl.create_default_context()
+
+
 def fetch_data_matrix_html() -> str:
     """Same transport contract as lanka_sector_sync.py's fetch: raises
     BlockedError immediately on 403/429, TransportError after retries on
     anything else."""
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx = _LANKA_SSL_CONTEXT
 
     last_error = None
     for attempt in range(1, MAX_TRANSPORT_ATTEMPTS + 1):
-        req = urllib.request.Request(DATA_MATRIX_URL, headers={"User-Agent": USER_AGENT})
+        req = urllib.request.Request(
+            DATA_MATRIX_URL,
+            headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"},
+        )
         try:
             with urllib.request.urlopen(req, context=ctx, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-                return response.read().decode("utf-8", errors="ignore")
+                raw = response.read()
+                if response.headers.get("Content-Encoding", "").lower() == "gzip":
+                    raw = gzip.decompress(raw)
+                return raw.decode("utf-8", errors="ignore")
         except urllib.error.HTTPError as e:
             if e.code in (403, 429):
                 raise BlockedError(f"HTTP {e.code} from lankabd.com — treating as a block signal")

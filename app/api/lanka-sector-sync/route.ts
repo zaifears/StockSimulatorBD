@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
+import { verifyCronSecret } from '@/lib/utils/cronAuth';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -45,19 +46,12 @@ function diffSectors(previous: Record<string, string>, next: Record<string, stri
 
 export async function GET(request: NextRequest) {
   // ── Auth ──────────────────────────────────────────────────────────────────
-  const expectedSecret = process.env.CRON_SECRET;
-
-  if (!expectedSecret) {
-    console.error('[lanka-sector-sync] CRON_SECRET env var is not set');
-    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
-  }
-
-  const authHeader = request.headers.get('authorization');
-  const apiKey = request.headers.get('x-api-key');
-  const isAuthed = authHeader === `Bearer ${expectedSecret}` || apiKey === expectedSecret;
-
-  if (!isAuthed) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const authResult = verifyCronSecret(request);
+  if (!authResult.ok) {
+    if (authResult.status === 500) {
+      console.error('[lanka-sector-sync] CRON_SECRET env var is not set');
+    }
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
   // ── Scrape ────────────────────────────────────────────────────────────────

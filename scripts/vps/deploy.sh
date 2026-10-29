@@ -11,6 +11,16 @@ echo "=== 1. Setting up directory structure ==="
 mkdir -p "$DEPLOY_DIR/data"
 mkdir -p "$DEPLOY_DIR/scrapers"
 
+if [ ! -f "$DEPLOY_DIR/.env" ]; then
+    echo "Generating 256-bit CRON_SECRET in $DEPLOY_DIR/.env..."
+    umask 077
+    printf "CRON_SECRET=%s\n" "$(python3 -c 'import secrets; print(secrets.token_hex(32))')" > "$DEPLOY_DIR/.env"
+elif ! grep -q "^CRON_SECRET=" "$DEPLOY_DIR/.env"; then
+    echo "Adding 256-bit CRON_SECRET to $DEPLOY_DIR/.env..."
+    printf "\nCRON_SECRET=%s\n" "$(python3 -c 'import secrets; print(secrets.token_hex(32))')" >> "$DEPLOY_DIR/.env"
+fi
+chmod 600 "$DEPLOY_DIR/.env"
+
 echo "=== 2. Setting up Python virtual environment ==="
 if [ ! -d "$DEPLOY_DIR/venv" ]; then
     echo "Creating virtual environment at $DEPLOY_DIR/venv..."

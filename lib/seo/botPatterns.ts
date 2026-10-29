@@ -17,13 +17,13 @@ export interface BotPatternDef {
 }
 
 export const BOT_PATTERNS: BotPatternDef[] = [
-  { pattern: /Googlebot/i, name: 'Googlebot' },
+  { pattern: /Googlebot|Google-Extended/i, name: 'Googlebot' },
   { pattern: /OAI-SearchBot/i, name: 'OAI-SearchBot' },
   { pattern: /ChatGPT-User/i, name: 'OAI-SearchBot' },
   { pattern: /GPTBot/i, name: 'OAI-SearchBot' },
   { pattern: /bingbot/i, name: 'Bingbot' },
-  { pattern: /PerplexityBot/i, name: 'PerplexityBot' },
-  { pattern: /ClaudeBot|Claude-Web|anthropic-ai/i, name: 'ClaudeBot' },
+  { pattern: /PerplexityBot|Perplexity-User/i, name: 'PerplexityBot' },
+  { pattern: /ClaudeBot|Claude-SearchBot|Claude-Web|Claude-User|anthropic-ai/i, name: 'ClaudeBot' },
   { pattern: /Bytespider/i, name: 'Bytespider' },
 ];
 

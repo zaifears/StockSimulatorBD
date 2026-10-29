@@ -205,8 +205,21 @@ const webAppSchema = {
   },
   publisher: {
     '@type': 'Organization',
+    '@id': `${SITE}/#organization`,
     name: 'StockSimulatorBD',
     url: SITE,
+  },
+  author: {
+    '@type': 'Person',
+    '@id': 'https://shahoriar.bd/#person',
+    name: 'Md Al Shahoriar Hossain',
+    url: 'https://shahoriar.bd',
+  },
+  creator: {
+    '@type': 'Person',
+    '@id': 'https://shahoriar.bd/#person',
+    name: 'Md Al Shahoriar Hossain',
+    url: 'https://shahoriar.bd',
   },
 };
 

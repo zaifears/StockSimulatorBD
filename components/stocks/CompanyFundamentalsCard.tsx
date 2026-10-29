@@ -41,14 +41,24 @@ export interface CompanyFundamentals {
 interface Props {
   symbol: string;
   currentPrice?: number;
+  initialData?: CompanyFundamentals | null;
 }
 
-export default function CompanyFundamentalsCard({ symbol, currentPrice }: Props) {
-  const [data, setData] = useState<CompanyFundamentals | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function CompanyFundamentalsCard({ symbol, currentPrice, initialData }: Props) {
+  const hasMatchingInitial = Boolean(
+    initialData && (!initialData.code || initialData.code.toUpperCase() === symbol.toUpperCase())
+  );
+  const [data, setData] = useState<CompanyFundamentals | null>(hasMatchingInitial ? (initialData ?? null) : null);
+  const [loading, setLoading] = useState(!hasMatchingInitial);
   const [showAllDividends, setShowAllDividends] = useState(false);
 
   useEffect(() => {
+    if (initialData && (!initialData.code || initialData.code.toUpperCase() === symbol.toUpperCase())) {
+      setData(initialData);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     async function loadFundamentals() {
       try {
@@ -75,7 +85,7 @@ export default function CompanyFundamentalsCard({ symbol, currentPrice }: Props)
     return () => {
       mounted = false;
     };
-  }, [symbol]);
+  }, [symbol, initialData]);
 
   if (loading) {
     return (

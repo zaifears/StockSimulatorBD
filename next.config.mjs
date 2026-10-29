@@ -157,6 +157,29 @@ const nextConfig = {
           },
         ],
       },
+      // Allow cross-origin embedding for OpenGraph / social preview images & icons
+      {
+        source: '/og/:path*',
+        headers: [
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'cross-origin',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=86400',
+          },
+        ],
+      },
+      {
+        source: '/:file(favicon\\.svg|favicon-96x96\\.png|favicon\\.ico|web-app-manifest-512x512\\.png)',
+        headers: [
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'cross-origin',
+          },
+        ],
+      },
       // 🚀 Cache static HTML pages (24 hours)
       {
         source: '/about-us',

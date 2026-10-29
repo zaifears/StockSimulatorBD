@@ -11,6 +11,8 @@ Serves:
 Runs as a systemd service (stocksimulator-daemon) behind Caddy on port 8005.
 """
 
+import gzip
+import hmac
 import json
 import logging
 import os
@@ -25,6 +27,7 @@ from typing import Any, Optional
 import psutil
 from fastapi import FastAPI, HTTPException, Header, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 # Add scrapers directory to module path
@@ -74,6 +77,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 def get_cached_fundamentals() -> dict:
@@ -98,10 +102,27 @@ def get_cached_fundamentals() -> dict:
 def verify_secret_if_configured(auth_header: Optional[str] = None, api_key: Optional[str] = None):
     expected = os.environ.get("CRON_SECRET")
     if not expected:
-        return True  # If not set in environment, allow local calls
+        try:
+            expected = firebase_telemetry.load_env_config().get("CRON_SECRET")
+        except Exception:
+            expected = None
 
-    bearer_token = auth_header.replace("Bearer ", "").strip() if auth_header else None
-    if bearer_token == expected or api_key == expected:
+    if not expected:
+        logger.error("CRON_SECRET is not configured in environment or .firebase_env.json")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    expected_bytes = expected.encode("utf-8")
+    bearer_token = None
+    if auth_header:
+        cleaned = auth_header.strip()
+        if cleaned.lower().startswith("bearer "):
+            bearer_token = cleaned[7:].strip()
+        else:
+            bearer_token = cleaned
+
+    if bearer_token and hmac.compare_digest(bearer_token.encode("utf-8"), expected_bytes):
+        return True
+    if api_key and hmac.compare_digest(api_key.strip().encode("utf-8"), expected_bytes):
         return True
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
@@ -145,14 +166,12 @@ def health_check():
 @app.get("/api/market_sync")
 def api_market_sync(
     source: str = Query("auto", description="Scrape source: auto, new, or classic"),
-    url: Optional[str] = Query(None, description="Custom scrape URL"),
     exclude_gov: bool = Query(True, description="Exclude Treasury bonds"),
     public_only: bool = Query(False, description="Filter public board only"),
 ):
     try:
         stocks, status_val, engine = market_sync.scrape_market(
             source=source,
-            custom_url=url,
             exclude_gov=exclude_gov,
             public_only=public_only,
         )
@@ -334,11 +353,15 @@ def _fetch_dse_json(urls: list[str], timeout: float = 10.0) -> dict:
                 headers={
                     "User-Agent": BROWSER_USER_AGENT,
                     "Accept": "application/json",
+                    "Accept-Encoding": "gzip",
                     "Referer": "https://new.dsebd.org/",
                 },
             )
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+            with urllib.request.urlopen(req, context=market_sync._SSL_CONTEXT, timeout=timeout) as resp:
+                raw = resp.read()
+                if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+                    raw = gzip.decompress(raw)
+                return json.loads(raw.decode("utf-8"))
         except Exception as e:
             last_err = e
     raise RuntimeError(f"Failed fetching DSE JSON across mirrors: {last_err}")
@@ -474,6 +497,12 @@ def api_trigger_crawler(
 ):
     """Manually triggers background crawler task."""
     verify_secret_if_configured(authorization, x_api_key)
+
+    if symbol is not None:
+        sym_clean = symbol.strip().upper()
+        if not sym_clean or not re.match(r"^[A-Z0-9.\-]{1,20}$", sym_clean):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid DSE stock symbol")
+        symbol = sym_clean
 
     crawler_script = os.path.join(SCRIPT_DIR, "crawl_fundamentals.py")
     cmd = [sys.executable, crawler_script]

@@ -178,121 +178,59 @@ export default function RootLayout({
         {/* Sitemap Link for Search Engines */}
         <link rel="sitemap" type="application/xml" href={absoluteUrl("/sitemap.xml")} />
         
-        {/* Enhanced Structured Data */}
+        {/* Global Entity Graph (WebSite, Organization, Person) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "StockSimulatorBD",
-              "alternateName": [
-                "StockSimulatorBD: DSE Trading Simulator",
-                "Bangladesh Stock Market Game",
-                "Stocks Sim BD"
-              ],
-              "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
-              "url": SITE_URL,
-              "sameAs": [
-                "https://facebook.com/stocksimulatorbd/"
-              ],
-              "publisher": {
-                "@type": "Organization",
-                "name": "StockSimulatorBD",
-                "url": SITE_URL,
-                "logo": {
-                  "@type": "ImageObject",
-                  "url": absoluteUrl("/web-app-manifest-512x512.png"),
-                  "width": 512,
-                  "height": 512
-                },
-                "contactPoint": {
-                  "@type": "ContactPoint",
-                  "contactType": "customer service",
-                  "availableLanguage": ["English"]
-                }
-              }
-            })
-          }}
-        />
-
-        {/* Additional Structured Data for Educational Organization */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "EducationalOrganization",
-              "name": "StockSimulatorBD",
-              "description": "Paper trading simulator platform for Bangladesh investors",
-              "url": SITE_URL,
-              "logo": absoluteUrl("/web-app-manifest-512x512.png"),
-              "educationalCredentialAwarded": "Trading Experience",
-              "offers": [
+              "@graph": [
                 {
-                  "@type": "Course",
-                  "name": "DSE Stock Market Simulator",
-                  "description": "Practice trading stocks risk-free with live data"
+                  "@type": "WebSite",
+                  "@id": `${SITE_URL}/#website`,
+                  "name": "StockSimulatorBD",
+                  "alternateName": [
+                    "StockSimulatorBD: DSE Trading Simulator",
+                    "Bangladesh Stock Market Game",
+                    "Stocks Sim BD"
+                  ],
+                  "description": "Practice trading Dhaka Stock Exchange stocks risk-free with virtual currency.",
+                  "url": SITE_URL,
+                  "publisher": { "@id": `${SITE_URL}/#organization` }
+                },
+                {
+                  "@type": "Organization",
+                  "@id": `${SITE_URL}/#organization`,
+                  "name": "StockSimulatorBD",
+                  "url": SITE_URL,
+                  "sameAs": [
+                    "https://facebook.com/stocksimulatorbd/"
+                  ],
+                  "founder": { "@id": "https://shahoriar.bd/#person" },
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": absoluteUrl("/web-app-manifest-512x512.png"),
+                    "width": 512,
+                    "height": 512
+                  },
+                  "contactPoint": {
+                    "@type": "ContactPoint",
+                    "contactType": "customer service",
+                    "availableLanguage": ["English", "Bengali"]
+                  }
+                },
+                {
+                  "@type": "Person",
+                  "@id": "https://shahoriar.bd/#person",
+                  "name": "Md Al Shahoriar Hossain",
+                  "alternateName": ["Shahoriar Hossain", "zaifears"],
+                  "url": "https://shahoriar.bd",
+                  "sameAs": [
+                    "https://shahoriar.bd",
+                    "https://linkedin.com/in/shahoriarhossain",
+                    "https://github.com/zaifears"
+                  ]
                 }
-              ]
-            })
-          }}
-        />
-
-        {/* SoftwareApplication - enables Google app rich results */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              "name": "StockSimulatorBD",
-              "alternateName": ["Stock Market Game BD", "Stocks Sim"],
-              "url": SITE_URL,
-              "applicationCategory": "FinanceApplication",
-              "operatingSystem": "Web",
-              "browserRequirements": "Requires JavaScript",
-              "description": "The only free DSE paper trading simulator for the Dhaka Stock Exchange. Trade 300+ stocks with virtual currency, real-time market data, T+1 settlement rules, and 0.4% commission simulation.",
-              "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "BDT"
-              },
-              "author": {
-                "@type": "Person",
-                "name": "Md Al Shahoriar Hossain",
-                "url": "https://shahoriar.bd"
-              },
-              "creator": {
-                "@type": "Person",
-                "name": "Md Al Shahoriar Hossain",
-                "url": "https://shahoriar.bd"
-              },
-              "featureList": [
-                "Real-time DSE market data",
-                "T+1 settlement simulation",
-                "0.4% commission simulation",
-                "Virtual portfolio tracking",
-                "300+ DSE stocks"
-              ]
-            })
-          }}
-        />
-
-        {/* Person - creator entity */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Person",
-              "name": "Md Al Shahoriar Hossain",
-              "alternateName": ["Shahoriar Hossain", "zaifears"],
-              "url": "https://shahoriar.bd",
-              "sameAs": [
-                "https://shahoriar.bd",
-                "https://linkedin.com/in/shahoriarhossain",
-                "https://github.com/zaifears"
               ]
             })
           }}

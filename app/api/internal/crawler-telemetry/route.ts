@@ -7,19 +7,19 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getSeoDb } from '@/lib/firebaseSeoAdmin';
 import { BotCrawlerName, STANDARD_BOTS } from '@/lib/seo/botPatterns';
 import { AiCrawlerLog } from '@/lib/seo/types';
+import { timingSafeEqualStr } from '@/lib/utils/cronAuth';
 
 export const runtime = 'nodejs';
 
-const INTERNAL_TELEMETRY_SECRET = process.env.CRON_SECRET || process.env.INTERNAL_TELEMETRY_SECRET;
-
 export async function POST(req: NextRequest) {
   try {
-    if (!INTERNAL_TELEMETRY_SECRET) {
+    const expectedSecret = process.env.CRON_SECRET || process.env.INTERNAL_TELEMETRY_SECRET;
+    if (!expectedSecret) {
       return NextResponse.json({ error: 'Server misconfiguration: telemetry secret not configured' }, { status: 500 });
     }
 
     const authHeader = req.headers.get('x-crawler-telemetry-secret');
-    if (!authHeader || authHeader !== INTERNAL_TELEMETRY_SECRET) {
+    if (!timingSafeEqualStr(authHeader, expectedSecret)) {
       return NextResponse.json({ error: 'Unauthorized internal telemetry call' }, { status: 401 });
     }
 

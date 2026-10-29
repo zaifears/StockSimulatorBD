@@ -1,3 +1,4 @@
+import gzip
 import html as html_lib
 import json
 import os
@@ -241,29 +242,53 @@ def parse_new_dse_payload(data, exclude_gov=True, public_only=False):
 # Fetchers
 # ------------------------------------------------------------------------------
 
+ALLOWED_DSE_HOSTS = ("new.dsebd.org", "www.dsebd.org", "dsebd.org")
+
+
+def _validate_dse_url(url: str) -> str:
+    """Validates that the target URL uses HTTPS and targets an allowlisted DSE host."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(f"Disallowed URL scheme: {parsed.scheme!r} (only 'https' is permitted)")
+    host = (parsed.hostname or "").lower()
+    if host not in ALLOWED_DSE_HOSTS:
+        raise ValueError(f"Disallowed target host: {host!r} (allowed: {ALLOWED_DSE_HOSTS})")
+    if parsed.username or parsed.password:
+        raise ValueError("URL credentials are not permitted")
+    return url
+
+
+_SSL_CONTEXT = ssl.create_default_context()
+
+
 def _create_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+    return _SSL_CONTEXT
+
+
+def _read_response_text(response) -> str:
+    raw = response.read()
+    if response.headers.get("Content-Encoding", "").lower() == "gzip":
+        raw = gzip.decompress(raw)
+    return raw.decode("utf-8", errors="ignore")
 
 
 def fetch_new_dse(api_url=None, exclude_gov=True, public_only=False, timeout=20.0):
     """
     Fetches live market data from modern DSE API.
     """
-    target_api = api_url or NEW_DSE_API_URL
+    target_api = _validate_dse_url(api_url or NEW_DSE_API_URL)
     ctx = _create_ssl_context()
     req = urllib.request.Request(
         target_api,
         headers={
             'User-Agent': USER_AGENT,
             'Accept': 'application/json',
+            'Accept-Encoding': 'gzip',
             'Referer': NEW_DSE_PAGE_URL
         }
     )
     with urllib.request.urlopen(req, context=ctx, timeout=timeout) as response:
-        content = response.read().decode('utf-8', errors='ignore')
+        content = _read_response_text(response)
         data = json.loads(content)
 
     stocks, market_status = parse_new_dse_payload(data, exclude_gov=exclude_gov, public_only=public_only)
@@ -277,14 +302,14 @@ def fetch_classic_dse(page_url=None, timeout=15.0):
     """
     Fetches live market data from classic DSE scroll page (legacy fallback).
     """
-    target_page = page_url or CLASSIC_DSE_URL
+    target_page = _validate_dse_url(page_url or CLASSIC_DSE_URL)
     ctx = _create_ssl_context()
     req = urllib.request.Request(
         target_page,
-        headers={'User-Agent': USER_AGENT}
+        headers={'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip'}
     )
     with urllib.request.urlopen(req, context=ctx, timeout=timeout) as response:
-        html = response.read().decode('utf-8', errors='ignore')
+        html = _read_response_text(response)
 
     parser = DSEMarketParser()
     parser.feed(html)
@@ -305,10 +330,12 @@ def scrape_market(source="auto", custom_url=None, exclude_gov=True, public_only=
     High-level scraper dispatcher with modern DSE (new.dsebd.org) as default
     and multi-domain failover (www.dsebd.org/api/live/prices).
     """
-    # 1. Custom URL explicitly targeting new or classic
+    # 1. Custom URL explicitly targeting allowlisted DSE host (programmatic use only)
     if custom_url:
-        if "new.dsebd.org" in custom_url or "/api/live/prices" in custom_url:
-            target_api = NEW_DSE_API_URL if "markets/latest-share-price" in custom_url else custom_url
+        custom_url = _validate_dse_url(custom_url)
+        parsed_custom = urllib.parse.urlparse(custom_url)
+        if (parsed_custom.hostname or "").lower() == "new.dsebd.org" or "/api/live/prices" in parsed_custom.path:
+            target_api = NEW_DSE_API_URL if "markets/latest-share-price" in parsed_custom.path else custom_url
             stocks, status = fetch_new_dse(api_url=target_api, exclude_gov=exclude_gov, public_only=public_only)
             return stocks, status, "new-dse-custom"
         else:
@@ -366,7 +393,6 @@ class handler(BaseHTTPRequestHandler):
             parsed = urllib.parse.urlparse(self.path)
             query = urllib.parse.parse_qs(parsed.query)
 
-            custom_url = query.get("url", [None])[0]
             source = query.get("source", [None])[0]
 
             if not source:
@@ -380,7 +406,6 @@ class handler(BaseHTTPRequestHandler):
 
             stocks, market_status, engine_used = scrape_market(
                 source=source,
-                custom_url=custom_url,
                 exclude_gov=exclude_gov,
                 public_only=public_only
             )
