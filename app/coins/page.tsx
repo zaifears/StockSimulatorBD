@@ -219,6 +219,7 @@ function FundsScreen() {
         fetchWithFreshToken('/api/coins/send-recharge-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
           body: JSON.stringify({
             emailData: {
               requestId: rechargeRef.id,

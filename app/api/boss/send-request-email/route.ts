@@ -131,9 +131,13 @@ export async function POST(request: NextRequest) {
     const userSnap = await db.collection('users').doc(uid).get();
     const userData = userSnap.data();
 
-    // 🔒 5. HTML Sanitize inputs before injecting into email/telegram templates
-    const userName = escapeHtml(emailData.userName || userData?.displayName || decodedToken.name || 'Trader');
-    const userEmail = escapeHtml(emailData.userEmail || userData?.email || decodedToken.email || '');
+    // 🔒 5. Keep raw values for Telegram (which escapes internally via escapeTelegramHtml)
+    // and HTML-escaped values for the Resend HTML email template.
+    const rawUserName = String(emailData.userName || userData?.displayName || decodedToken.name || 'Trader').trim();
+    const rawUserEmail = String(emailData.userEmail || userData?.email || decodedToken.email || '').trim();
+
+    const userName = escapeHtml(rawUserName);
+    const userEmail = escapeHtml(rawUserEmail);
     const planName = escapeHtml(authoritativePlanName);
     const transactionId = escapeHtml(authoritativeTrxId);
     const senderPhone = escapeHtml(authoritativePhone);
@@ -157,7 +161,7 @@ export async function POST(request: NextRequest) {
       destinationAccount = 'Cellfin / Nagad / Rocket (01865333143)';
     }
 
-    const bkashNumber = escapeHtml(emailData.bkashNumber || destinationAccount);
+    const bkashNumber = escapeHtml(authoritativePhone || emailData.bkashNumber || destinationAccount);
 
     const isBank = Boolean(
       paymentMethod?.toLowerCase().includes('bank') ||
@@ -179,7 +183,6 @@ export async function POST(request: NextRequest) {
           </div>
           
           <div style="background: #ffffff; padding: 24px;">
-            {/* Prominent Fund Origin Box */}
             <div style="background: ${isBank ? '#eff6ff' : '#fefce8'}; border: 2px solid ${isBank ? '#3b82f6' : '#f59e0b'}; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;">
               <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: ${isBank ? '#1d4ed8' : '#b45309'}; letter-spacing: 0.5px;">
                 Fund Source & Destination
@@ -284,18 +287,18 @@ export async function POST(request: NextRequest) {
     const [emailResult, telegramResult, kumaResult] = await Promise.allSettled([
       emailPromise,
       sendTelegramBossAlert({
-        userName,
-        userEmail,
-        planName,
+        userName: rawUserName,
+        userEmail: rawUserEmail,
+        planName: authoritativePlanName,
         amount,
         durationDays,
-        paymentMethod,
+        paymentMethod: authoritativeMethod,
         destinationAccount,
-        transactionId,
-        senderPhone: senderPhone || whatsappNumber,
-        bankName,
+        transactionId: authoritativeTrxId,
+        senderPhone: authoritativePhone,
+        bankName: authoritativeBank,
       }),
-      pingUptimeKumaPush(`Boss Upgrade: ৳${amount} (${planName}) by ${userName}`),
+      pingUptimeKumaPush(`Boss Upgrade: ৳${amount} (${authoritativePlanName}) by ${rawUserName}`),
     ]);
 
     const emailSent =

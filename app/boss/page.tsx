@@ -436,6 +436,7 @@ export default function BossPage() {
         fetchWithFreshToken('/api/boss/send-request-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
           body: JSON.stringify({
             emailData: {
               requestId: docRef.id,
