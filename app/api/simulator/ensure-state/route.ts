@@ -47,9 +47,37 @@ export async function POST(req: NextRequest) {
     const db = getFirestore();
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
     const stateRef = db.doc(`artifacts/${appId}/users/${uid}/simulator/state`);
+    const userRef = db.collection('users').doc(uid);
 
     const state = await db.runTransaction(async (transaction) => {
-      const stateDoc = await transaction.get(stateRef);
+      const [stateDoc, userDoc] = await Promise.all([
+        transaction.get(stateRef),
+        transaction.get(userRef),
+      ]);
+
+      const userData = userDoc.exists ? userDoc.data() : null;
+      if (!userDoc.exists || !userData?.createdAt) {
+        const derivedEmail = decodedToken.email || userData?.email || null;
+        const derivedName =
+          userData?.name ||
+          (decodedToken as any).name ||
+          (derivedEmail ? String(derivedEmail).split('@')[0] : 'User');
+        transaction.set(
+          userRef,
+          {
+            name: derivedName,
+            email: derivedEmail,
+            displayName: userData?.displayName || (decodedToken as any).name || null,
+            photoURL: userData?.photoURL || decodedToken.picture || null,
+            status: userData?.status || 'Other',
+            provider: userData?.provider || decodedToken.firebase?.sign_in_provider || 'email',
+            accountTier: userData?.accountTier || 'Bro',
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
+
       if (stateDoc.exists) {
         return stateDoc.data();
       }

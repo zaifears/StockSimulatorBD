@@ -77,11 +77,25 @@ function isPlausibleSessionId(value: unknown): value is string {
   return typeof value === 'string' && value.length >= 8 && value.length <= 100;
 }
 
-async function tryVerifyUid(idToken: unknown): Promise<string | null> {
+interface VerifiedIdentity {
+  uid: string;
+  email: string | null;
+  name: string | null;
+  picture: string | null;
+  provider: string;
+}
+
+async function tryVerifyIdentity(idToken: unknown): Promise<VerifiedIdentity | null> {
   if (typeof idToken !== 'string' || !idToken) return null;
   try {
     const decoded = await getAuth().verifyIdToken(idToken);
-    return decoded.uid;
+    return {
+      uid: decoded.uid,
+      email: decoded.email || null,
+      name: (decoded as any).name || null,
+      picture: decoded.picture || null,
+      provider: decoded.firebase?.sign_in_provider || 'email',
+    };
   } catch {
     // Expired/invalid token from a stale tab — fall back to anonymous rather than failing the beacon.
     return null;
@@ -168,7 +182,8 @@ export async function POST(req: NextRequest) {
     // START — create the session + bump rollups
     // ─────────────────────────────────────────────
     if (action === 'start') {
-      const uid = await tryVerifyUid(body?.idToken);
+      const identity = await tryVerifyIdentity(body?.idToken);
+      const uid = identity?.uid || null;
       const dateKey = getDhakaDateKey(0);
       const hour = getDhakaHour();
       const entryPath = normalizeAnalyticsPath(sanitizeString(body?.entryPath, 300) || '/');
@@ -200,6 +215,7 @@ export async function POST(req: NextRequest) {
         let isFirstVisitToday = false;
         let isNewVisitorEver = false;
         let hasIdentitySignal = false;
+        let needsProfileBackfill = false;
 
         if (userRef) {
           hasIdentitySignal = true;
@@ -207,6 +223,7 @@ export async function POST(req: NextRequest) {
           const userData = userSnap.exists ? userSnap.data() : null;
           isFirstVisitToday = (userData?.lastVisitDateKey ?? null) !== dateKey;
           isNewVisitorEver = !userSnap.exists || !userData?.visitCount;
+          needsProfileBackfill = !userSnap.exists || !userData?.createdAt;
         } else if (guestRef) {
           hasIdentitySignal = true;
           const guestSnap = await tx.get(guestRef);
@@ -280,6 +297,18 @@ export async function POST(req: NextRequest) {
           tx.set(
             userRef,
             {
+              ...(needsProfileBackfill && identity
+                ? {
+                    name: identity.name || (identity.email ? identity.email.split('@')[0] : 'User'),
+                    email: identity.email,
+                    displayName: identity.name || null,
+                    photoURL: identity.picture || null,
+                    status: 'Other',
+                    provider: identity.provider,
+                    accountTier: 'Bro',
+                    createdAt: new Date().toISOString(),
+                  }
+                : {}),
               visitCount: FieldValue.increment(1),
               lastVisitAt: FieldValue.serverTimestamp(),
               lastVisitDateKey: dateKey,
@@ -317,7 +346,8 @@ export async function POST(req: NextRequest) {
     };
     if (lastPath) sessionUpdate.lastPath = lastPath;
 
-    const incomingUid = await tryVerifyUid(body?.idToken);
+    const incomingIdentity = await tryVerifyIdentity(body?.idToken);
+    const incomingUid = incomingIdentity?.uid || null;
 
     // Promotion logic: if an ephemeral bounce becomes an active guest or a user logs in,
     // upgrade the retention tier and extend the TTL appropriately.

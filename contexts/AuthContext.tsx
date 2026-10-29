@@ -278,14 +278,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           
           console.log(`📧 [Email Status] User: ${user.uid}, Verified: ${nowVerified}, Provider: ${user.providerData[0]?.providerId || 'unknown'}`);
-
-          // 🪙 GRANT WELCOME BONUS for verified users
-          // grantWelcomeBonus has multi-layer dedup (session ref → Firestore flag → server checks)
-          if (nowVerified) {
-            await grantWelcomeBonus(user);
-          }
           
-          // ✅ AUTOMATIC USER DOCUMENT CREATION & COUNT UPDATE
+          // ✅ AUTOMATIC USER DOCUMENT CREATION & COUNT UPDATE (runs BEFORE welcome bonus so users/{uid} exists immediately)
           try {
             const userDocRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userDocRef);
@@ -356,6 +350,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
           } catch (error) {
             console.error('❌ Failed to create or load user document:', error);
+          }
+
+          // 🪙 GRANT WELCOME BONUS for verified users
+          // grantWelcomeBonus has multi-layer dedup (session ref → Firestore flag → server checks)
+          if (nowVerified) {
+            await grantWelcomeBonus(user);
           }
           
           console.log('🔍 User email verified:', nowVerified);

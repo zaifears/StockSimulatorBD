@@ -90,9 +90,33 @@ export async function POST(request: NextRequest) {
       }
 
       // Mark welcome bonus as granted on user doc INSIDE the transaction
+      // Also backfill core profile fields if the client has not written users/{uid} yet
+      const existingUserData = userDoc.exists ? userDoc.data() : null;
+      const derivedEmail = decodedToken.email || existingUserData?.email || null;
+      const derivedName =
+        existingUserData?.name ||
+        (decodedToken as any).name ||
+        (derivedEmail ? String(derivedEmail).split('@')[0] : 'User');
+      const signInProvider =
+        existingUserData?.provider ||
+        decodedToken.firebase?.sign_in_provider ||
+        'google.com';
+
       transaction.set(
         userRef,
         {
+          ...(existingUserData?.createdAt
+            ? {}
+            : {
+                name: derivedName,
+                email: derivedEmail,
+                displayName: existingUserData?.displayName || (decodedToken as any).name || null,
+                photoURL: existingUserData?.photoURL || decodedToken.picture || null,
+                status: existingUserData?.status || 'Other',
+                provider: signInProvider,
+                accountTier: existingUserData?.accountTier || 'Bro',
+                createdAt: timestamp.toISOString(),
+              }),
           welcomeBonusGranted: true,
           lastCoinUpdate: timestamp,
           lastCoinAction: 'welcome_bonus',
