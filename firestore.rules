@@ -128,6 +128,7 @@ service cloud.firestore {
     }
     
     // ===== RECHARGE REQUESTS =====
+    // min 20 BDT, max 5000 BDT, integer BDT, 1 BDT = 300 coins
     match /recharge_requests/{requestId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow read: if isAdmin();
@@ -135,16 +136,15 @@ service cloud.firestore {
         && hasRequiredFields(['userId', 'amount', 'coins', 'transactionId', 'status', 'createdAt'])
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == 'pending'
-        && request.resource.data.amount is number
-        && request.resource.data.amount > 0
+        && request.resource.data.amount is int
+        && request.resource.data.amount >= 20
         && request.resource.data.amount <= 5000
-        && request.resource.data.amount % 20 == 0
-        // 🔒 Coins must match the fixed exchange rate (20 BDT = 10,000 coins).
+        // 🔒 Coins must match the fixed exchange rate (1 BDT = 300 coins).
         // The admin approval endpoint recomputes this from `amount` itself and
         // ignores whatever is stored here, but rejecting the write here stops
         // a forged request from ever landing in the pending queue an admin
         // has to review by eye.
-        && request.resource.data.coins == (request.resource.data.amount / 20) * 10000;
+        && request.resource.data.coins == request.resource.data.amount * 300;
       allow update, delete: if false;
     }
     

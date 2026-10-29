@@ -157,8 +157,14 @@ export async function POST(request: NextRequest) {
       destinationAccount = 'Eastern Bank PLC (A/C: 8208250002314, Branch: Gulshan Branch, Dhaka, Routing: 095261562)';
     } else if (paymentTab === 'bkash_pay' || paymentMethod?.toLowerCase().includes('payment')) {
       destinationAccount = 'bKash Merchant / Make Payment (01581401895)';
-    } else if (paymentMethod?.toLowerCase().includes('other mfs') || paymentMethod?.toLowerCase().includes('nagad') || paymentMethod?.toLowerCase().includes('rocket') || paymentMethod?.toLowerCase().includes('cellfin')) {
-      destinationAccount = 'Cellfin / Nagad / Rocket (01865333143)';
+    } else if (
+      paymentMethod?.toLowerCase().includes('other mfs') ||
+      paymentMethod?.toLowerCase().includes('nagad') ||
+      paymentMethod?.toLowerCase().includes('upay') ||
+      paymentMethod?.toLowerCase().includes('rocket') ||
+      paymentMethod?.toLowerCase().includes('cellfin')
+    ) {
+      destinationAccount = 'Cellfin / Nagad / Upay / Rocket (01865333143)';
     }
 
     const bkashNumber = escapeHtml(authoritativePhone || emailData.bkashNumber || destinationAccount);

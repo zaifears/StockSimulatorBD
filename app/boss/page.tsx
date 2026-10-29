@@ -196,8 +196,8 @@ const COMPLETE_AUDIT_DATA: AuditCategory[] = [
     features: [
       {
         name: 'Recharge Coin Bonus (Feature C)',
-        description: 'You get 10% extra coins for free on every single bKash recharge (e.g. ৳100 = 50,000 + 5,000 free bonus coins).',
-        bro: 'Standard (৳20 = 10k)',
+        description: 'You get 10% extra coins for free on every single recharge (e.g. ৳100 = 30,000 + 3,000 free bonus coins).',
+        bro: 'Standard (৳1 = 300)',
         boss: '10% Extra Free Coins',
         isBossExclusive: true,
         tag: 'Feature C',
@@ -227,7 +227,7 @@ const FAQS = [
   },
   {
     q: 'Why ৳20 or ৳99 instead of a recurring monthly subscription?',
-    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via BanglaQR, bKash (Send Money or Payment), Nagad, Rocket, Cellfin, or Bank Transfer (Eastern Bank PLC NPSB), and it simply expires when the time is up.',
+    a: 'In Bangladesh, automated credit card debits are frustrating and often get declined. We believe in complete transparency: no auto-renewals, no hidden fees, and no surprises. You pay once for 1 month (31 days) or 6 months (185 days) via BanglaQR, bKash (Send Money or Payment), Cellfin, Nagad, Upay, Rocket, or Bank Transfer (Eastern Bank PLC NPSB), and it simply expires when the time is up.',
   },
   {
     q: 'What happens when my Boss membership expires?',
@@ -235,11 +235,11 @@ const FAQS = [
   },
   {
     q: 'How does the 10% extra coins bonus work?',
-    a: 'Whenever you recharge virtual coins (for example, ৳100 recharge = 50,000 coins for Bro), as a Boss member you get 10% extra coins for free (55,000 coins) credited directly to your simulator balance automatically.',
+    a: 'Whenever you recharge virtual coins (for example, ৳100 recharge = 30,000 coins for Bro at ৳1 = 300 coins), as a Boss member you get 10% extra coins for free (33,000 coins) credited directly to your simulator balance automatically.',
   },
   {
     q: 'Which payment methods are accepted for Boss Tier?',
-    a: 'We accept BanglaQR (Recommended for all Bank & MFS apps), Other MFS (Cellfin, Nagad, Rocket - 01865333143), direct Bank Transfer to Eastern Bank PLC (A/C: 8208250002314, Gulshan Branch, Dhaka, Routing: 095261562) via NPSB (instant confirmation) or BEFTN, bKash Make Payment (01581401895), and bKash Send Money (01865333143).',
+    a: 'We accept BanglaQR (Recommended for all Bank & MFS apps), Other MFS (Cellfin, Nagad, Upay, Rocket - 01865333143), direct Bank Transfer to Eastern Bank PLC (A/C: 8208250002314, Gulshan Branch, Dhaka, Routing: 095261562) via NPSB (instant confirmation) or BEFTN, bKash Make Payment (01581401895), and bKash Send Money (01865333143).',
   },
   {
     q: 'Can I export my portfolio PDF on my phone?',
@@ -254,6 +254,7 @@ export default function BossPage() {
   const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('banglaqr');
   const [paymentMethodLabel, setPaymentMethodLabel] = useState('BanglaQR');
   const [selectedBank, setSelectedBank] = useState('');
+  const [selectedMfs, setSelectedMfs] = useState('');
   const [copied, setCopied] = useState(false);
   const [trxId, setTrxId] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
@@ -383,6 +384,11 @@ export default function BossPage() {
         return;
       }
 
+      if (activePaymentTab === 'other' && !paymentMethodLabel.includes('Bank') && !selectedMfs) {
+        setSubmitError('Please select which MFS app (Cellfin, Nagad, Upay, or Rocket) you used to send the money.');
+        return;
+      }
+
       if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
         setSubmitError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
         return;
@@ -407,6 +413,8 @@ export default function BossPage() {
 
       const finalPaymentMethod = paymentMethodLabel.includes('Bank') && selectedBank
         ? `Bank Transfer (${selectedBank})`
+        : activePaymentTab === 'other' && !paymentMethodLabel.includes('Bank') && selectedMfs
+        ? `Other MFS (${selectedMfs})`
         : paymentMethodLabel;
 
       const db = getFirestore();
@@ -469,6 +477,7 @@ export default function BossPage() {
       setTrxId('');
       setWhatsappNumber('');
       setSelectedBank('');
+      setSelectedMfs('');
     } catch (err: any) {
       console.error('Boss request submission failed:', err);
       setSubmitError(err.message || 'Failed to submit Boss request. Please check your connection and try again.');
@@ -898,6 +907,48 @@ export default function BossPage() {
                     }}
                     required
                   />
+                )}
+
+                {/* 4-Box MFS Selector (Cellfin, Nagad, Upay, Rocket) */}
+                {activePaymentTab === 'other' && !paymentMethodLabel.includes('Bank') && (
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>Select Sending MFS Method *</span>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
+                        Required
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'Cellfin', badge: 'C', dotClass: 'bg-emerald-600' },
+                        { id: 'Nagad', badge: 'N', dotClass: 'bg-orange-600' },
+                        { id: 'Upay', badge: 'U', dotClass: 'bg-blue-600' },
+                        { id: 'Rocket', badge: 'R', dotClass: 'bg-purple-600' },
+                      ].map((mfs) => {
+                        const isSelected = selectedMfs === mfs.id;
+                        return (
+                          <button
+                            key={mfs.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMfs(mfs.id);
+                              if (submitError) setSubmitError('');
+                            }}
+                            className={`min-h-[44px] px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                              isSelected
+                                ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-700 dark:text-orange-300 shadow-sm ring-2 ring-orange-500/20'
+                                : 'bg-gray-50 hover:bg-gray-100 dark:bg-[#1a2130] dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            <span className={`w-5 h-5 rounded-full ${mfs.dotClass} text-[10px] text-white font-black flex items-center justify-center shrink-0`}>
+                              {mfs.badge}
+                            </span>
+                            <span>{mfs.id}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {/* Conditional Inputs based on BanglaQR vs bKash / Other */}

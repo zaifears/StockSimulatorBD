@@ -60,7 +60,7 @@ export const PAYMENT_DETAILS = {
   },
   otherMfs: {
     number: '01865333143',
-    channels: ['Cellfin', 'Nagad', 'Rocket'],
+    channels: ['Cellfin', 'Nagad', 'Upay', 'Rocket'],
     tabLabel: 'Other MFS',
   },
   bank: {
@@ -402,7 +402,7 @@ export default function PaymentMethodTabs({
               type="button"
               onClick={() => {
                 setMfsSubTab('mfs');
-                onTabChange('other', 'Other MFS (Nagad/Rocket/Cellfin)');
+                onTabChange('other', 'Other MFS (Cellfin/Nagad/Upay/Rocket)');
               }}
               className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all min-h-[44px] active:scale-[0.98] ${
                 effectiveMfsSubTab === 'mfs'
@@ -411,7 +411,7 @@ export default function PaymentMethodTabs({
               }`}
             >
               <Smartphone className="w-4 h-4 shrink-0" />
-              <span>Cellfin, Nagad &amp; Rocket</span>
+              <span>Cellfin, Nagad, Upay &amp; Rocket</span>
             </button>
             <button
               type="button"
@@ -450,7 +450,7 @@ export default function PaymentMethodTabs({
             </button>
           </div>
 
-          {/* Sub-View 1: Other MFS (Cellfin, Nagad, Rocket) */}
+          {/* Sub-View 1: Other MFS (Cellfin, Nagad, Upay, Rocket) */}
           {effectiveMfsSubTab === 'mfs' && (
             <div className="rounded-2xl overflow-hidden shadow-sm border border-orange-200 dark:border-orange-900/40 bg-white dark:bg-[#161c28]">
               <div className="p-4 sm:p-5 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent dark:from-orange-950/30 dark:via-[#161c28] border-b border-orange-100 dark:border-orange-900/30">
@@ -459,10 +459,11 @@ export default function PaymentMethodTabs({
                     <div className="flex -space-x-1.5">
                       <span className="w-5 h-5 rounded-full bg-emerald-600 text-[10px] text-white font-black flex items-center justify-center">C</span>
                       <span className="w-5 h-5 rounded-full bg-orange-600 text-[10px] text-white font-black flex items-center justify-center">N</span>
+                      <span className="w-5 h-5 rounded-full bg-blue-600 text-[10px] text-white font-black flex items-center justify-center">U</span>
                       <span className="w-5 h-5 rounded-full bg-purple-600 text-[10px] text-white font-black flex items-center justify-center">R</span>
                     </div>
                     <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">
-                      Cellfin, Nagad &amp; Rocket (Send Money)
+                      Cellfin, Nagad, Upay &amp; Rocket (Send Money)
                     </h3>
                   </div>
                   <span className="shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold leading-none bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">
@@ -476,7 +477,7 @@ export default function PaymentMethodTabs({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-gray-50 dark:bg-[#111620] border border-gray-200 dark:border-gray-800 gap-3">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block">
-                      Target Mobile Number (Nagad / Rocket / Cellfin)
+                      Target Mobile Number (Cellfin / Nagad / Upay / Rocket)
                     </span>
                     <span className="font-mono text-xl font-black text-gray-900 dark:text-white tracking-widest mt-0.5 block">
                       {PAYMENT_DETAILS.otherMfs.number}
@@ -533,7 +534,7 @@ export default function PaymentMethodTabs({
                 <ol className="space-y-2 pt-1 border-t border-gray-100 dark:border-gray-800/80">
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-                    <span>Open your <strong>Cellfin</strong>, <strong>Nagad</strong>, or <strong>Rocket</strong> App.</span>
+                    <span>Open your <strong>Cellfin</strong>, <strong>Nagad</strong>, <strong>Upay</strong>, or <strong>Rocket</strong> App.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
@@ -546,6 +547,10 @@ export default function PaymentMethodTabs({
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
                     <span>Copy the <strong>Transaction ID</strong> and paste it below.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-bold flex items-center justify-center shrink-0 text-[10px]">5</span>
+                    <span>If you are using <strong>Rocket</strong>, use <strong>0</strong> at the end of the number if asked.</span>
                   </li>
                 </ol>
               </div>

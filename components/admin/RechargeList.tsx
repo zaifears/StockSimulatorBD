@@ -484,7 +484,9 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                         <div className="font-bold text-base sm:text-lg text-gray-900 dark:text-white">
                           ৳{req.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">+{req.coins.toLocaleString()} Coins</div>
+                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                          +{(req.status === 'pending' ? Math.floor(req.amount) * 300 : req.coins).toLocaleString()} Coins
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -492,7 +494,7 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                   {/* Actions */}
                   {req.status === 'pending' && (
                     <div className="flex flex-row lg:flex-col gap-2.5 w-full lg:w-auto shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-gray-100 dark:border-gray-800">
-                      <form className="flex-1 lg:flex-none flex" onSubmit={(e) => { e.preventDefault(); handleApprove(req.id, req.userId, req.coins, req.userName); }}>
+                      <form className="flex-1 lg:flex-none flex" onSubmit={(e) => { e.preventDefault(); handleApprove(req.id, req.userId, Math.floor(req.amount) * 300, req.userName); }}>
                         <input type="hidden" name="request_id" value={req.id} />
                         <button
                           type="submit"

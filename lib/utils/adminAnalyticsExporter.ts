@@ -72,7 +72,7 @@ export function generateAdminAnalyticsMarkdown(
   lines.push('- **Monetization & Tiers:**');
   lines.push('  - **Bro Tier (Free):** 100% free DSE trading, live board, basic candlestick charts.');
   lines.push('  - **Boss Tier (Pro):** ৳20/month or ৳99/6-months; grants Portfolio Risk Radar (21 LankaBangla sectors), 40% concentration alerts, lifetime commission tracking, and +10% bonus coins.');
-  lines.push('  - **Virtual Currency Recharge:** bKash recharge at 20 BDT = 10,000 coins (500 coins/taka).');
+  lines.push('  - **Virtual Currency Recharge:** Recharge at 1 BDT = 300 coins (300 coins/taka for Bro tier; 330 coins/taka for Boss tier).');
   lines.push('');
 
   // 2. High-Level KPIs

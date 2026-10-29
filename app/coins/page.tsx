@@ -32,10 +32,10 @@ import PaymentMethodTabs, { PaymentTabId, PAYMENT_DETAILS } from '@/components/s
 import BankSelector from '@/components/shared/BankSelector';
 
 const BKASH_NUMBER = PAYMENT_DETAILS.bkashSendMoney.number;
-const PRICE_PER_10K_COINS = 20; // 20 BDT = 10,000 Coins (500 coins per taka)
+const COINS_PER_BDT = 300; // 1 BDT = 300 Coins (Bro tier base rate)
 const MIN_RECHARGE_BDT = 20;
 const MAX_RECHARGE_BDT = 5000;
-const COINS_PER_10_BDT = 10000;
+const STEP_RECHARGE_BDT = 10;
 
 export default function CoinsPage() {
   return (
@@ -55,7 +55,10 @@ function FundsScreen() {
   const [activePaymentTab, setActivePaymentTab] = useState<PaymentTabId>('banglaqr');
   const [paymentMethodLabel, setPaymentMethodLabel] = useState('BanglaQR');
   const [selectedBank, setSelectedBank] = useState('');
-  const [rechargeAmount, setRechargeAmount] = useState(20);
+  const [selectedMfs, setSelectedMfs] = useState('');
+  const [rechargeInput, setRechargeInput] = useState('20');
+  const parsedAmount = parseInt(rechargeInput, 10);
+  const rechargeAmount = Number.isNaN(parsedAmount) ? 0 : Math.max(0, parsedAmount);
   const [trxId, setTrxId] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,7 +72,7 @@ function FundsScreen() {
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
 
-  const baseCoins = Math.floor(rechargeAmount / PRICE_PER_10K_COINS) * COINS_PER_10_BDT;
+  const baseCoins = Math.floor(rechargeAmount) * COINS_PER_BDT;
   const bonusCoins = isBoss ? Math.round(baseCoins * 0.10) : 0;
   const coinsToReceive = baseCoins + bonusCoins;
 
@@ -160,14 +163,18 @@ function FundsScreen() {
         setRechargeError('Please select your sending bank account from the dropdown list.');
         return;
       }
+      if (activePaymentTab === 'other' && !paymentMethodLabel.includes('Bank') && !selectedMfs) {
+        setRechargeError('Please select which MFS app (Cellfin, Nagad, Upay, or Rocket) you used to send the money.');
+        return;
+      }
       if (!/^[A-Za-z0-9\-_#:\/\. ]{4,60}$/.test(trimmedTrxId)) {
         setRechargeError('Invalid Transaction ID format. It should be 4-60 characters (letters, numbers, spaces, or dashes).');
         return;
       }
     }
 
-    if (rechargeAmount < MIN_RECHARGE_BDT || rechargeAmount > MAX_RECHARGE_BDT || rechargeAmount % PRICE_PER_10K_COINS !== 0 || baseCoins <= 0) {
-      setRechargeError(`Invalid amount. Must be between ${MIN_RECHARGE_BDT} and ${MAX_RECHARGE_BDT} BDT, and a multiple of ${PRICE_PER_10K_COINS}.`);
+    if (!Number.isInteger(rechargeAmount) || rechargeAmount < MIN_RECHARGE_BDT || rechargeAmount > MAX_RECHARGE_BDT || baseCoins <= 0) {
+      setRechargeError(`Invalid amount. Please enter a whole BDT amount between ${MIN_RECHARGE_BDT} and ${MAX_RECHARGE_BDT} BDT.`);
       return;
     }
 
@@ -189,6 +196,8 @@ function FundsScreen() {
 
       const finalPaymentMethod = paymentMethodLabel.includes('Bank') && selectedBank
         ? `Bank Transfer (${selectedBank})`
+        : activePaymentTab === 'other' && !paymentMethodLabel.includes('Bank') && selectedMfs
+        ? `Other MFS (${selectedMfs})`
         : paymentMethodLabel;
 
       const db = getFirestore();
@@ -197,7 +206,7 @@ function FundsScreen() {
         userName: user.displayName || user.email?.split('@')[0] || 'User',
         userEmail: user.email,
         amount: rechargeAmount,
-        coins: baseCoins, // Matches firestore.rules exchange rate: (amount / 20) * 10000
+        coins: baseCoins, // Matches firestore.rules exchange rate: amount * 300
         bonusCoins: bonusCoins,
         totalCoins: coinsToReceive,
         isBoss: !!isBoss,
@@ -248,7 +257,8 @@ function FundsScreen() {
       setTrxId('');
       setWhatsappNumber('');
       setSelectedBank('');
-      setRechargeAmount(20);
+      setSelectedMfs('');
+      setRechargeInput('20');
       setTimeout(() => {
         setShowRechargeForm(false);
         setRechargeSuccess('');
@@ -420,14 +430,17 @@ function FundsScreen() {
             <form onSubmit={handleRechargeSubmit} className="space-y-5">
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                  Amount in BDT
+                  Amount in BDT (৳1 = {COINS_PER_BDT} Coins)
                 </label>
                 <div className="grid grid-cols-4 gap-2 mb-3">
-                  {[20, 40, 100, 200].map((amt) => (
+                  {[20, 50, 100, 200].map((amt) => (
                     <button
                       key={amt}
                       type="button"
-                      onClick={() => setRechargeAmount(amt)}
+                      onClick={() => {
+                        setRechargeInput(String(amt));
+                        if (rechargeError) setRechargeError('');
+                      }}
                       className={`w-full py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold transition-all border min-h-[42px] flex items-center justify-center ${
                         rechargeAmount === amt
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/20'
@@ -441,28 +454,47 @@ function FundsScreen() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setRechargeAmount(Math.max(MIN_RECHARGE_BDT, rechargeAmount - PRICE_PER_10K_COINS))}
+                    onClick={() => {
+                      const next = Math.max(MIN_RECHARGE_BDT, (rechargeAmount || MIN_RECHARGE_BDT) - STEP_RECHARGE_BDT);
+                      setRechargeInput(String(next));
+                      if (rechargeError) setRechargeError('');
+                    }}
                     disabled={rechargeAmount <= MIN_RECHARGE_BDT}
                     className="w-12 h-12 shrink-0 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40"
                   >
                     <Minus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                   <input
-                    type="number"
-                    value={rechargeAmount}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={rechargeInput}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value) || MIN_RECHARGE_BDT;
-                      const snapped = Math.round(val / PRICE_PER_10K_COINS) * PRICE_PER_10K_COINS;
-                      setRechargeAmount(Math.min(MAX_RECHARGE_BDT, Math.max(MIN_RECHARGE_BDT, snapped)));
+                      const digitsOnly = e.target.value.replace(/[^0-9]/g, '');
+                      if (digitsOnly === '') {
+                        setRechargeInput('');
+                        if (rechargeError) setRechargeError('');
+                        return;
+                      }
+                      const numeric = parseInt(digitsOnly, 10);
+                      if (numeric > MAX_RECHARGE_BDT) {
+                        setRechargeInput(String(MAX_RECHARGE_BDT));
+                      } else {
+                        setRechargeInput(String(numeric));
+                      }
+                      if (rechargeError) setRechargeError('');
                     }}
-                    min={MIN_RECHARGE_BDT}
-                    max={MAX_RECHARGE_BDT}
-                    step={PRICE_PER_10K_COINS}
-                    className="flex-1 h-12 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-xl font-black text-center tabular-nums text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
+                    placeholder="20"
+                    aria-label="Recharge amount in BDT"
+                    className="flex-1 h-12 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#111418] text-xl font-mono font-black text-center tabular-nums text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
                   />
                   <button
                     type="button"
-                    onClick={() => setRechargeAmount(Math.min(MAX_RECHARGE_BDT, rechargeAmount + PRICE_PER_10K_COINS))}
+                    onClick={() => {
+                      const next = Math.min(MAX_RECHARGE_BDT, (rechargeAmount || MIN_RECHARGE_BDT) + STEP_RECHARGE_BDT);
+                      setRechargeInput(String(next));
+                      if (rechargeError) setRechargeError('');
+                    }}
                     disabled={rechargeAmount >= MAX_RECHARGE_BDT}
                     className="w-12 h-12 shrink-0 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40"
                   >
@@ -507,6 +539,48 @@ function FundsScreen() {
                   }}
                   required
                 />
+              )}
+
+              {/* 4-Box MFS Selector (Cellfin, Nagad, Upay, Rocket) */}
+              {activePaymentTab === 'other' && !paymentMethodLabel.includes('Bank') && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide flex items-center justify-between">
+                    <span>Select Sending MFS Method *</span>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
+                      Required
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'Cellfin', badge: 'C', dotClass: 'bg-emerald-600' },
+                      { id: 'Nagad', badge: 'N', dotClass: 'bg-orange-600' },
+                      { id: 'Upay', badge: 'U', dotClass: 'bg-blue-600' },
+                      { id: 'Rocket', badge: 'R', dotClass: 'bg-purple-600' },
+                    ].map((mfs) => {
+                      const isSelected = selectedMfs === mfs.id;
+                      return (
+                        <button
+                          key={mfs.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMfs(mfs.id);
+                            if (rechargeError) setRechargeError('');
+                          }}
+                          className={`min-h-[44px] px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                            isSelected
+                              ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-700 dark:text-orange-300 shadow-sm ring-2 ring-orange-500/20'
+                              : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700/80 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          <span className={`w-5 h-5 rounded-full ${mfs.dotClass} text-[10px] text-white font-black flex items-center justify-center shrink-0`}>
+                            {mfs.badge}
+                          </span>
+                          <span>{mfs.id}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
 
               {/* Conditional Inputs based on BanglaQR vs bKash / Other */}

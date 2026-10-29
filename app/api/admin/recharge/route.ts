@@ -13,15 +13,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Fixed BDT → coin exchange rate, mirrored from the client's conversion in
-// app/coins/page.tsx (PRICE_PER_10K_COINS / COINS_PER_10_BDT). This is the
+// app/coins/page.tsx (COINS_PER_BDT = 300). This is the
 // single source of truth for how many coins a recharge is worth — see the
 // comment inside the transaction below for why the credited amount is
 // recomputed from this rate instead of trusted from client input.
-const PRICE_PER_10K_COINS = 20; // 20 BDT = 10,000 coins (500 coins per taka)
-const COINS_PER_10_BDT = 10000;
+const COINS_PER_BDT = 300; // 1 BDT = 300 coins (Bro tier base rate)
 
 function coinsForAmount(amountBdt: number): number {
-  return Math.floor(amountBdt / PRICE_PER_10K_COINS) * COINS_PER_10_BDT;
+  return Math.floor(amountBdt) * COINS_PER_BDT;
 }
 
 export async function POST(req: NextRequest) {
@@ -101,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     // Cap maximum coins per request (safety valve — mirrors the max BDT
     // amount firestore.rules allows on recharge_requests.amount)
-    const MAX_COINS_PER_REQUEST = 2_500_000; // 2.5M coins = 5,000 BDT at 500 coins/taka
+    const MAX_COINS_PER_REQUEST = 1_500_000; // 1.5M coins = 5,000 BDT at 300 coins/taka
 
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
     const simulatorStateRef = db.doc(`artifacts/${appId}/users/${userId}/simulator/state`);
@@ -190,6 +189,7 @@ export async function POST(req: NextRequest) {
         status: 'approved',
         processedAt: FieldValue.serverTimestamp(),
         processedBy: adminCheck.uid,
+        coins: baseCoins,
         creditedCoins,
         baseCoins,
         bonusCoins,
