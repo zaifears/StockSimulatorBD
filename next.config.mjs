@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Dev only: lets a phone on the same Wi-Fi load dev assets from this machine
+  // (http://192.168.10.68:3000). Update the address if the router assigns a new one.
+  allowedDevOrigins: ['192.168.10.68'],
   typescript: {
     // Keep TypeScript checking enabled
     ignoreBuildErrors: false,

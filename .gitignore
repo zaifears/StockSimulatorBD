@@ -164,3 +164,6 @@ skills-lock.json
 # Brag video outputs
 brag-output*/
 
+# Claude Code local config (preview launch settings)
+.claude/
+

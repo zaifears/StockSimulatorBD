@@ -24,6 +24,9 @@ function Clean-Port([int]$port, [string]$name) {
 # 1. Clean stale scrapers if still hanging from previous runs
 Clean-Port 8001 "Chart Scraper"
 Clean-Port 8002 "Market Sync"
+# A leftover Next.js dev server holds the lock for this folder; a second one exits
+# and leaves vercel dev looping on taskkill, so free the frontend port too.
+Clean-Port 3000 "Next.js dev"
 
 # 2. Start Python chart scraper daemon on port 8001
 Write-Host "Starting Python DSE Chart Scraper (Port 8001)..." -ForegroundColor Green
