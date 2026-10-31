@@ -1128,6 +1128,18 @@ export default function BossPage() {
                     </>
                   )}
                 </button>
+
+                <p className="text-center text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-3.5 leading-relaxed max-w-md mx-auto">
+                  If you are facing any issues or if your payment verification is taking long please contact{' '}
+                  <a
+                    href="https://wa.me/zaifears"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-600 dark:text-gray-300 underline underline-offset-2 hover:text-amber-600 dark:hover:text-amber-400 font-medium transition-colors break-all sm:break-normal"
+                  >
+                    https://wa.me/zaifears
+                  </a>
+                </p>
               </form>
             )}
           </div>

@@ -11,7 +11,7 @@ import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import { useTradeModal } from '@/hooks/useTradeModal';
 import { searchByNameOrSymbol } from '@/lib/dseCompanyNames';
 import { getUpcomingHolidays } from '@/lib/bangladeshHolidays';
-import { Search, X } from 'lucide-react';
+import { Search, X, ExternalLink } from 'lucide-react';
 import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
 import AppShell, { useRegisterSearchFocus } from '@/components/app/AppShell';
 import MarketRow from '@/components/market/MarketRow';
@@ -40,35 +40,184 @@ export default function TradePage() {
   );
 }
 
-// Active Notice / Announcement / Poll Configuration for /trade
-// Controls what modal is shown once per login until completed. Trade is NEVER blocked.
+// Concluded / Previous Campaigns (Archived)
+const ARCHIVED_CAMPAIGNS = [
+  {
+    campaignId: 'facebook_page_launch_v1',
+    status: 'concluded',
+    title: 'StockSimulatorBD Official Facebook Page Launch',
+    concludedAt: '2026-10-31',
+  },
+  {
+    campaignId: 'domain_survey',
+    status: 'concluded',
+    title: 'Domain Renewal Community Poll #1',
+    concludedAt: '2026-10-25',
+  },
+] as const;
+
+// Active Notice / Announcement Configuration for /trade
+// Controls what modal is shown once per user until completed. Trade is NEVER blocked.
 const ACTIVE_NOTICE_CONFIG = {
   isActive: true,
-  campaignId: 'facebook_page_launch_v1',
+  campaignId: 'dse_settlement_reality_v1',
   variant: 'announcement' as const,
-  iconType: 'facebook' as const,
-  badge: 'OFFICIAL ANNOUNCEMENT',
-  title: 'StockSimulatorBD Official Facebook Page Launch',
-  description: (
-    <div className="space-y-2 text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed">
-      <p className="font-semibold text-gray-900 dark:text-gray-100">
-        StockSimulatorBD was built on one principle: empowering people to learn the Dhaka Stock Exchange with 100% confidence, zero financial risk, and authentic market rules.
-      </p>
-      <p>
-        Follow our official Facebook page for market guides, DSE tips, and share with fellow learners!
-      </p>
-    </div>
-  ),
-  copyBox: {
-    url: 'https://facebook.com/stocksimulatorbd/',
-    label: 'Share the official page with friends & fellow learners:',
-    educationalNote: 'We will share educational content about the stock market here — exactly on the principle StockSimulatorBD was built upon.',
-    buttonText: 'Copy Link',
+  iconType: 'settlement' as const,
+  badge: {
+    en: 'REALISTIC DSE ENGINE',
+    bn: 'বাস্তব DSE ট্রেডিং নিয়ম',
   },
-  ctaText: 'Visit Facebook Page →',
-  ctaLink: 'https://facebook.com/stocksimulatorbd/',
-  ctaOpenInNewTab: true,
-  dismissText: 'Continue to Trade',
+  showLanguageToggle: true,
+  defaultLang: 'bn' as const,
+  title: {
+    en: 'StockSimulatorBD is Now One Step Ahead in Market Realism!',
+    bn: 'StockSimulatorBD এখন থেকে আরও রিয়ালিস্টিক!',
+  },
+  description: {
+    bn: (
+      <div className="space-y-3 text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed">
+        <p className="font-semibold text-gray-900 dark:text-gray-100">
+          একদম আসল DSE-এর মতো, এখন থেকে শেয়ার কেনার পর অফিশিয়াল সেটেলমেন্ট সাইকেল শেষ না হওয়া পর্যন্ত তা আর সেল করা যাবে না। আর হ্যাঁ, শুধু ট্রেডিং ডে-গুলোই (রবি-বৃহস্পতি) কাউন্ট হবে।
+        </p>
+
+        {/* Category Breakdown Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-2 not-prose">
+          <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161D27] border border-gray-200/80 dark:border-gray-800 text-left">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                ক্যাটাগরি A, B, G, N
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                T+2
+              </span>
+            </div>
+            <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+              ২ কার্যদিবস পর বিক্রয়যোগ্য
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-normal">
+              যেমন: রবিবার ক্রয় করলে মঙ্গলবার বিক্রি করা যাবে।
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161D27] border border-gray-200/80 dark:border-gray-800 text-left">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                ক্যাটাগরি Z
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                T+3
+              </span>
+            </div>
+            <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+              ৩ কার্যদিবস পর বিক্রয়যোগ্য
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-normal">
+              যেমন: রবিবার ক্রয় করলে বুধবার বিক্রি করা যাবে।
+            </p>
+          </div>
+        </div>
+
+        {/* Small Facebook Follow Strip */}
+        <div className="p-3 rounded-xl bg-[#1877F2]/5 dark:bg-[#1877F2]/10 border border-[#1877F2]/20 flex items-center justify-between gap-3 not-prose">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#1877F2] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </div>
+            <p className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-snug">
+              নতুন আপডেট আর ট্রেডিং গাইডলাইনের জন্য আমাদের ফেসবুক পেজটা ফলো করেছেন তো?
+            </p>
+          </div>
+          <a
+            href="https://facebook.com/stocksimulatorbd/"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-no-dismiss="true"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1877F2] hover:bg-[#166fe5] text-white transition-all shrink-0 active:scale-95 shadow-xs"
+          >
+            <span>ফলো করুন</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+    ),
+    en: (
+      <div className="space-y-3 text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed">
+        <p className="font-semibold text-gray-900 dark:text-gray-100">
+          To mirror the authentic Dhaka Stock Exchange (DSE), shares you buy can now only be sold once their official settlement cycle completes. StockSimulatorBD enforces settlement per purchase lot, counting strictly trading days (Sundays to Thursdays, excluding holidays).
+        </p>
+
+        {/* Category Breakdown Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-2 not-prose">
+          <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161D27] border border-gray-200/80 dark:border-gray-800 text-left">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                Category A, B, G, N
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                T+2
+              </span>
+            </div>
+            <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+              2 Trading Days Settlement
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-normal">
+              e.g. Bought on Sunday ➔ Sellable on Tuesday.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161D27] border border-gray-200/80 dark:border-gray-800 text-left">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                Category Z (Junk)
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                T+3
+              </span>
+            </div>
+            <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+              3 Trading Days Settlement
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-normal">
+              e.g. Bought on Sunday ➔ Sellable on Wednesday.
+            </p>
+          </div>
+        </div>
+
+        {/* Small Facebook Follow Strip */}
+        <div className="p-3 rounded-xl bg-[#1877F2]/5 dark:bg-[#1877F2]/10 border border-[#1877F2]/20 flex items-center justify-between gap-3 not-prose">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#1877F2] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </div>
+            <p className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-snug">
+              Did you follow our Facebook page for updates and educational guidelines?
+            </p>
+          </div>
+          <a
+            href="https://facebook.com/stocksimulatorbd/"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-no-dismiss="true"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1877F2] hover:bg-[#166fe5] text-white transition-all shrink-0 active:scale-95 shadow-xs"
+          >
+            <span>Follow</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+    ),
+  },
+  ctaText: {
+    en: 'Confirm',
+    bn: 'বুঝেছি',
+  },
+  ctaVariant: 'emerald' as const,
+  hideSecondaryDismiss: true,
+  dismissible: true,
 };
 
 function MarketScreen() {

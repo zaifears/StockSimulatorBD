@@ -30,6 +30,7 @@ import {
   Sparkles,
   Copy,
   Check,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getFirestore, getDoc } from 'firebase/firestore';
@@ -82,8 +83,8 @@ export interface UserNoticeModalProps {
 
   /** Title (can be a plain string or bilingual object) */
   title: string | { en: string; bn: string };
-  /** Description or body content (can include links) */
-  description?: string | { en: string; bn: string } | React.ReactNode;
+  /** Description or body content (can include links or bilingual nodes) */
+  description?: string | { en: string | React.ReactNode; bn: string | React.ReactNode } | React.ReactNode;
   /** Optional badge text displayed above the title */
   badge?: string | { en: string; bn: string };
 
@@ -94,8 +95,18 @@ export interface UserNoticeModalProps {
   /** Visual accent for alert variant */
   alertType?: NoticeAlertType;
 
-  /** Brand icon override (e.g. 'facebook' for official Facebook branding) */
-  iconType?: 'default' | 'facebook';
+  /** Brand icon override (e.g. 'facebook' for official Facebook branding, 'settlement' for DSE rules) */
+  iconType?: 'default' | 'facebook' | 'settlement';
+
+  /** Primary CTA button style variant */
+  ctaVariant?: 'blue' | 'emerald' | 'facebook';
+
+  /** Hide secondary bottom dismiss text button, showing only the cross (X) at top */
+  hideSecondaryDismiss?: boolean;
+
+  /** Interactive language toggle (EN | বাং) */
+  showLanguageToggle?: boolean;
+  defaultLang?: 'en' | 'bn';
 
   /** Interactive link copy box with educational note */
   copyBox?: CopyBoxConfig;
@@ -135,6 +146,10 @@ export default function UserNoticeModal({
   imageAlt = 'Notice banner',
   alertType = 'info',
   iconType = 'default',
+  ctaVariant = 'blue',
+  hideSecondaryDismiss = false,
+  showLanguageToggle = false,
+  defaultLang = 'en',
   copyBox,
   ctaText,
   ctaLink,
@@ -151,7 +166,7 @@ export default function UserNoticeModal({
 
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [lang, setLang] = useState<'en' | 'bn'>(questionnaire?.defaultLang || 'en');
+  const [lang, setLang] = useState<'en' | 'bn'>(defaultLang || questionnaire?.defaultLang || 'en');
   const [copied, setCopied] = useState(false);
 
   // Questionnaire state
@@ -382,9 +397,9 @@ export default function UserNoticeModal({
   const handleContentClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = (e.target as HTMLElement).closest('a');
     if (!target) return;
-    dismissedRef.current = true;
     const href = target.getAttribute('href');
     const label = (target.textContent || '').trim().slice(0, 60);
+    const noDismiss = target.getAttribute('data-no-dismiss') === 'true';
 
     // Track which link was clicked
     sendTelemetry('click', {
@@ -393,7 +408,12 @@ export default function UserNoticeModal({
       href: href || undefined,
     });
 
+    if (noDismiss) {
+      return; // Keep modal active so trader can confirm
+    }
+
     // Mark as completed permanently!
+    dismissedRef.current = true;
     markCompletedPermanently();
   };
 
@@ -510,6 +530,10 @@ export default function UserNoticeModal({
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                 </svg>
               </div>
+            ) : iconType === 'settlement' ? (
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80 flex items-center justify-center font-bold shrink-0">
+                <Clock className="w-4 h-4" />
+              </div>
             ) : (
               <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
                 {variant === 'questionnaire' ? (
@@ -522,9 +546,11 @@ export default function UserNoticeModal({
               </div>
             )}
             {badgeText && (
-              <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                 iconType === 'facebook'
                   ? 'bg-blue-100 dark:bg-blue-900/40 text-[#1877F2] dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60'
+                  : iconType === 'settlement'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-800/80'
                   : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
               }`}>
                 {badgeText}
@@ -533,6 +559,33 @@ export default function UserNoticeModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {showLanguageToggle && (
+              <div className="flex items-center rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setLang('en')}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    lang === 'en'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs font-bold'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang('bn')}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    lang === 'bn'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs font-bold'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  বাংলা
+                </button>
+              </div>
+            )}
+
             {/* Accessible Cross (X) Close button: minimum 40px touch area */}
             {dismissible && (
               <button
@@ -540,7 +593,7 @@ export default function UserNoticeModal({
                 onClick={handleCrossDismiss}
                 className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer active:scale-95"
                 aria-label="Close modal and continue to trade"
-                title="Continue to Trade"
+                title="Close"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -582,8 +635,10 @@ export default function UserNoticeModal({
             <div className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2 prose dark:prose-invert max-w-none">
               {typeof description === 'string'
                 ? description
-                : typeof description === 'object' && description !== null && 'en' in description
-                ? getText(description as { en: string; bn: string })
+                : React.isValidElement(description)
+                ? description
+                : typeof description === 'object' && description !== null && ('en' in description || 'bn' in description)
+                ? ((description as any)[lang] || (description as any).bn || (description as any).en)
                 : (description as React.ReactNode)}
             </div>
           )}
@@ -777,7 +832,7 @@ export default function UserNoticeModal({
         {variant !== 'questionnaire' && (
           <div className="px-4 py-2.5 sm:px-6 sm:py-3 border-t border-gray-100 dark:border-gray-800/80 bg-gray-50/80 dark:bg-[#161B24]/80 flex flex-row items-center justify-end gap-2">
             {/* Dismiss / Continue to Trade */}
-            {dismissible && (
+            {dismissible && !hideSecondaryDismiss && (
               <button
                 type="button"
                 onClick={handleCrossDismiss}
@@ -787,7 +842,7 @@ export default function UserNoticeModal({
               </button>
             )}
 
-            {/* Primary Action Button (Visit Facebook Page / Okay) */}
+            {/* Primary Action Button (Visit Facebook Page / Okay / Confirm) */}
             {ctaBtnText && (
               ctaLink ? (
                 <Link
@@ -796,7 +851,9 @@ export default function UserNoticeModal({
                   rel={ctaOpenInNewTab ? 'noopener noreferrer' : undefined}
                   onClick={() => handleCtaClick(ctaBtnText, ctaLink)}
                   className={`flex-1 sm:flex-initial h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
-                    iconType === 'facebook'
+                    ctaVariant === 'emerald'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-xs shadow-emerald-500/20'
+                      : iconType === 'facebook' || ctaVariant === 'facebook'
                       ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-xs'
                       : 'bg-blue-600 hover:bg-blue-700 shadow-xs'
                   }`}
@@ -814,13 +871,19 @@ export default function UserNoticeModal({
                   type="button"
                   onClick={() => handleCtaClick(ctaBtnText)}
                   className={`flex-1 sm:flex-initial h-9 sm:h-10 inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold text-white active:scale-95 transition-all text-center cursor-pointer ${
-                    iconType === 'facebook'
+                    ctaVariant === 'emerald'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-xs shadow-emerald-500/20'
+                      : iconType === 'facebook' || ctaVariant === 'facebook'
                       ? 'bg-[#1877F2] hover:bg-[#166fe5] shadow-xs'
                       : 'bg-blue-600 hover:bg-blue-700 shadow-xs'
                   }`}
                 >
                   <span>{ctaBtnText}</span>
-                  <ArrowRight className="w-3 h-3" />
+                  {ctaVariant === 'emerald' ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowRight className="w-3 h-3" />
+                  )}
                 </button>
               )
             )}

@@ -568,15 +568,24 @@ export default function AnnouncementsAndPollsManager() {
                       Live Campaign Active
                     </span>
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-700">
-                      ID: facebook_page_launch_v1
+                      ID: dse_settlement_reality_v1
                     </span>
                   </div>
                   <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white">
-                    StockSimulatorBD Official Facebook Page Launch
+                    DSE Settlement Cycle Realism Update (T+2 / T+3)
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Modal broadcasted on /trade terminal once per user until completed or dismissed via Continue to Trade. Tracking CTA visits, link copy clicks, and cross dismissals.
+                    Live educational notice on /trade enforcing T+2 / T+3 settlement reality. Tracking Confirm button clicks, Cross (✕) dismissals, impressions, and Facebook page visits.
                   </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/80 text-[11px] text-gray-500">
+                    <span className="font-bold text-gray-400">Previous Campaigns:</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      ID: facebook_page_launch_v1 (Concluded Oct 31)
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      ID: domain_survey (Concluded Oct 25)
+                    </span>
+                  </div>
                 </div>
               </div>
 

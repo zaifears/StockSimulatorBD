@@ -1026,6 +1026,21 @@ export default function PaymentMethodTabs({
         </div>
       )}
 
+      {/* Slim small greyed support contact note */}
+      <div className="pt-2 px-2 text-center">
+        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 leading-relaxed max-w-md mx-auto">
+          If you are facing any issues or if your coin recharge is taking long please contact{' '}
+          <a
+            href="https://wa.me/zaifears"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-600 dark:text-gray-300 underline underline-offset-2 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium transition-colors break-all sm:break-normal"
+          >
+            https://wa.me/zaifears
+          </a>
+        </p>
+      </div>
+
       {/* Lightbox / Zoom Modal for QR Code and Apps Banner */}
       {activeZoomModal && (
         <div
