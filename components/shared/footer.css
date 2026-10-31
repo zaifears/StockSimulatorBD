@@ -1,0 +1,62 @@
+/* Hallmark · scope: component (footer) · genre: modern-minimal · theme: brand (locked DESIGN.md; the same values as app/home.css, declared here on :root under --sf- names because the footer also renders on /boss and blog articles, which do not load home.css) · redesign: full · footer: a mast, the wordmark and blurb over two link columns, the byline on a hairline · v2.0.0 */
+/* Hallmark · pre-emit critique: P3 H4 E4 S4 R5 V3 · weakest: P, a footer carries no argument of its own; it earns its place by matching the pages above it exactly and fixing the tracked capitals and the em dash */
+/* Hallmark · reworded "Helping students and new investors — including those moving from Sanchayapatra and fixed deposits into the stock market — learn" to "Helping students and new investors, including those moving from Sanchayapatra and fixed deposits into the stock market, learn" · 19 names the em dash */
+/* Hallmark · dismissed 19 · "All rights reserved" is the copyright notice, legal text the redesign never rewords */
+
+/* Tokens: DESIGN.md light, then the dark ladder, under their own --sf- names */
+:root {
+  --sf-paper: #ffffff; --sf-ink: #111827; --sf-ink-2: #4b5563; --sf-muted: #6b7280; --sf-rule: #e5e7eb;
+  --sf-link: #1d4ed8; --sf-focus: #2563eb; --sf-accent: #2563eb;
+  --sf-font-display: var(--font-coolvetica), "Coolvetica", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sf-font-body: var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sf-space-2xs: 4px; --sf-space-xs: 8px; --sf-space-sm: 12px; --sf-space-md: 16px; --sf-space-lg: 24px; --sf-space-xl: 40px; --sf-space-2xl: 64px; --sf-space-3xl: 96px;
+  --sf-text-sm: 0.875rem; --sf-text-md: 1rem; --sf-text-xl: 1.5625rem;
+  --sf-gutter: 32px; --sf-container: 1280px;
+  --sf-dur: 220ms; --sf-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --sf-paper: #090e17; --sf-ink: #f9fafb; --sf-ink-2: #d1d5db; --sf-muted: #9ca3af; --sf-rule: #1f2937; --sf-link: #60a5fa; --sf-focus: #60a5fa; --sf-accent: #60a5fa; }
+}
+
+.sf { width: 100%; border-top: 1px solid var(--sf-rule); background: var(--sf-paper); color: var(--sf-ink); font-family: var(--sf-font-body); font-size: var(--sf-text-md); line-height: 1.6; }
+.sf *, .sf *::before, .sf *::after { box-sizing: border-box; }
+.sf :focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
+.sf a { color: inherit; text-decoration: none; }
+.sf p, .sf ul { margin: 0; padding: 0; }
+.sf ul { list-style: none; }
+
+.sf-wrap { width: 100%; max-width: var(--sf-container); margin-inline: auto; padding: var(--sf-space-2xl) var(--sf-gutter) var(--sf-space-xl); }
+.sf-top { display: grid; grid-template-columns: minmax(0, 28rem) auto; justify-content: start; column-gap: var(--sf-space-3xl); row-gap: var(--sf-space-2xl); }
+
+.sf-mark { display: inline-flex; align-items: center; gap: var(--sf-space-sm); border-radius: 12px; }
+.sf-mark img { display: block; }
+.sf-mark__word { font-family: var(--sf-font-display); font-size: var(--sf-text-xl); line-height: 1; letter-spacing: -0.01em; color: var(--sf-ink); transition: color var(--sf-dur) var(--sf-ease); }
+.sf-mark__word span { color: var(--sf-accent); }
+.sf-mark:hover .sf-mark__word { color: var(--sf-link); }
+.sf-blurb { margin-top: var(--sf-space-md) !important; max-width: 44ch; font-size: var(--sf-text-sm); line-height: 1.6; color: var(--sf-ink-2); }
+
+.sf-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 12rem)); gap: var(--sf-space-2xl); }
+.sf-head { margin: 0 0 var(--sf-space-xs); font-family: var(--sf-font-body); font-size: var(--sf-text-sm); font-weight: 600; letter-spacing: 0; color: var(--sf-muted); }
+.sf-link { display: inline-flex; align-items: center; gap: var(--sf-space-xs); min-height: 44px; font-size: var(--sf-text-md); font-weight: 600; color: var(--sf-ink-2); transition: color var(--sf-dur) var(--sf-ease); }
+.sf-link:hover { color: var(--sf-link); }
+.sf-link:active, .sf-mark:active, .sf-byline:active { opacity: 0.8; }
+.sf-link__icon { display: inline-flex; color: var(--sf-muted); }
+
+.sf-base { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sf-space-xs) var(--sf-space-lg); margin-top: var(--sf-space-2xl); padding-top: var(--sf-space-lg); border-top: 1px solid var(--sf-rule); font-size: var(--sf-text-sm); color: var(--sf-muted); }
+.sf-byline { font-weight: 600; color: var(--sf-ink-2); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.16em; transition: color var(--sf-dur) var(--sf-ease); }
+.sf-byline:hover { color: var(--sf-link); }
+
+@media (max-width: 60rem) {
+  :root { --sf-gutter: 24px; }
+  .sf-top { grid-template-columns: minmax(0, 1fr); gap: var(--sf-space-xl); }
+}
+@media (max-width: 40rem) {
+  :root { --sf-gutter: 16px; }
+  .sf-wrap { padding-top: var(--sf-space-xl); padding-bottom: var(--sf-space-lg); }
+  .sf-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sf-space-lg); }
+  .sf-link { white-space: nowrap; }
+  .sf-base { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-mark__word, .sf-link, .sf-byline { transition: none; }
+}

@@ -1,0 +1,7 @@
+/* Hallmark · scope: component (the /about-us headline) · theme: brand (locked DESIGN.md, tokens from app/home.css) · redesign: full · the rest of the page lives in app/about-us/about.css · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H5 E5 S4 R5 V3 · weakest: V, the headline is set exactly like the homepage and /blog heroes so the three pages read as one system */
+
+.ab-intro h1, .ab-intro__head { font-size: var(--text-hero); max-width: none; text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+@media (max-width: 40rem) {
+  .ab-intro h1, .ab-intro__head { font-size: var(--text-3xl); }
+}

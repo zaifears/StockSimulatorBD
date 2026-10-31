@@ -1,0 +1,71 @@
+/* Hallmark · shape: Letter (headline and maker, the reasons as a ledger, the solidarity image, contact) · genre: modern-minimal · theme: brand (locked DESIGN.md, shared with the homepage and /blog: tokens and primitives from app/home.css) · redesign: full · hero: Stage (/about-us) · nav: kept (shared ModernNavbar) · footer: redesigned alongside (components/shared/footer.css) · signature: a product built and run by one named person, the byline set as the hero's other half · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V3 · weakest: V, the ledger and the contact band repeat the homepage and /blog on purpose so the three pages read as one system; the maker byline in the hero is what this page owns */
+/* Hallmark · dropped the grid background, the three blurred glows and the fade-in animation · 29 names the blurred orb and the page keeps still like its siblings */
+/* Hallmark · dropped the "Our Story" pill above the headline · 54 names the eyebrow */
+/* Hallmark · dropped the emoji tiles on the three reasons and the icons inside the contact buttons · 30a names the emoji icon; the buttons' words carry them */
+/* Hallmark · finish-review: subagent · 7 findings · 6 resolved 1 dismissed (the /boss footer strip, measured: no gap) · gap: the hero still names neither Bangladesh nor the DSE, because the copy that did was cut under 19; the owner can add a line */
+/* Hallmark · dismissed footer strip on /boss · the footer's bottom equals the document height (6190 of 6190px); the strip was the element screenshot clipping past the page end */
+/* Hallmark · waive 79 · the gap is the hero's bottom padding; the Why section's head and statement sit fully above the fold at 1440x900 · the reader sees the next section on the first screen */
+/* Hallmark · dismissed 77 · the linter counts one section; the page has five (hero, why with its ledger, the solidarity image, contact, footer), each a full band */
+/* Hallmark · reworded "Empowering the next generation of investors in Bangladesh. We built this platform to provide a realistic, risk-free environment to master the stock market." to "We built this platform to provide a realistic, risk-free environment to master the stock market." · 19 names the buzzword opener */
+/* Hallmark · reworded "We built the ultimate paper trading platform for the Dhaka Stock Exchange." to "We built a paper trading platform for the Dhaka Stock Exchange." · 19 names the superlative */
+
+/* Focus: the homepage ring, restated for the links this page owns */
+.ab :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* Hero: the headline on seven columns, the maker on five */
+.ab-hero { display: grid; align-items: center; min-height: 88svh; padding-top: calc(var(--nav-h) + var(--space-xl)); padding-bottom: var(--space-xl); border-bottom: 1px solid var(--color-rule); }
+.ab-hero__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: center; }
+.ab-intro .hm-lead { margin-top: var(--space-lg); max-width: 40ch; text-wrap: pretty; }
+
+.ab-maker { padding: var(--space-xl); border-radius: var(--radius-card); background: var(--color-paper-3); outline: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent); outline-offset: -1px; }
+.ab-maker__label { font-size: var(--text-sm); color: var(--color-muted); }
+.ab-maker__name { display: inline-block; margin-top: var(--space-xs); font-family: var(--font-display); font-size: var(--text-3xl); line-height: 1.1; letter-spacing: var(--tracking-display); color: var(--color-ink); text-decoration: none; overflow-wrap: break-word; transition: color var(--dur-short) var(--ease-out); }
+.ab-maker__name:hover { color: var(--color-link); }
+.ab-maker__links { margin-top: var(--space-lg) !important; border-top: 1px solid var(--color-rule); }
+.ab-maker__links a { display: flex; align-items: center; min-height: 48px; border-bottom: 1px solid var(--color-rule); color: var(--color-ink-2); font-weight: 600; text-decoration: none; transition: color var(--dur-short) var(--ease-out); }
+.ab-maker__links a:hover { color: var(--color-link); }
+.ab-maker__links li:last-child a { border-bottom: 0; }
+.ab-maker a:active { opacity: 0.8; }
+
+.ab .hm-head { align-items: start; }
+.ab .hm-head h2 { overflow-wrap: break-word; min-width: 0; text-wrap: balance; }
+
+/* Why: the three reasons as a ruled ledger, three across */
+.ab-ledger { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-columns); margin-top: var(--space-2xl) !important; border-top: 1px solid var(--color-rule); }
+.ab-ledger li { padding-top: var(--space-lg); }
+.ab-ledger h3 { font-size: var(--text-title); }
+.ab-ledger p { margin-top: var(--space-sm); font-size: var(--text-md); line-height: 1.6; color: var(--color-ink-2); max-width: 45ch; }
+
+/* Solidarity: the owner's image, shown plainly */
+.ab-solidarity { padding-block: var(--space-3xl); }
+.ab-solidarity figure { max-width: 840px; margin-inline: auto; padding: var(--space-lg); border-radius: var(--radius-card); background: var(--color-plate); }
+.ab-solidarity img { width: 100%; height: auto; border-radius: var(--radius-well); }
+
+/* Contact: the statement on the left, the sentence and the two ways to write on the right */
+.ab-contact { padding-block: var(--space-3xl); }
+.ab-contact__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: end; }
+.ab-contact h2 { font-size: var(--text-display-s); }
+.ab-contact__act .hm-lead { max-width: 40ch; }
+.ab-contact .hm-actions { margin-top: var(--space-lg); }
+
+@media (max-width: 75rem) {
+  .ab-maker__name { font-size: var(--text-xl); }
+}
+@media (max-width: 60rem) {
+  .ab-hero__grid, .ab-contact__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); }
+  .ab-ledger { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ab-ledger li { padding-block: var(--space-lg); border-bottom: 1px solid var(--color-rule); }
+  .ab-hero { min-height: 0; }
+}
+@media (max-width: 40rem) {
+  .ab-hero { padding-top: calc(var(--nav-h) + var(--space-xl)); padding-bottom: var(--space-xl); }
+  .ab-maker { padding: var(--space-lg); }
+  .ab-maker__name { font-size: var(--text-xl); }
+  .ab-solidarity { padding-block: var(--space-xl); }
+  .ab-solidarity figure { padding: var(--space-sm); }
+  .ab-contact { padding-block: var(--space-2xl); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-maker__name, .ab-maker__links a { transition: none; }
+}
