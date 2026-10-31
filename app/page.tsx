@@ -5,15 +5,15 @@ import Footer from '@/components/shared/Footer';
 import { OpenRemark } from '@/components/OpenRemark';
 import { SITE_URL } from '@/lib/siteUrl';
 import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
-import { ArrowRight, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
-import { coolvetica } from '@/lib/fonts';
+import { ArrowRight } from 'lucide-react';
+import './home.css';
 
 const SITE = SITE_URL;
 
 export async function generateMetadata(): Promise<Metadata> {
   const defaultTitle = 'StockSimulatorBD: DSE Trading Simulator & Market Practice';
   const defaultDescription =
-    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours (Sun–Thu 10:00–14:15), T+1 settlement and virtual money.';
+    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours (Sun–Thu 10:00–14:15), T+2/T+3 settlement and virtual money.';
 
   const resolved = await resolvePageMetadata('/', defaultTitle, defaultDescription);
 
@@ -34,12 +34,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const floorRules = [
-  { label: 'Trading hours', value: '10:00 to 14:15' },
-  { label: 'Trading days', value: 'Sun to Thu' },
-  { label: 'Settlement', value: 'T+1' },
-  { label: 'Commission', value: '0.40%' },
-  { label: 'Starting balance', value: '৳10,000' },
-  { label: 'Listed symbols', value: '300+' },
+  { label: 'Trading hours', value: '10:00 to 14:15', note: 'Dhaka time. Orders outside this window are blocked.' },
+  { label: 'Trading days', value: 'Sun to Thu', plain: true, note: 'Closed on Friday, Saturday and public holidays.' },
+  { label: 'Settlement', value: 'T+2 or T+3', note: 'Categories A, B, G and N can be sold two trading days after purchase. Category Z takes three.' },
+  { label: 'Commission', value: '0.40%', note: 'Taken on every order, the way a broker would take it.' },
+  { label: 'Starting balance', value: '৳10,000', note: 'Virtual, credited when you verify your email.' },
+  { label: 'Listed symbols', value: '300+', note: 'Companies listed on the Dhaka Stock Exchange.' },
 ];
 
 const practiceReasons = [
@@ -60,8 +60,8 @@ const steps = [
     body: 'Choose from the companies currently listed on the Dhaka Stock Exchange at the price the exchange is quoting. The 0.40% commission comes off exactly the way a broker would take it.',
   },
   {
-    title: 'Wait out T+1, then sell',
-    body: 'Shares bought today unlock for selling on the next trading day. That wait is not a limitation of the simulator. It is the lesson.',
+    title: 'Wait out settlement, then sell',
+    body: 'Shares unlock for selling two trading days after you buy them, or three for category Z stocks. That wait is not a limitation of the simulator. It is the lesson.',
   },
 ];
 
@@ -96,7 +96,7 @@ const faqs = [
   },
   {
     q: 'Is there a stock market game or demo trading app for Bangladesh?',
-    a: 'Yes. StockSimulatorBD is the dedicated stock market game and paper trading simulator built specifically for the Dhaka Stock Exchange. Registered users receive ৳10,000 in virtual trading currency to practice live DSE equity trades risk-free under authentic market hours, T+1 settlement, and 0.40% commission.',
+    a: 'Yes. StockSimulatorBD is the dedicated stock market game and paper trading simulator built specifically for the Dhaka Stock Exchange. Registered users receive ৳10,000 in virtual trading currency to practice live DSE equity trades risk-free under authentic market hours, T+2/T+3 settlement, and 0.40% commission.',
   },
   {
     q: 'What is a circuit breaker and lower circuit in the share market?',
@@ -104,7 +104,7 @@ const faqs = [
   },
   {
     q: 'Is StockSimulatorBD a trading simulator / fake trading simulator?',
-    a: 'Yes. It is a trading simulator / fake trading simulator in the sense that every balance and trade is virtual, so you can practise without risking real money. It uses published DSE prices and realistic market hours, commission and T+1 settlement rules to make the practice useful.',
+    a: 'Yes. It is a trading simulator / fake trading simulator in the sense that every balance and trade is virtual, so you can practise without risking real money. It uses published DSE prices and realistic market hours, commission and T+2/T+3 settlement rules to make the practice useful.',
   },
   {
     q: 'What is StockSimulatorBD?',
@@ -120,7 +120,7 @@ const faqs = [
   },
   {
     q: 'Is this a stock market game?',
-    a: 'Many people search for it that way, and the practice loop does feel like a game. The difference is that the rules are not softened to make it fun. Trades are blocked outside market hours, commission is deducted, and settlement takes a full day, because the point is to rehearse the real thing.',
+    a: 'Many people search for it that way, and the practice loop does feel like a game. The difference is that the rules are not softened to make it fun. Trades are blocked outside market hours, commission is deducted, and settlement takes two or three trading days, because the point is to rehearse the real thing.',
   },
   {
     q: 'Do I need a BO account to practise here?',
@@ -131,8 +131,8 @@ const faqs = [
     a: 'The Dhaka Stock Exchange trades Sunday to Thursday, from 10:00 to 14:15 Bangladesh time, and is closed on Friday, Saturday and public holidays. The simulator enforces the same schedule, so you cannot buy or sell outside it.',
   },
   {
-    q: 'What is T+1 settlement?',
-    a: 'T+1 means shares you buy today become available to sell on the next trading day, not the same day. The simulator enforces this per purchase, so a position bought this morning stays locked until tomorrow.',
+    q: 'What is T+2 settlement?',
+    a: 'Settlement is the wait between buying shares and being able to sell them. Shares in categories A, B, G and N settle T+2, so they can be sold two trading days after purchase. Category Z shares settle T+3. The simulator enforces this per purchase and per category, counting only trading days, so shares bought on a Thursday stay locked until Monday (Tuesday for category Z).',
   },
   {
     q: 'Can I withdraw the money I make?',
@@ -183,7 +183,7 @@ const webAppSchema = {
   url: SITE,
   inLanguage: ['en', 'bn'],
   description:
-    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+1 settlement and 0.4% commission, all settled in virtual money.',
+    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+2/T+3 settlement and 0.4% commission, all settled in virtual money.',
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -192,7 +192,7 @@ const webAppSchema = {
   },
   featureList: [
     'Live Dhaka Stock Exchange price data',
-    'T+1 settlement enforced per purchase lot',
+    'T+2/T+3 settlement by market category, enforced per purchase lot',
     '0.4% broker commission simulation',
     'Trading restricted to real DSE market hours',
     'Risk-free paper trading with virtual money',
@@ -235,7 +235,7 @@ const faqSchema = {
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col w-full bg-white dark:bg-[#090E17] transition-colors duration-300 pb-safe overflow-x-hidden text-gray-800 dark:text-gray-200">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
@@ -245,106 +245,220 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
+
       {/* HERO */}
-      <section className="relative w-full pt-36 pb-14 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-18 overflow-hidden border-b border-gray-200 dark:border-gray-800/60">
-        <div
-          className="absolute inset-0 bg-[linear-gradient(to_right,#80808010_1px,transparent_1px),linear-gradient(to_bottom,#80808010_1px,transparent_1px)] bg-[size:32px_32px] dark:bg-[linear-gradient(to_right,#3b82f612_1px,transparent_1px),linear-gradient(to_bottom,#3b82f612_1px,transparent_1px)]"
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[300px] bg-blue-600/10 dark:bg-blue-600/15 blur-[120px] rounded-full" />
-        </div>
+      <section className="hm hm-hero" aria-labelledby="hero-title">
+        <div className="hm-wrap hm-hero__grid">
+          <div>
+            <h1 id="hero-title">
+              Paper trade the Dhaka Stock Exchange
+            </h1>
+            <p className="hm-lead">
+              Free practice with live DSE prices, real rules and virtual money.
+            </p>
 
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h1 className={`${coolvetica.className} font-coolvetica animate-rise text-4xl xs:text-[2.65rem] sm:text-5xl lg:text-6xl font-normal text-gray-900 dark:text-white tracking-normal sm:tracking-tight leading-[1.08] sm:!leading-[1.08]`}>
-            <span className="sm:block">Dhaka Stock Exchange</span>{' '}
-            <span className="sm:block">Paper Trading Simulator.</span>{' '}
-            <span className="block text-blue-600 dark:text-blue-400 mt-1.5 sm:mt-0">
-              All the rules, zero risk.
-            </span>
-          </h1>
+            <div className="hm-actions">
+              <Link href="/trade" prefetch className="hm-btn">
+                Start trading now
+                <ArrowRight size={20} aria-hidden="true" />
+              </Link>
+              <Link href="/blog" className="hm-btn hm-btn--outline">
+                Read the guides first
+              </Link>
+            </div>
 
-          <p
-            className="animate-rise mt-4 sm:mt-6 text-xs sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto"
-            style={{ animationDelay: '90ms' }}
-          >
-            StockSimulatorBD is a free paper trading simulator for the Dhaka Stock Exchange.
-            Practice buying and selling DSE shares at live market prices, under real trading
-            hours, T+1 settlement and 0.40% commission, using virtual money instead of your own.
-          </p>
-
-          <div
-            className="animate-rise mt-8 flex flex-col sm:flex-row sm:justify-center items-stretch sm:items-center gap-3 sm:gap-4"
-            style={{ animationDelay: '180ms' }}
-          >
-            <Link
-              href="/trade"
-              prefetch
-              className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-base sm:text-lg font-bold rounded-xl shadow-lg shadow-blue-600/30 hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all duration-300"
-            >
-              Start trading now
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/blog"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800 hover:border-blue-600 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 active:scale-95 transition-all duration-200"
-            >
-              Read the guides first
-            </Link>
+            <p className="hm-fine">
+              Free to use. The balance is virtual and has no real world value.
+            </p>
           </div>
 
-          <p
-            className="animate-rise mt-6 text-sm text-gray-500 dark:text-gray-400"
-            style={{ animationDelay: '240ms' }}
+          <figure
+            className="hm-shot"
+            data-slot="hero"
+            data-kind="product"
+            data-alt="The Grameenphone (GP) candlestick chart on its StockSimulatorBD stock page"
           >
-            Free to use. The balance is virtual and has no real world value.
-          </p>
+            <picture>
+              <source
+                media="(prefers-color-scheme: dark) and (max-width: 40rem)"
+                srcSet="/home/gp-chart-dark-phone.webp"
+                width={716}
+                height={792}
+              />
+              <source
+                media="(prefers-color-scheme: dark)"
+                srcSet="/home/gp-chart-dark-wide.webp"
+                width={1600}
+                height={1494}
+              />
+              <source
+                media="(max-width: 40rem)"
+                srcSet="/home/gp-chart-light-phone.webp"
+                width={716}
+                height={792}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/home/gp-chart-light-wide.webp"
+                width={1600}
+                height={1494}
+                alt="Candlestick chart with volume for Grameenphone (GP), built from the Dhaka Stock Exchange day-end archive, on its StockSimulatorBD stock page"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
+            <figcaption>
+              Grameenphone (GP) on its stock page.{' '}
+              <Link href="/stocks/GP" className="hm-link">
+                Open the live chart
+              </Link>
+            </figcaption>
+          </figure>
         </div>
       </section>
 
       {/* THE RULES OF THE FLOOR */}
-      <section className="w-full bg-gray-50 dark:bg-[#111418] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <div className="max-w-2xl">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              The floor runs on the exchange&apos;s own rules
-            </h2>
-            <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+      <section className="hm hm-sec" aria-labelledby="rules-title">
+        <div className="hm-wrap">
+          <div className="hm-head">
+            <h2 id="rules-title">The floor runs on the exchange’s own rules</h2>
+            <p className="hm-lead">
               Nothing has been loosened to make practice comfortable. When the DSE is closed,
-              so is this. When settlement takes a day, you wait the day. Regular continuous trading
+              so is this. When settlement takes two days, you wait the two days. Regular continuous trading
               runs Sunday to Thursday from 10:00 to 14:15 BST. Practice only counts if the constraints
               are the real ones.
             </p>
           </div>
 
-          <dl className="mt-8 sm:mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-gray-200 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
-            {floorRules.map((rule) => (
-              <div key={rule.label} className="bg-gray-50 dark:bg-[#111418] px-4 py-4 sm:py-5">
-                <dt className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  {rule.label}
-                </dt>
-                <dd className="mt-1.5 font-mono text-base sm:text-lg font-semibold text-gray-900 dark:text-white tabular-nums">
-                  {rule.value}
-                </dd>
+          <table className="hm-rules">
+            <caption className="visually-hidden">The rules the simulator enforces</caption>
+            <thead>
+              <tr>
+                <th scope="col">Rule</th>
+                <th scope="col">Setting</th>
+                <th scope="col">What it means</th>
+              </tr>
+            </thead>
+            <tbody>
+              {floorRules.map((rule) => (
+                <tr key={rule.label}>
+                  <th scope="row">{rule.label}</th>
+                  <td className={'plain' in rule ? 'plain' : 'num'}>{rule.value}</td>
+                  <td>{rule.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="hm hm-sec hm-sec--band" aria-labelledby="steps-title">
+        <div className="hm-wrap">
+          <div className="hm-head">
+            <h2 id="steps-title">Three steps, in this order</h2>
+            <p className="hm-lead">
+              The sequence matters, because the waiting is part of what you are here to learn.
+            </p>
+          </div>
+
+          <ol className="hm-steps" role="list">
+            <li className="hm-step">
+              <div className="hm-step__text">
+                <h3>{steps[0].title}</h3>
+                <p>
+                  {steps[0].body.split('৳10,000').flatMap((part, i, all) =>
+                    i < all.length - 1 ? [part, <span key={i} className="num">৳10,000</span>] : [part],
+                  )}
+                </p>
               </div>
-            ))}
-          </dl>
+              <figure className="hm-balance">
+                <span className="num">৳10,000</span>
+                <figcaption>Virtual balance. It has no real world value.</figcaption>
+              </figure>
+            </li>
+
+            <li className="hm-step">
+              <div className="hm-step__text">
+                <h3>{steps[1].title}</h3>
+                <p>{steps[1].body}</p>
+              </div>
+              <figure className="hm-shot hm-shot--dir">
+                <picture>
+                  <source
+                    media="(prefers-color-scheme: dark)"
+                    srcSet="/home/directory-dark.webp"
+                    width={1240}
+                    height={968}
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/home/directory-light.webp"
+                    width={1240}
+                    height={968}
+                    alt="The StockSimulatorBD stock directory searched for “bank”, listing DSE banks such as BRAC Bank, City Bank and AB Bank"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </picture>
+                <figcaption>
+                  The stock directory, searched for “bank”.{' '}
+                  <Link href="/stocks" className="hm-link">
+                    Browse every listed symbol
+                  </Link>
+                </figcaption>
+              </figure>
+            </li>
+
+            <li className="hm-step">
+              <div className="hm-step__text">
+                <h3>{steps[2].title}</h3>
+                <p>{steps[2].body}</p>
+              </div>
+              <figure className="hm-t1" role="group" aria-label="How T+2 settlement works across a weekend">
+                <ul className="hm-t1__rail" role="list">
+                  <li className="hm-t1__day hm-t1__day--buy">
+                    <b>Thursday</b>
+                    You buy
+                  </li>
+                  <li className="hm-t1__day hm-t1__day--shut">
+                    <b>Friday</b>
+                    Closed
+                  </li>
+                  <li className="hm-t1__day hm-t1__day--shut">
+                    <b>Saturday</b>
+                    Closed
+                  </li>
+                  <li className="hm-t1__day">
+                    <b>Sunday</b>
+                    Still locked
+                  </li>
+                  <li className="hm-t1__day hm-t1__day--sell">
+                    <b>Monday</b>
+                    You can sell
+                  </li>
+                </ul>
+                <figcaption>
+                  T+2 counts trading days, so shares bought on a Thursday can be sold from Monday.
+                  Category Z needs one more trading day, until Tuesday. Public holidays are skipped too.
+                </figcaption>
+              </figure>
+            </li>
+          </ol>
         </div>
       </section>
 
       {/* WHO IT IS FOR */}
-      <section className="w-full bg-white dark:bg-[#090E17] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight max-w-2xl">
+      <section className="hm hm-sec" aria-labelledby="who-title">
+        <div className="hm-wrap">
+          <h2 id="who-title" className="hm-statement">
             Built for the first trade you have not made yet
           </h2>
 
-          <div className="mt-8 sm:mt-10 grid md:grid-cols-2 gap-8 md:gap-0">
-            <div className="md:pr-12">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                Students and first time learners
-              </h3>
-              <p className="mt-3 text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+          <div className="hm-readers">
+            <div>
+              <h3>Students and first time learners</h3>
+              <p>
                 Curious about the share market but with no capital to put at risk, and probably
                 no BO account yet. Here you can watch prices move, place orders, hold a position
                 overnight and see what a portfolio does over a month, at no cost and with
@@ -352,11 +466,9 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="md:pl-12 md:border-l border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                Savers moving beyond Sanchayapatra and FDR
-              </h3>
-              <p className="mt-3 text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div>
+              <h3>Savers moving beyond Sanchayapatra and FDR</h3>
+              <p>
                 You already know how to save. Shares are the part that feels intimidating,
                 because the money at stake took years to put aside. Practice here until the
                 mechanics are ordinary, and let your first real order be a decision rather
@@ -368,45 +480,40 @@ export default function HomePage() {
       </section>
 
       {/* WHAT IS PAPER TRADING */}
-      <section className="w-full bg-gray-50 dark:bg-[#111418] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-start">
-            <div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                What is <span className="text-blue-600 dark:text-blue-400">paper trading</span>?
-              </h2>
-              <p className="mt-5 sm:mt-6 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+      <section className="hm hm-sec hm-sec--rule" aria-labelledby="paper-title">
+        <div className="hm-wrap">
+          <div className="hm-split">
+            <div className="hm-prose">
+              <h2 id="paper-title">What is paper trading?</h2>
+              <p>
+                StockSimulatorBD is a free paper trading simulator for the Dhaka Stock Exchange.
+                Practice buying and selling DSE shares at live market prices, using virtual
+                money instead of your own.
+              </p>
+              <p>
                 Paper trading, also called simulator trading or virtual trading, means placing
                 trades with fake money in an environment that mirrors real market conditions.
                 The name comes from the days when traders wrote hypothetical positions down on
                 paper. Platforms like this one just do the arithmetic for you, against live data.
               </p>
-              <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p>
                 Plenty of people search for it as a stock market game or a stocks sim instead.
                 Same idea, different words. StockSimulatorBD is that game for Bangladesh
                 specifically, tied to the Dhaka Stock Exchange rather than to a generic global market.
               </p>
 
-              <div className="mt-7 flex items-start gap-3 p-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
-                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-                <p className="text-amber-900 dark:text-amber-200 text-sm leading-relaxed">
-                  Finding a paper trading platform built for the Bangladesh stock market is
-                  genuinely hard. Almost every simulator targets US markets, which leaves
-                  Bangladeshi investors practicing on tickers and rules they will never actually trade.
-                </p>
-              </div>
+              <p className="hm-note">
+                Finding a paper trading platform built for the Bangladesh stock market is
+                genuinely hard. Almost every simulator targets US markets, which leaves
+                Bangladeshi investors practicing on tickers and rules they will never actually trade.
+              </p>
             </div>
 
-            <div className="bg-white dark:bg-[#1A1F26] rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Why practice first</h3>
-              <ul className="mt-6 space-y-4">
+            <div className="hm-why">
+              <h3>Why practice first</h3>
+              <ul role="list">
                 {practiceReasons.map((reason) => (
-                  <li key={reason} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 mt-0.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                    <span className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {reason}
-                    </span>
-                  </li>
+                  <li key={reason}>{reason}</li>
                 ))}
               </ul>
             </div>
@@ -414,169 +521,109 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="w-full bg-white dark:bg-[#090E17] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <div className="max-w-2xl">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              Three steps, in this order
-            </h2>
-            <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-              The sequence matters, because the waiting is part of what you are here to learn.
+      {/* LEARN BEFORE YOU TRADE */}
+      <section className="hm hm-sec hm-sec--band" aria-labelledby="learn-title">
+        <div className="hm-wrap">
+          <div className="hm-head hm-head--stack">
+            <h2 id="learn-title">Learn before you trade</h2>
+            <p className="hm-lead">
+              Practical guides for Bangladeshi investors, from opening a BO account to choosing
+              a broker.
             </p>
           </div>
 
-          <ol className="mt-8 sm:mt-10 ml-4 max-w-3xl border-l border-gray-200 dark:border-gray-800">
-            {steps.map((step, index) => (
-              <li key={step.title} className="relative pl-7 sm:pl-10 pb-9 last:pb-0">
-                <span
-                  className="absolute -left-[13px] top-0 flex items-center justify-center w-[26px] h-[26px] rounded-full bg-blue-600 text-white font-mono text-xs font-bold tabular-nums"
-                  aria-hidden="true"
-                >
-                  {index + 1}
-                </span>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {step.body}
-                </p>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-6 flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>
-              The market trades Sunday to Thursday, 10:00 to 14:15. Outside those hours you can
-              research, but not buy or sell.
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="w-full bg-gray-50 dark:bg-[#111418] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight max-w-2xl">
-            Questions people ask before they start
-          </h2>
-
-          <div className="mt-8 sm:mt-10 grid md:grid-cols-2 gap-x-12 gap-y-8">
-            {faqs.map((faq) => (
-              <div key={faq.q}>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug">
-                  {faq.q}
-                </h3>
-                <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {faq.a}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 max-w-3xl" lang="bn">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">বাংলায় সংক্ষেপে: সাধারণ জিজ্ঞাসা ও উত্তর</h3>
-            <div className="mt-4 space-y-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-              <p>
-                <strong>স্টকসিমুলেটরবিডি কী?</strong> এটি ঢাকা স্টক এক্সচেঞ্জের (DSE) একমাত্র ফ্রি পেপার ট্রেডিং প্ল্যাটফর্ম। এখানে আসল বাজারের লাইভ ডেটা, বাস্তব মার্কেট আওয়ার এবং T+1 সেটেলমেন্ট নিয়মে সম্পূর্ণ ঝুঁকিমুক্তভাবে শেয়ার ট্রেডিং শেখা যায়। নতুন একাউন্ট খুললেই পাচ্ছেন ৳১০,০০০ ভার্চুয়াল ব্যালেন্স।
-              </p>
-              <p>
-                <strong>ডিএসই মার্কেট টাইম / শেয়ার বাজার ট্রেডিং সময়সূচী:</strong> রবিবার থেকে বৃহস্পতিবার সকাল ১০:০০ টা থেকে দুপুর ২:১৫ পর্যন্ত সরাসরি লেনদেন চলে। এরপর দুপুর ২:১৫ থেকে ২:৩০ পর্যন্ত পোস্ট-ক্লোজিং সেশন। শুক্রবার ও শনিবার সাপ্তাহিক বন্ধ।
-              </p>
-              <p>
-                <strong>অনলাইনে বিও একাউন্ট খোলার নিয়ম:</strong> ঘরে বসে লংকাবাংলা, ব্র্যাক ইপিএল বা আইডিএলসির মতো শীর্ষ ব্রোকারেজ হাউসের অ্যাপে আপনার জাতীয় পরিচয়পত্র (NID), ছবি, ব্যাংক চেকের ছবি ও নমিনির তথ্য জমা দিয়ে অনলাইনে বিও (BO) একাউন্ট খুলতে পারবেন। সিডিবিএল বাৎসরিক ফি ৪৫০ টাকা। তবে স্টকসিমুলেটরবিডিতে প্র্যাকটিস করার জন্য কোনো বিও একাউন্ট বা টাকার প্রয়োজন নেই।
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* COMMENTS */}
-      <section className="w-full bg-white dark:bg-[#090E17] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            Still have a question?
-          </h2>
-          <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-            Ask below and it gets answered here, where the next person with the same question
-            can find it. Please do not post your BO account number, broker login or any personal
-            financial details.
-          </p>
-          <div className="mt-8">
-            <OpenRemark />
-          </div>
-        </div>
-      </section>
-
-      {/* LEARN BEFORE YOU TRADE */}
-      <section className="w-full bg-white dark:bg-[#090E17] border-b border-gray-200 dark:border-gray-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight max-w-2xl">
-            Learn before you trade
-          </h2>
-          <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl">
-            Practical guides for Bangladeshi investors, from opening a BO account to choosing
-            a broker.
-          </p>
-
-          <ul className="mt-8 sm:mt-10 border-t border-gray-200 dark:border-gray-800">
+          <ul className="hm-index" role="list">
             {articles.map((article) => (
               <li key={article.href}>
-                <Link
-                  href={article.href}
-                  className="group flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-8 py-5 sm:py-6 border-b border-gray-200 dark:border-gray-800 transition-colors hover:bg-gray-50 dark:hover:bg-[#1A1F26] -mx-4 px-4 sm:-mx-6 sm:px-6"
-                >
-                  <span className="sm:w-44 flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                    {article.tag}
+                <Link href={article.href} className="hm-row">
+                  <span>
+                    <span className="hm-row__title">{article.title}</span>
+                    <span className="hm-row__desc">{article.description}</span>
                   </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {article.title}
-                    </span>
-                    <span className="mt-1 block text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {article.description}
-                    </span>
-                  </span>
-                  <ArrowRight className="hidden sm:block w-5 h-5 flex-shrink-0 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+                  <span className="hm-row__tag">{article.tag}</span>
+                  <ArrowRight size={20} aria-hidden="true" />
                 </Link>
               </li>
             ))}
           </ul>
 
-          <Link
-            href="/blog"
-            className="mt-8 inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white active:scale-95 transition-all duration-200"
-          >
+          <Link href="/blog" className="hm-btn hm-btn--outline hm-more">
             Browse every guide
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
+        </div>
+      </section>
+
+      {/* FAQ AND QUESTIONS */}
+      <section className="hm hm-sec hm-sec--rule" aria-labelledby="faq-title">
+        <div className="hm-wrap">
+          <div className="hm-faq">
+            <div className="hm-faq__head">
+              <h2 id="faq-title">Questions people ask before they start</h2>
+            </div>
+
+            <div>
+              {faqs.map((faq, index) => (
+                <details key={faq.q} className="hm-qa" open={index < 2}>
+                  <summary>
+                    <h3>{faq.q}</h3>
+                  </summary>
+                  <p>{faq.a}</p>
+                </details>
+              ))}
+
+              <div className="hm-bn" lang="bn">
+                <h3>বাংলায় সংক্ষেপে: সাধারণ জিজ্ঞাসা ও উত্তর</h3>
+                <p>
+                  <strong>স্টকসিমুলেটরবিডি কী?</strong> এটি ঢাকা স্টক এক্সচেঞ্জের (DSE) একমাত্র ফ্রি পেপার ট্রেডিং প্ল্যাটফর্ম। এখানে আসল বাজারের লাইভ ডেটা, বাস্তব মার্কেট আওয়ার এবং T+2/T+3 সেটেলমেন্ট নিয়মে সম্পূর্ণ ঝুঁকিমুক্তভাবে শেয়ার ট্রেডিং শেখা যায়। নতুন একাউন্ট খুললেই পাচ্ছেন ৳১০,০০০ ভার্চুয়াল ব্যালেন্স।
+                </p>
+                <p>
+                  <strong>ডিএসই মার্কেট টাইম / শেয়ার বাজার ট্রেডিং সময়সূচী:</strong> রবিবার থেকে বৃহস্পতিবার সকাল ১০:০০ টা থেকে দুপুর ২:১৫ পর্যন্ত সরাসরি লেনদেন চলে। এরপর দুপুর ২:১৫ থেকে ২:৩০ পর্যন্ত পোস্ট-ক্লোজিং সেশন। শুক্রবার ও শনিবার সাপ্তাহিক বন্ধ।
+                </p>
+                <p>
+                  <strong>অনলাইনে বিও একাউন্ট খোলার নিয়ম:</strong> ঘরে বসে লংকাবাংলা, ব্র্যাক ইপিএল বা আইডিএলসির মতো শীর্ষ ব্রোকারেজ হাউসের অ্যাপে আপনার জাতীয় পরিচয়পত্র (NID), ছবি, ব্যাংক চেকের ছবি ও নমিনির তথ্য জমা দিয়ে অনলাইনে বিও (BO) একাউন্ট খুলতে পারবেন। সিডিবিএল বাৎসরিক ফি ৪৫০ টাকা। তবে স্টকসিমুলেটরবিডিতে প্র্যাকটিস করার জন্য কোনো বিও একাউন্ট বা টাকার প্রয়োজন নেই।
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="hm-ask">
+            <div>
+              <h3>Still have a question?</h3>
+              <p className="hm-lead">
+                Ask below and it gets answered here, where the next person with the same question
+                can find it. Please do not post your BO account number, broker login or any personal
+                financial details.
+              </p>
+            </div>
+            <div>
+              <OpenRemark />
+            </div>
+          </div>
         </div>
       </section>
 
       {/* CLOSING */}
-      <section className="w-full bg-white dark:bg-[#090E17]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
-            Nobody&apos;s first real trade should be their first trade
-          </h2>
-          <p className="mt-5 sm:mt-6 text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+      <section className="hm hm-sec hm-sec--band hm-close" aria-labelledby="close-title">
+        <div className="hm-wrap">
+          <h2 id="close-title">Nobody’s first real trade should be their first trade</h2>
+          <p className="hm-lead">
             Open the floor, place a few orders and get some of them wrong while it costs
             nothing. Then do it with your own money, already knowing what to expect.
           </p>
-          <Link
-            href="/trade"
-            className="mt-8 sm:mt-10 inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-lg font-bold rounded-xl shadow-lg shadow-blue-600/30 hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all duration-300"
-          >
-            Start trading now
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="hm-actions">
+            <Link href="/trade" className="hm-btn">
+              Start trading now
+              <ArrowRight size={20} aria-hidden="true" />
+            </Link>
+            <p className="hm-small">Works in any browser, and installs as an app on Android and desktop.</p>
+          </div>
         </div>
       </section>
 
-      <div className="mt-auto z-10 bg-white dark:bg-[#090E17] border-t border-gray-200 dark:border-gray-800/60">
+      <div className="hm-foot">
         <Footer />
       </div>
-    </main>
+    </>
   );
 }
