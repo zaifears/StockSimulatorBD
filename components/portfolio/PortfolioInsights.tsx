@@ -420,7 +420,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
                       7. Settlement Liquidity & Lockup Radar
                     </h4>
                     <p className="text-[10px] text-gray-400">
-                      Capital ready to sell right now vs shares locked in overnight DSE clearing
+                      Capital ready to sell right now vs shares still in DSE settlement (T+2 / T+3)
                     </p>
                   </div>
                 </div>
