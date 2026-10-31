@@ -26,7 +26,7 @@ export function getFinancialSourceGraph(): {
       id: 'src_sec_rules',
       path: '/trade',
       primarySource: 'BSEC',
-      claimsCovered: ['T+1 settlement rule', 'Daily circuit breaker bands', 'Brokerage commission 0.4% default'],
+      claimsCovered: ['T+2/T+3 settlement rule', 'Daily circuit breaker bands', 'Brokerage commission 0.4% default'],
       lastVerifiedDate: '2026-08-15',
       stalenessAlert: false,
       freshnessDays: 37,

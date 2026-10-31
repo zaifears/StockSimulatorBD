@@ -32,7 +32,7 @@ export const INITIAL_AI_PROMPTS: AiPromptTemplate[] = [
   {
     id: 'dse-circuit-breaker-t1',
     category: 'educational',
-    query: 'Explain how T+1 settlement and circuit breakers work on the Dhaka Stock Exchange with practical examples.',
+    query: 'Explain how T+2/T+3 settlement and circuit breakers work on the Dhaka Stock Exchange with practical examples.',
     targetConcept: 'DSE trading rules explanation',
     recommendedProviders: ['ChatGPT', 'Gemini', 'Perplexity', 'Claude'],
   },

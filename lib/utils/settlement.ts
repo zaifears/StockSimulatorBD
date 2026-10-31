@@ -107,8 +107,13 @@ export function getLotSettlementDays(lot: SettlementLot, fallbackCategory?: stri
     : getSettlementDays(fallbackCategory);
 }
 
-/** First Dhaka date (YYYY-MM-DD) on which this lot may be sold. */
+/**
+ * First Dhaka date (YYYY-MM-DD) on which this lot may be sold. A lot with a
+ * missing or unparseable purchaseDate returns '' (settled): the old T+1 check
+ * treated such lots as sellable, and a bad date must not lock shares forever.
+ */
 export function getLotUnlockDate(lot: SettlementLot, fallbackCategory?: string | null): string {
+  if (Number.isNaN(new Date(lot.purchaseDate).getTime())) return '';
   return addTradingDays(dhakaDateKey(lot.purchaseDate), getLotSettlementDays(lot, fallbackCategory));
 }
 
