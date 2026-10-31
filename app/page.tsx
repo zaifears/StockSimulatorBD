@@ -6,6 +6,8 @@ import { OpenRemark } from '@/components/OpenRemark';
 import { SITE_URL } from '@/lib/siteUrl';
 import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 import { ArrowRight } from 'lucide-react';
+import IndexBoard from '@/components/home/IndexBoard';
+import { fetchMarketOverview } from '@/lib/marketOverview';
 import './home.css';
 
 const SITE = SITE_URL;
@@ -233,7 +235,10 @@ const faqSchema = {
   })),
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  // First reading for the hero index board; the board refreshes itself client-side.
+  const marketOverview = await fetchMarketOverview();
+
   return (
     <>
       <script
@@ -272,48 +277,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <figure
-            className="hm-shot"
-            data-slot="hero"
-            data-kind="product"
-            data-alt="The Grameenphone (GP) candlestick chart on its StockSimulatorBD stock page"
-          >
-            <picture>
-              <source
-                media="(prefers-color-scheme: dark) and (max-width: 40rem)"
-                srcSet="/home/gp-chart-dark-phone.webp"
-                width={716}
-                height={792}
-              />
-              <source
-                media="(prefers-color-scheme: dark)"
-                srcSet="/home/gp-chart-dark-wide.webp"
-                width={1600}
-                height={1494}
-              />
-              <source
-                media="(max-width: 40rem)"
-                srcSet="/home/gp-chart-light-phone.webp"
-                width={716}
-                height={792}
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/home/gp-chart-light-wide.webp"
-                width={1600}
-                height={1494}
-                alt="Candlestick chart with volume for Grameenphone (GP), built from the Dhaka Stock Exchange day-end archive, on its StockSimulatorBD stock page"
-                fetchPriority="high"
-                decoding="async"
-              />
-            </picture>
-            <figcaption>
-              Grameenphone (GP) on its stock page.{' '}
-              <Link href="/stocks/GP" className="hm-link">
-                Open the live chart
-              </Link>
-            </figcaption>
-          </figure>
+          <IndexBoard initial={marketOverview} />
         </div>
       </section>
 
@@ -581,7 +545,7 @@ export default function HomePage() {
                   <strong>ডিএসই মার্কেট টাইম / শেয়ার বাজার ট্রেডিং সময়সূচী:</strong> রবিবার থেকে বৃহস্পতিবার সকাল ১০:০০ টা থেকে দুপুর ২:১৫ পর্যন্ত সরাসরি লেনদেন চলে। এরপর দুপুর ২:১৫ থেকে ২:৩০ পর্যন্ত পোস্ট-ক্লোজিং সেশন। শুক্রবার ও শনিবার সাপ্তাহিক বন্ধ।
                 </p>
                 <p>
-                  <strong>অনলাইনে বিও একাউন্ট খোলার নিয়ম:</strong> ঘরে বসে লংকাবাংলা, ব্র্যাক ইপিএল বা আইডিএলসির মতো শীর্ষ ব্রোকারেজ হাউসের অ্যাপে আপনার জাতীয় পরিচয়পত্র (NID), ছবি, ব্যাংক চেকের ছবি ও নমিনির তথ্য জমা দিয়ে অনলাইনে বিও (BO) একাউন্ট খুলতে পারবেন। সিডিবিএল বাৎসরিক ফি ৪৫০ টাকা। তবে স্টকসিমুলেটরবিডিতে প্র্যাকটিস করার জন্য কোনো বিও একাউন্ট বা টাকার প্রয়োজন নেই।
+                  <strong>স্টকসিমুলেটরবিডি ব্যবহার করতে কি কোনো অফিসিয়াল কাগজপত্র লাগে?</strong> না। স্টকসিমুলেটরবিডিতে প্র্যাকটিস করার জন্য কোনো বিও একাউন্ট বা টাকার প্রয়োজন নেই।
                 </p>
               </div>
             </div>
