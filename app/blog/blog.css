@@ -1,0 +1,108 @@
+/* Hallmark · shape: Index-First (search hero, lead guide, ruled index) · genre: modern-minimal · theme: brand (locked DESIGN.md, shared with the homepage: tokens and primitives from app/home.css) · redesign: full · hero: Stage (/blog) · nav: kept (shared ModernNavbar) · footer: kept (shared Footer) · signature: the guide index itself, the newest or featured guide set large with its Contentful cover, the rest ruled beneath · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H5 E4 S4 R5 V3 · weakest: V, the ruled index repeats the homepage's guide list on purpose so the two pages read as one system; the search panel in the hero is what this page adds */
+/* Hallmark · dropped the mascot illustration (/images/blog-hero-mascot.png) and its blurred glow · 80 names drawn illustration and 29 the blurred orb; the file stays in public/ */
+/* Hallmark · dropped the "Bangladesh market education" pill above the headline · 54 names the eyebrow; the headline already says it */
+/* Hallmark · finish-review: subagent · 7 findings · 6 resolved 1 out of scope (the shared Footer's tracked-caps headings and em dash, owned by components/shared/Footer.tsx) · gap: none */
+/* Hallmark · waive 49b · the wrapping link is the lead guide's own title · titles are Contentful content the redesign keeps word for word; on phones it steps down to --text-xl */
+/* Hallmark · waive 79 · the space below the hero holds the lead guide's head and cover, visible above the fold at 1440x900 · the index starts on the first screen on purpose, so a reader sees there is more below */
+/* Hallmark · dismissed 78 · the lead title is an item title, not a section head; the index carries no head of its own because the hero's search panel names it */
+/* Hallmark · answered F3 · text-wrap: balance is set on the hero head and the lead title; both render as even lines at 1280, 1440 and 1920 */
+/* Hallmark · dismissed 77 · /blog is an index whose job is search and browse; its sections are the search hero, the lead guide, the index and the close band, not a landing strip */
+/* Hallmark · answered F19 · 500 and 700 come from the shared navbar and footer; this page sets only 400 and 600, as on the homepage */
+
+/* Hero: the headline on five columns, the search on seven */
+.bl-hero { padding-top: calc(var(--nav-h) + clamp(var(--space-lg), 6vh, var(--space-3xl))); padding-bottom: clamp(var(--space-xl), 7vh, var(--space-3xl)); border-bottom: 1px solid var(--color-rule); }
+.bl-hero__grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-2xl); align-items: start; }
+.bl-intro { padding-top: var(--space-md); }
+.bl-intro h1 { font-size: var(--text-hero); max-width: 12ch; text-wrap: balance; }
+.bl-intro .hm-lead { margin-top: var(--space-lg); max-width: 40ch; }
+.bl-intro .hm-fine { font-size: var(--text-sm); color: var(--color-muted); }
+
+/* Search panel */
+.bl-find { padding: var(--space-xl); border-radius: var(--radius-card); background: var(--color-paper-3); outline: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent); outline-offset: -1px; }
+.bl-find__label { display: block; font-weight: 600; font-size: var(--text-md); color: var(--color-ink); }
+.bl-find__field { position: relative; margin-top: var(--space-sm); }
+.bl-find__icon { position: absolute; left: var(--space-md); top: 50%; transform: translateY(-50%); color: var(--color-muted); pointer-events: none; }
+.bl-find__input { width: 100%; min-height: 52px; padding: 0 calc(var(--space-md) + 32px) 0 calc(var(--space-md) + 28px); border: 1px solid var(--color-muted); border-radius: var(--radius-ctl); background: var(--color-paper); color: var(--color-ink); font: 400 var(--text-md)/1.4 var(--font-body); transition: border-color var(--dur-short) var(--ease-out); }
+.bl-find__input::placeholder { color: var(--color-muted); }
+.bl-find__input:hover { border-color: var(--color-ink-2); }
+.bl-find__input:focus-visible { outline: none; border-color: var(--color-focus); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-focus) 25%, transparent); }
+.bl-find__input::-webkit-search-cancel-button { display: none; }
+.bl-find__clear { position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-muted); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.bl-find__clear:hover { background: var(--color-paper-2); color: var(--color-ink); }
+.bl-find__help { margin-top: var(--space-xs) !important; font-size: var(--text-sm); line-height: 1.5; color: var(--color-ink-2); max-width: 60ch; }
+
+.bl-group { margin: var(--space-lg) 0 0; padding: 0; border: 0; min-width: 0; }
+.bl-group legend { padding: 0; font-size: var(--text-sm); color: var(--color-muted); }
+.bl-chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-xs); }
+.bl-chip { min-height: 44px; padding: 0 var(--space-md); border: 1px solid var(--color-rule); border-radius: var(--radius-pill); background: var(--color-paper); color: var(--color-ink-2); font: 600 var(--text-sm)/1 var(--font-body); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-micro) var(--ease-out); }
+.bl-chip:hover { border-color: var(--color-link); color: var(--color-link); }
+.bl-chip:active { transform: scale(0.97); }
+.bl-chip[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-accent-ink); }
+.bl-chip:disabled, .bl-clear:disabled, .bl-find__clear:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.bl-chip--time[aria-pressed="true"] { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-paper); }
+
+.bl-find__status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--color-rule); font-size: var(--text-sm); color: var(--color-ink-2); }
+.bl-clear { display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: 44px; padding: 0 var(--space-sm); border: 0; border-radius: var(--radius-ctl); background: transparent; color: var(--color-link); font: 600 var(--text-sm)/1 var(--font-body); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out); }
+.bl-clear:hover { background: var(--color-open-wash); }
+
+/* Results: one lead guide with its cover, then a ruled index */
+.bl-results { padding-top: var(--space-lg); }
+.bl-lead { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: center; }
+.bl-cover { display: block; overflow: hidden; transition: outline-color var(--dur-short) var(--ease-out); border-radius: var(--radius-card); background: var(--color-paper-3); aspect-ratio: 16 / 9; outline: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent); outline-offset: -1px; }
+.bl-cover img, .bl-row__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.bl-cover:hover { outline: 2px solid var(--color-link); outline-offset: -2px; }
+.bl-cover__none { display: grid; place-items: center; width: 100%; height: 100%; padding: var(--space-md); font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: var(--tracking-display); color: var(--color-muted); text-align: center; }
+.bl-lead__text { display: grid; gap: var(--space-md); justify-items: start; }
+.bl-lead__text h2 { font-size: var(--text-2xl); line-height: 1.15; max-width: 24ch; text-wrap: balance; }
+.bl-lead__text h2 a { text-decoration: none; }
+.bl-lead__text h2 a:hover { color: var(--color-link); }
+.bl-lead__excerpt { font-size: var(--text-lg); line-height: 1.5; color: var(--color-ink-2); max-width: 48ch; }
+.bl-lead__text .hm-btn { margin-top: var(--space-xs); }
+
+.bl-tags { display: block; font-size: var(--text-sm); color: var(--color-link); font-weight: 600; }
+.bl-meta { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md); font-size: var(--text-sm); color: var(--color-muted); }
+
+.bl-index { margin-top: var(--space-3xl); margin-inline: calc(-1 * var(--space-md)); border-top: 1px solid var(--color-rule); }
+.bl-row { display: grid; grid-template-columns: 176px minmax(0, 1fr) 11rem; gap: var(--space-lg); align-items: center; padding: var(--space-lg) var(--space-md); border-bottom: 1px solid var(--color-rule); text-decoration: none; color: inherit; transition: background-color var(--dur-short) var(--ease-out); }
+.bl-row:hover { background: var(--color-paper-2); }
+.bl-row__thumb { display: block; overflow: hidden; aspect-ratio: 16 / 10; border-radius: var(--radius-well); background: var(--color-paper-3); }
+.bl-row__thumb .bl-cover__none { font-size: var(--text-sm); }
+.bl-row__body { display: grid; gap: var(--space-2xs); min-width: 0; }
+.bl-row__title { margin: 0; font-family: var(--font-body); font-size: var(--text-lg); font-weight: 600; letter-spacing: 0; line-height: 1.3; max-width: 60ch; color: var(--color-ink); }
+.bl-row:hover .bl-row__title { color: var(--color-link); }
+.bl-row__excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--text-md); line-height: 1.5; color: var(--color-ink-2); max-width: 62ch; }
+.bl-row .bl-meta { flex-direction: column; align-items: flex-end; text-align: right; }
+
+/* Close: the statement across the row, the sentence and the action beside it */
+.bl-close { padding-block: var(--space-3xl); }
+.bl-close__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: end; }
+.bl-close h2 { font-size: var(--text-section); max-width: 18ch; }
+.bl-close__act { display: grid; gap: var(--space-lg); justify-items: start; }
+.bl-close__act .hm-lead { max-width: 44ch; }
+
+.bl-empty { display: grid; gap: var(--space-md); justify-items: start; padding-block: var(--space-xl); }
+.bl-empty h2 { font-size: var(--text-section); }
+
+@media (max-width: 60rem) {
+  .bl-hero__grid, .bl-lead, .bl-close__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); }
+  .bl-close { padding-block: var(--space-2xl); }
+  .bl-intro { padding-top: 0; text-align: center; }
+  .bl-intro h1, .bl-intro .hm-lead, .bl-intro .hm-fine { margin-inline: auto; }
+  .bl-row { grid-template-columns: 136px minmax(0, 1fr); }
+  .bl-row .bl-meta { grid-column: 2; flex-direction: row; align-items: center; text-align: left; }
+}
+@media (max-width: 40rem) {
+  .bl-hero { padding-top: calc(var(--nav-h) + var(--space-lg)); }
+  .bl-intro h1 { font-size: var(--text-3xl); }
+  .bl-find { padding: var(--space-md); }
+  .bl-lead__text h2 { font-size: var(--text-xl); }
+  .bl-index { margin-top: var(--space-2xl); margin-inline: calc(-1 * var(--gutter)); }
+  .bl-row { grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-md); padding-inline: var(--gutter); align-items: start; }
+  .bl-row__excerpt { font-size: var(--text-sm); }
+  .bl-row__title { font-size: var(--text-md); }
+  .bl-row .bl-meta { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bl-chip, .bl-clear, .bl-row, .bl-find__input, .bl-find__clear, .bl-cover { transition: none; }
+}

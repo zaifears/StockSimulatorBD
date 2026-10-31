@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
 import Footer from '@/components/shared/Footer';
 import BlogExplorer, { type ExplorerPost } from '@/components/blog/BlogExplorer';
 import { getBlogPosts, type BlogPost } from '@/lib/contentful-blog';
 import { SITE_URL, absoluteUrl } from '@/lib/siteUrl';
+import '../home.css';
+import './blog.css';
 
 const baseUrl = SITE_URL;
 
@@ -51,6 +51,22 @@ function estimateReadingTime(post: BlogPost): number {
   const approximateWordCount = post.excerpt.trim().split(/\s+/).length * 8;
 
   return Math.max(1, Math.ceil(approximateWordCount / 200));
+}
+
+function BlogIntro() {
+  return (
+    <div className="bl-intro">
+      <h1 id="blog-title">Learn the Bangladesh stock market</h1>
+      <p className="hm-lead">
+        Practical, educational guides on the Dhaka Stock Exchange, BO accounts, DSE market rules,
+        trading concepts, brokers, and paper-trading preparation.
+      </p>
+      <p className="hm-fine">
+        Educational information only. This blog is not investment, trading, legal, or financial
+        advice. Verify time-sensitive market information with official sources before acting.
+      </p>
+    </div>
+  );
 }
 
 export default async function BlogPage() {
@@ -126,8 +142,10 @@ export default async function BlogPage() {
     ],
   };
 
+  const intro = <BlogIntro />;
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+    <div className="hm bl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -141,83 +159,40 @@ export default async function BlogPage() {
         }}
       />
 
-      <section className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto max-w-7xl px-4 pb-12 pt-36 sm:px-6 sm:pt-40 lg:px-8 lg:pb-16 lg:pt-40">
-          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:gap-12">
-            <div className="max-w-3xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <ShieldCheck className="h-4 w-4" />
-                Bangladesh market education
-              </div>
-
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                Learn the Bangladesh stock market
-              </h1>
-
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">
-                Practical, educational guides on the Dhaka Stock Exchange, BO
-                accounts, DSE market rules, trading concepts, brokers, and
-                paper-trading preparation.
-              </p>
-
-              <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Educational information only. This blog is not investment,
-                trading, legal, or financial advice. Verify time-sensitive
-                market information with official sources before acting.
-              </p>
+      {posts.length === 0 ? (
+        <>
+          <section className="hm bl-hero" aria-labelledby="blog-title">
+            <div className="hm-wrap">{intro}</div>
+          </section>
+          <section className="hm hm-sec" aria-labelledby="blog-empty">
+            <div className="hm-wrap bl-empty">
+              <h2 id="blog-empty">Articles are coming soon.</h2>
+              <p className="hm-lead">Publish an article in Contentful to display it here.</p>
             </div>
+          </section>
+        </>
+      ) : (
+        <BlogExplorer posts={explorerPosts} intro={intro} />
+      )}
 
-            <div className="relative mx-auto w-full max-w-[250px] sm:max-w-[310px] lg:max-w-[430px]">
-              <div className="absolute inset-x-6 bottom-4 top-10 rounded-full bg-emerald-500/15 blur-3xl dark:bg-emerald-400/10" />
-              <Image
-                src="/images/blog-hero-mascot.png"
-                alt="StockSimulatorBD learner studying a simulated stock market dashboard"
-                width={1024}
-                height={1024}
-                priority
-                sizes="(max-width: 640px) 250px, (max-width: 1024px) 310px, 430px"
-                className="relative h-auto w-full object-contain drop-shadow-2xl"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        {posts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-900">
-            <h2 className="text-xl font-semibold">Articles are coming soon.</h2>
-            <p className="mt-3 text-slate-600 dark:text-slate-300">
-              Publish an article in Contentful to display it here.
+      <section className="hm hm-sec hm-sec--band bl-close" aria-labelledby="practise-title">
+        <div className="hm-wrap bl-close__grid">
+          <h2 id="practise-title">Learn by practising, not risking real money.</h2>
+          <div className="bl-close__act">
+            <p className="hm-lead">
+              Explore StockSimulatorBD to practise DSE-style investing concepts with virtual money
+              before making real-world financial decisions.
             </p>
-          </div>
-        ) : (
-          <BlogExplorer posts={explorerPosts} />
-        )}
-      </section>
-
-      <section className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-slate-900 p-8 text-white dark:bg-emerald-950 sm:p-10">
-            <h2 className="text-2xl font-bold">
-              Learn by practising, not risking real money.
-            </h2>
-            <p className="mt-3 max-w-2xl text-slate-300">
-              Explore StockSimulatorBD to practise DSE-style investing concepts
-              with virtual money before making real-world financial decisions.
-            </p>
-            <Link
-              href="/trade"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400"
-            >
+            <Link href="/trade" className="hm-btn">
               Open StockSimulatorBD
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      <Footer />
-    </main>
+      <div className="hm-foot">
+        <Footer />
+      </div>
+    </div>
   );
 }
