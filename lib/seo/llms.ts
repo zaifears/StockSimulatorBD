@@ -29,7 +29,7 @@ StockSimulatorBD (${SITE_URL}) is an educational paper-trading platform designed
 - DSE-listed equities, sectors, and corporate fundamentals
 - Risk-free virtual portfolio trading (paper trading)
 - Investment risk assessment, diversification, and brokerage fee awareness
-- T+1 settlement cycles, circuit breaker mechanics, and market schedules
+- T+2/T+3 settlement cycles, circuit breaker mechanics, and market schedules
 
 ## Core Resources
 - [Home](${absoluteUrl('/')}): Main simulator portal, interactive features, and market overview
@@ -56,7 +56,7 @@ Individual stock pages are available at \`${absoluteUrl('/stocks')}/[symbol]\` (
 - **BO Account (Beneficiary Owner)**: An electronic share account with CDBL (Central Depository Bangladesh Limited) through a registered DSE broker. Annual fee is ৳450. Max 2 accounts per person (1 individual + 1 joint). Can be opened 100% online with NID, photo, bank cheque, and nominee details.
 - **Best Brokerage Houses in Bangladesh**: LankaBangla Securities, BRAC EPL Stock Brokerage, IDLC Securities, City Brokerage, and EBL Securities. Broker commissions range from 0.30% to 0.50% (simulated as 0.40% on StockSimulatorBD).
 - **Circuit Breakers & Lower Circuit**: Daily price movement limits set by BSEC. Lower circuit is the floor price below which shares cannot trade that day.
-- **Stock Market Game / Simulator**: StockSimulatorBD provides ৳10,000 in virtual trading capital to paper trade 300+ DSE equities risk-free under authentic market hours and T+1 settlement.
+- **Stock Market Game / Simulator**: StockSimulatorBD provides ৳10,000 in virtual trading capital to paper trade 300+ DSE equities risk-free under authentic market hours and T+2/T+3 settlement.
 
 ## Educational & Simulation Scope
 StockSimulatorBD is strictly an educational simulation platform. Virtual trades, portfolio returns, and coins do not constitute real-world securities transactions, legal financial advice, or broker custodial services.
@@ -112,12 +112,12 @@ ${migrationHeader}
 ## 2. Core Educational Objectives
 StockSimulatorBD was created to address the gap in Bangladesh's financial education:
 1. Helping students and retail investors transition safely from savings certificates (Sanchayapatra) and fixed deposits into equity markets.
-2. Demystifying DSE trading rules, such as the T+1 settlement cycle and circuit breaker limits.
+2. Demystifying DSE trading rules, such as the T+2/T+3 settlement cycle and circuit breaker limits.
 3. Teaching responsible risk management, commission cost awareness (0.4% standard brokerage fees), and sector concentration risks.
 
 ## 3. Platform Mechanics & Features
 - **Virtual Balance**: Every account begins with virtual currency. Transactions reflect simulated market execution.
-- **T+1 Settlement Engine**: In accordance with DSE rules, shares bought in lot 'N' cannot be sold until T+1 trading day has elapsed.
+- **T+2/T+3 Settlement Engine**: In accordance with DSE rules, shares bought in lot 'N' cannot be sold until their settlement cycle has elapsed: T+2 trading days for categories A, B, G and N, and T+3 trading days for category Z.
 - **DSE Commission Tracking**: The platform models standard 0.4% brokerage fees on transactions to reflect real-world net gains/losses.
 - **Boss Tier (Pro)**: Provides deep analytical tools:
   - Banked Realized P&L tracking
@@ -129,7 +129,7 @@ StockSimulatorBD was created to address the gap in Bangladesh's financial educat
 - Market Status & Schedule: Sunday to Thursday, 10:00 AM to 2:15 PM BST (UTC+6) continuous trading session, followed by 2:15 PM to 2:30 PM post-closing session.
 - Weekly Holidays: Friday and Saturday (exchange closed).
 - Market Holidays: Officially gazetted Bangladesh national and religious holidays.
-- Settlement: T+1 settlement cycle for standard equity categories (A, B, N, G). Shares bought on day T unlock for sale on day T+1.
+- Settlement: T+2 for categories A, B, G and N; T+3 for category Z. Shares bought on day T unlock for sale on the second (or, for Z, third) trading day after T. Friday, Saturday and public holidays are skipped.
 - Circuit Breaker: Daily upper and lower price change limits (bands) enforced by BSEC to curb extreme market volatility. Lower circuit is the minimum price a share can drop to in a session; upper circuit is the maximum price it can rise to.
 - BO Account (Beneficiary Owner): Central Depository Bangladesh Limited (CDBL) demat account required to trade real DSE shares. Max 2 accounts per investor under BSEC rules (1 single + 1 joint). Not required to paper trade on StockSimulatorBD.
 - Brokerage Commission: Standard DSE brokers charge 0.30%–0.50% (simulated as 0.40% on StockSimulatorBD).

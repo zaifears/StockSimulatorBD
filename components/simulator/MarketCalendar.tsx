@@ -182,7 +182,7 @@ export default function MarketCalendar({ holidays }: MarketCalendarProps) {
             </li>
             <li className="flex gap-2 items-start">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0"></span>
-              <span><strong>T+1 Rule:</strong> Cannot sell shares on same day of purchase.</span>
+              <span><strong>Settlement:</strong> categories A, B, G and N settle T+2; category Z settles T+3 (trading days).</span>
             </li>
             <li className="flex gap-2 items-start">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></span>

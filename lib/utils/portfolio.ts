@@ -1,19 +1,28 @@
 // lib/utils/portfolio.ts
 // Client-side portfolio/holding math for the broker-style UI.
 //
-// The T+1 saleable calculation here is a deliberate MIRROR of the
-// authoritative server logic in app/api/simulator/trade/route.ts (same
-// getLots fallback, same Asia/Dhaka date comparison, same "shares bought
-// today are excluded" rule). It exists so the UI can show a SALEABLE figure
+// The settlement (T+2 for categories A/B/G/N, T+3 for Z) saleable calculation
+// here is a deliberate MIRROR of the authoritative server logic in
+// app/api/simulator/trade/route.ts (same getLots fallback, same trading-day
+// counting from lib/utils/settlement.ts). It exists so the UI can show a SALEABLE figure
 // up front instead of letting the user discover the lockout only after the
 // server rejects their order. It is NOT a gate — the server re-checks
 // everything and remains the only authority.
 import { moneyAdd, moneyMultiply, roundMoney, COMMISSION_RATE } from './money';
 import type { Stock, PortfolioItem } from '@/hooks/useSimulator';
+import {
+  formatSettlement,
+  getNextUnlock,
+  getQuantityHeldBeforeToday,
+  getSaleableQuantityFromLots,
+  getSettlementDays,
+} from './settlement';
 
 export interface Lot {
   quantity: number;
   purchaseDate: string;
+  /** Stamped at purchase: 2 for categories A/B/G/N, 3 for Z. Older lots lack it. */
+  settlementDays?: number;
 }
 
 /** Same Asia/Dhaka YYYY-MM-DD key the trade route compares lots on. */
@@ -33,15 +42,27 @@ export function getLots(item: PortfolioItem): Lot[] {
 }
 
 /**
- * Shares that have cleared T+1 and can be sold today. Shares bought today
- * are locked until tomorrow, even when merged into an older position.
+ * Shares that have cleared settlement and can be sold today: T+2 trading days
+ * for categories A/B/G/N, T+3 for Z. Each lot settles on the cycle recorded when
+ * it was bought; lots from before that was recorded use the stock's current
+ * category, passed as `category`.
  */
-export function getSaleableQuantity(item: PortfolioItem, now: Date = new Date()): number {
-  const today = dhakaDateStr(now.toISOString());
-  return getLots(item).reduce(
-    (sum, lot) => (dhakaDateStr(lot.purchaseDate) === today ? sum : sum + lot.quantity),
-    0
-  );
+export function getSaleableQuantity(item: PortfolioItem, now: Date = new Date(), category?: string | null): number {
+  return getSaleableQuantityFromLots(getLots(item), now, category);
+}
+
+/** Shares bought before today's Dhaka date, whether or not they have settled. */
+export function getQuantityBoughtBeforeToday(item: PortfolioItem, now: Date = new Date()): number {
+  return getQuantityHeldBeforeToday(getLots(item), now);
+}
+
+/** When the next locked shares of a holding unlock, if any are locked. */
+export function getHoldingNextUnlock(
+  item: PortfolioItem,
+  now: Date = new Date(),
+  category?: string | null
+): { date: string; quantity: number } | null {
+  return getNextUnlock(getLots(item), now, category);
 }
 
 /**
@@ -77,9 +98,11 @@ export function getDayChange(stock: Stock | undefined): number {
  */
 export function getDayPnl(item: PortfolioItem, stock: Stock | undefined, now: Date = new Date()): number {
   if (!stock || stock.traded === false) return 0;
-  const saleable = getSaleableQuantity(item, now); // held before today
-  const boughtToday = item.quantity - saleable;
-  const fromOlderShares = moneyMultiply(getDayChange(stock), saleable);
+  // Settlement does not change what "since yesterday's close" means: shares held
+  // before today earn the day's move from YCP, shares bought today from their cost.
+  const heldBeforeToday = getQuantityBoughtBeforeToday(item, now);
+  const boughtToday = item.quantity - heldBeforeToday;
+  const fromOlderShares = moneyMultiply(getDayChange(stock), heldBeforeToday);
   const fromTodaysShares = moneyMultiply(stock.ltp - item.averageBuyPrice, boughtToday);
   return roundMoney(moneyAdd(fromOlderShares, fromTodaysShares));
 }
@@ -89,6 +112,10 @@ export interface HoldingMetrics {
   quantity: number;
   saleable: number;
   locked: number;
+  /** "T+2" or "T+3", from the stock's DSE category. */
+  settlementLabel: string;
+  /** When the next locked shares unlock (Dhaka YYYY-MM-DD) and how many. */
+  nextUnlock: { date: string; quantity: number } | null;
   avgCost: number;
   /** Total amount originally paid, commission included. */
   cost: number;
@@ -115,13 +142,15 @@ export function getHoldingMetrics(
   const marketValue = roundMoney(moneyMultiply(valuationPrice, item.quantity));
   const cost = roundMoney(item.totalCost);
   const pnl = roundMoney(marketValue - cost);
-  const saleable = getSaleableQuantity(item, now);
+  const saleable = getSaleableQuantity(item, now, stock?.category);
 
   return {
     symbol: item.symbol,
     quantity: item.quantity,
     saleable,
     locked: item.quantity - saleable,
+    settlementLabel: formatSettlement(getSettlementDays(stock?.category)),
+    nextUnlock: getHoldingNextUnlock(item, now, stock?.category),
     avgCost: item.averageBuyPrice,
     cost,
     ltp: stock?.ltp ?? 0,
@@ -270,7 +299,7 @@ export interface PortfolioInsights {
     riskRewardRatio: number | null;
     expectancy: number;
   };
-  /** T+1 overnight clearing vs instant saleable capital */
+  /** Settlement (T+2 / T+3) lock-up vs instantly saleable capital */
   liquidityRadar: {
     saleableValue: number;
     lockedValue: number;
@@ -429,7 +458,7 @@ export function getPortfolioInsights(
   const cashPercent = totalNetWorth > 0 ? roundMoney((safeCash / totalNetWorth) * 100) : 0;
   const equityPercent = totalNetWorth > 0 ? roundMoney((currentValue / totalNetWorth) * 100) : 0;
 
-  // 7. T+1 Liquidity Radar
+  // 7. Settlement (T+2 / T+3) Liquidity Radar
   let saleableValue = 0;
   let lockedValue = 0;
   for (const h of holdings) {

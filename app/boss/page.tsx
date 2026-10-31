@@ -116,9 +116,9 @@ const COMPLETE_AUDIT_DATA: AuditCategory[] = [
       },
       {
         name: 'Clearing & Settlement Rules',
-        description: 'Authentic T+1 clearing settlement cycle and 0.40% brokerage commission, matching real brokerages.',
-        bro: 'T+1 & 0.40%',
-        boss: 'T+1 & 0.40%',
+        description: 'Authentic T+2 / T+3 settlement by market category and 0.40% brokerage commission, matching real brokerages.',
+        bro: 'T+2/T+3 & 0.40%',
+        boss: 'T+2/T+3 & 0.40%',
       },
       {
         name: 'Starting Demo Capital',
@@ -538,7 +538,7 @@ export default function BossPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Buy/Sell Orders & T+1 Settlement</span>
+                    <span>Buy/Sell Orders & T+2/T+3 Settlement</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />

@@ -11,7 +11,7 @@
 //
 // This route re-derives the price server-side from the same market_info
 // document the client reads for display, runs the same BUY/SELL business
-// rules (commission, T+1, insufficient balance/shares) inside an Admin SDK
+// rules (commission, T+2/T+3 settlement, insufficient balance/shares) inside an Admin SDK
 // transaction, and is the only thing that may accept a trade request; the
 // client no longer computes or writes balance/portfolio itself.
 
@@ -20,6 +20,16 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { isMarketOpenCorroborated } from '@/lib/utils/marketHours';
 import { COMMISSION_RATE, moneyAdd, moneySubtract, moneyMultiply, roundMoney } from '@/lib/utils/money';
+import {
+  addTradingDays,
+  dhakaDateKey,
+  formatSettlement,
+  formatUnlockDate,
+  getNextUnlock,
+  getLotSettlementDays,
+  getSaleableQuantityFromLots,
+  getSettlementDays,
+} from '@/lib/utils/settlement';
 
 // Ensure Firebase Admin is initialized with full credentials
 import '@/lib/firebaseAdmin';
@@ -38,6 +48,8 @@ const SANE_BALANCE_CAP = 100_000_000;
 interface Lot {
   quantity: number;
   purchaseDate: string;
+  /** Settlement length stamped when the shares were bought (2 for A/B/G/N, 3 for Z). */
+  settlementDays?: number;
 }
 
 interface PortfolioItem {
@@ -153,7 +165,7 @@ export async function POST(req: NextRequest) {
       console.info('[trade] Weekend calendar says closed but DSE reports Open (special working Saturday) — trading allowed.');
     }
 
-    const stocks = (marketDoc.stocks || []) as Array<{ symbol: string; ltp: number; traded?: boolean }>;
+    const stocks = (marketDoc.stocks || []) as Array<{ symbol: string; ltp: number; traded?: boolean; category?: string }>;
     const stock = stocks.find((s) => s.symbol === symbol);
     if (!stock) {
       return NextResponse.json({ success: false, error: 'Stock not found' }, { status: 400 });
@@ -168,6 +180,20 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Settlement is decided by DSE market category (A/B/G/N settle T+2, Z settles
+    // T+3). The category comes from the same map the client displays
+    // (market_info/categories, written by api/category_sync.py), falling back to
+    // the category carried on the price row. A missing category means T+2.
+    let category: string | undefined = typeof stock.category === 'string' ? stock.category : undefined;
+    try {
+      const categoriesSnap = await db.doc(`artifacts/${appId}/public/data/market_info/categories`).get();
+      const mapped = categoriesSnap.exists ? categoriesSnap.data()?.categories?.[symbol] : undefined;
+      if (typeof mapped === 'string' && mapped.trim()) category = mapped;
+    } catch (err) {
+      console.warn('[trade] Could not read market categories, using price-row category:', err);
+    }
+    const settlementDays = getSettlementDays(category);
 
     const stateRef = db.doc(`artifacts/${appId}/users/${uid}/simulator/state`);
     const historyColRef = db.collection(`artifacts/${appId}/users/${uid}/simulator/state/trade_history`);
@@ -197,17 +223,21 @@ export async function POST(req: NextRequest) {
 
         const nowIso = new Date().toISOString();
         const todayDhaka = dhakaDateStr(nowIso);
+        const newLot: Lot = { quantity, purchaseDate: nowIso, settlementDays };
 
         if (existingItem) {
           const newTotalCost = moneyAdd(existingItem.totalCost, totalCost);
           const newQuantity = existingItem.quantity + quantity;
           const existingLots = getLots(existingItem);
           const lastLot = existingLots[existingLots.length - 1];
-          // Fold same-day purchases into one lot instead of growing the array forever.
+          // Fold same-day purchases into one lot instead of growing the array forever,
+          // but only when they settle on the same cycle.
           const newLots: Lot[] =
-            lastLot && dhakaDateStr(lastLot.purchaseDate) === todayDhaka
-              ? [...existingLots.slice(0, -1), { ...lastLot, quantity: lastLot.quantity + quantity }]
-              : [...existingLots, { quantity, purchaseDate: nowIso }];
+            lastLot &&
+            dhakaDateStr(lastLot.purchaseDate) === todayDhaka &&
+            getLotSettlementDays(lastLot, category) === settlementDays
+              ? [...existingLots.slice(0, -1), { ...lastLot, quantity: lastLot.quantity + quantity, settlementDays }]
+              : [...existingLots, newLot];
           portfolio[itemIndex] = {
             ...existingItem,
             quantity: newQuantity,
@@ -222,7 +252,7 @@ export async function POST(req: NextRequest) {
             averageBuyPrice: roundMoney(totalCost / quantity),
             totalCost,
             purchaseDate: nowIso,
-            lots: [{ quantity, purchaseDate: nowIso }],
+            lots: [newLot],
           });
         }
 
@@ -240,24 +270,25 @@ export async function POST(req: NextRequest) {
           throw new Error(`Insufficient shares. You own ${existingItem?.quantity || 0}.`);
         }
 
-        const todayDateStr = dhakaDateStr(new Date().toISOString());
+        const now = new Date();
         const existingLots = getLots(existingItem);
-        // Shares bought today aren't sellable yet; older lots (possibly mixed
-        // with a same-day top-up) are. Sum only the eligible lots.
-        const eligibleQuantity = existingLots.reduce(
-          (sum, lot) => (dhakaDateStr(lot.purchaseDate) === todayDateStr ? sum : sum + lot.quantity),
-          0
-        );
+        // A lot is sellable once its own settlement cycle (T+2 for A/B/G/N, T+3 for
+        // Z, counted in trading days) has elapsed. Lots from before this rule
+        // carry no settlementDays and use the stock's current category.
+        const eligibleQuantity = getSaleableQuantityFromLots(existingLots, now, category);
         if (quantity > eligibleQuantity) {
+          const label = formatSettlement(settlementDays);
+          const next = getNextUnlock(existingLots, now, category);
+          const unlockNote = next ? ` ${next.quantity} unlock on ${formatUnlockDate(next.date)}.` : '';
           throw new Error(
             eligibleQuantity > 0
-              ? `T+1 Rule: Only ${eligibleQuantity} of your ${existingItem.quantity} shares are eligible to sell (shares bought today are locked until tomorrow).`
-              : 'T+1 Rule: Cannot sell shares on the same day of purchase.'
+              ? `${label} Rule: Only ${eligibleQuantity} of your ${existingItem.quantity} shares have settled and can be sold.${unlockNote}`
+              : `${label} Rule: None of your ${existingItem.symbol} shares have settled yet.${unlockNote}`
           );
         }
 
         // Consume oldest lots first. Because `quantity <= eligibleQuantity`,
-        // this can never reach a same-day lot before the request is satisfied.
+        // the shares sold are always drawn from lots that have settled.
         let remainingToSell = quantity;
         const newLots: Lot[] = [];
         for (const lot of existingLots) {
@@ -322,18 +353,24 @@ export async function POST(req: NextRequest) {
       return { newBalance };
     });
 
+    const unlockDate = addTradingDays(dhakaDateKey(new Date()), settlementDays);
+
     return NextResponse.json({
       success: true,
-      message: `Successfully ${type === 'BUY' ? 'bought' : 'sold'} ${quantity} shares of ${symbol}.`,
+      message:
+        type === 'BUY'
+          ? `Successfully bought ${quantity} shares of ${symbol}. Settlement ${formatSettlement(settlementDays)}: you can sell them from ${formatUnlockDate(unlockDate)}.`
+          : `Successfully sold ${quantity} shares of ${symbol}.`,
       newBalance: result.newBalance,
+      settlement: { category: category ?? null, days: settlementDays, unlockDate },
     });
   } catch (error: any) {
     console.error('❌ Trade API error:', error);
     const message = error?.message || 'Failed to execute trade';
-    // Business-rule rejections (insufficient balance/shares, T+1, missing
+    // Business-rule rejections (insufficient balance/shares, T+2/T+3, missing
     // state, cap) are client-correctable — surface them as 400s with their
     // real message. Anything else stays a generic 500 so internals aren't leaked.
-    const isBusinessRuleError = /Insufficient|T\+1 Rule|Simulator state not found|exceed the allowed maximum/.test(
+    const isBusinessRuleError = /Insufficient|T\+\d Rule|Simulator state not found|exceed the allowed maximum/.test(
       message
     );
     return NextResponse.json(

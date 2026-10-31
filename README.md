@@ -33,7 +33,7 @@
 
 <br/>
 
-StockSimulatorBD is a **risk-free paper-trading simulator** for the Dhaka Stock Exchange (DSE). It mirrors real market conditions — live prices, T+1 settlement, broker commission, market hours — using a virtual, non-monetary trading balance, so students and first-time investors (including people moving from safer instruments like Sanchayapatra or fixed deposits) can build confidence before risking real capital.
+StockSimulatorBD is a **risk-free paper-trading simulator** for the Dhaka Stock Exchange (DSE). It mirrors real market conditions — live prices, T+2/T+3 settlement, broker commission, market hours — using a virtual, non-monetary trading balance, so students and first-time investors (including people moving from safer instruments like Sanchayapatra or fixed deposits) can build confidence before risking real capital.
 
 <br/>
 
@@ -74,7 +74,7 @@ StockSimulatorBD is a **risk-free paper-trading simulator** for the Dhaka Stock 
   <tr>
     <td><strong>🔒</strong></td>
     <td><strong>Server-Side, Tamper-Proof Trades</strong></td>
-    <td>Every BUY/SELL runs in an authoritative Firestore Admin SDK transaction (<code>app/api/simulator/trade</code>) — price, commission, and the T+1 rule are all re-derived and enforced server-side, not trusted from the client.</td>
+    <td>Every BUY/SELL runs in an authoritative Firestore Admin SDK transaction (<code>app/api/simulator/trade</code>) — price, commission, and the T+2/T+3 settlement rule are all re-derived and enforced server-side, not trusted from the client.</td>
   </tr>
   <tr>
     <td><strong>📅</strong></td>

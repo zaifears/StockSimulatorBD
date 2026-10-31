@@ -129,7 +129,7 @@ export default function BlogExplorer({ posts }: { posts: ExplorerPost[] }) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Try BO account, broker, circuit breaker, T+1"
+            placeholder="Try BO account, broker, circuit breaker, T+2"
             className="h-12 w-full rounded-xl border border-slate-300 bg-slate-50 pl-11 pr-11 text-base text-slate-900 transition placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:bg-slate-950"
           />
           {query !== '' && (

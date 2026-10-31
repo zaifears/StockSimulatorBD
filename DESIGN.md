@@ -159,7 +159,7 @@ components:
 
 **Creative North Star: "The Training Floor"**
 
-StockSimulatorBD is a rehearsal room built next door to the Dhaka Stock Exchange. Every instrument on the floor is a faithful replica of the real one — the same tickers, the same T+1 wait, the same commission bite, the same 2:15 PM bell — and the replica-ness is stated openly rather than disguised. This is not a pretend brokerage trying to pass for the real thing. It is a place to practice, and the whole visual system exists to make practicing feel welcoming instead of forbidding.
+StockSimulatorBD is a rehearsal room built next door to the Dhaka Stock Exchange. Every instrument on the floor is a faithful replica of the real one — the same tickers, the same T+2 wait, the same commission bite, the same 2:15 PM bell — and the replica-ness is stated openly rather than disguised. This is not a pretend brokerage trying to pass for the real thing. It is a place to practice, and the whole visual system exists to make practicing feel welcoming instead of forbidding.
 
 The atmosphere is bright, encouraging, and approachable. The default surface is white, not black; sections alternate white and the faintest warm-grey band so a long page reads as a series of well-lit rooms rather than one dense terminal. Corners are generously soft (up to 24px). Icons sit in tinted rounded tiles. Nothing is cramped, nothing bristles. The audience arrives nervous — a student with no capital, or someone who has kept their savings in Sanchayapatra for a decade and finds the stock market intimidating — and the first job of the interface is to lower the pulse rate, not raise it. A deep navy dark mode exists and is fully supported, but it is the night shift of a bright building, not the system's home state.
 
@@ -196,7 +196,7 @@ A sober blue voice on bright paper, with the market's own green-and-red rationed
 
 ### Tertiary
 
-- **Coin Amber** (`#F59E0B`, deep `#D97706`): the virtual-currency and caution register. The coin balance pill in the navbar, the commission line in the trade sheet, T+1 lockout notices, and the "practice money has no real value" reminders. Amber is the color of *this is a simulation* — a warm caution, never an alarm.
+- **Coin Amber** (`#F59E0B`, deep `#D97706`): the virtual-currency and caution register. The coin balance pill in the navbar, the commission line in the trade sheet, settlement lockout notices, and the "practice money has no real value" reminders. Amber is the color of *this is a simulation* — a warm caution, never an alarm.
 - **Multi-Asset Allocation (Donut)**: `#F4A236` (Dominant holding ochre amber), `#85B84B` (Secondary holding olive leaf), `#E54D4C` (Coral), `#0AA892` (Teal). Dominant allocation uses warm amber so it never triggers false buy/sell associations.
 
 ### Neutral & Operating Surfaces
@@ -406,7 +406,7 @@ Candlesticks use the market-standard teal/coral pair (`#26A69A` up, `#EF5350` do
 - **Do** run primary app surfaces edge-to-edge on phones (`-mx-4 rounded-none sm:rounded-xl`).
 - **Do** strip semantic color from BUY/SELL when the market is closed; grey with `cursor-not-allowed` is the correct closed state.
 - **Do** use the icon-tile motif (48–56px `rounded-2xl`, 10% color tint, 1px tint border, 24px Lucide icon) instead of illustration.
-- **Do** reach for amber whenever the copy is about virtual currency, commission, T+1 waiting, or the fact that this is a simulation.
+- **Do** reach for amber whenever the copy is about virtual currency, commission, settlement waiting, or the fact that this is a simulation.
 - **Do** stay inside the three-rung dark ladder: `#090E17` page, `#111418` band, `#1A1F26` card, plus `#0B0E11` for chrome.
 - **Do** wrap decorative motion in `prefers-reduced-motion` guards and mark atmospheric layers `pointer-events-none aria-hidden`.
 - **Do** ship a `@supports not (backdrop-filter: ...)` fallback with every frosted surface.

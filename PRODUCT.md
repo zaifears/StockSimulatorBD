@@ -28,7 +28,7 @@ Success is nerve, not engagement: a user who practices here should approach thei
 
 ## Positioning
 
-**A DSE-native simulator, not a global simulator with Bangladeshi stocks in it.** Nearly every paper-trading platform targets US markets. This one is built around Dhaka's actual mechanics: live prices scraped from the DSE archive, T+1 settlement enforced per purchase lot, 0.4% broker commission, trading confined to DSE hours (10:00–14:15 Dhaka, Friday/Saturday weekend) and Bangladesh public holidays. A neighboring product cannot truthfully copy this without rebuilding for the same market.
+**A DSE-native simulator, not a global simulator with Bangladeshi stocks in it.** Nearly every paper-trading platform targets US markets. This one is built around Dhaka's actual mechanics: live prices scraped from the DSE archive, T+2/T+3 settlement enforced per purchase lot, 0.4% broker commission, trading confined to DSE hours (10:00–14:15 Dhaka, Friday/Saturday weekend) and Bangladesh public holidays. A neighboring product cannot truthfully copy this without rebuilding for the same market.
 
 **The simulation is authoritative, not decorative.** Trades execute server-side in a Firestore Admin SDK transaction that re-derives price, recomputes commission, and re-enforces every rule — the client is never trusted. This came out of a real incident in which client-writable balances were tampered to absurd values. Integrity of the practice environment is a product commitment, not an implementation detail.
 
@@ -43,7 +43,7 @@ Success is nerve, not engagement: a user who practices here should approach thei
 
 **One currency.** `artifacts/{appId}/users/{uid}/simulator/state.balance` is the real BDT-denominated trading balance — the only one, and the one users mean when they say "my balance" or "my coins." A separate legacy `users/{uid}.coins` gating currency existed early on for "premium"-style features and was removed entirely (code and data) as unused.
 
-**Simulation rules currently enforced:** live DSE prices during market hours; T+1 settlement per purchase lot; 0.4% commission (`COMMISSION_RATE = 0.004`); market-hours and holiday gating on both client and server; a 100,000,000 sane-balance cap re-checked by hand on every privileged write path because Admin SDK writes bypass Firestore rules entirely.
+**Simulation rules currently enforced:** live DSE prices during market hours; T+2 settlement per purchase lot (T+3 for category Z, stamped on each lot at purchase); 0.4% commission (`COMMISSION_RATE = 0.004`); market-hours and holiday gating on both client and server; a 100,000,000 sane-balance cap re-checked by hand on every privileged write path because Admin SDK writes bypass Firestore rules entirely.
 
 **Virtual economy and account tiers:** new verified accounts receive 10,000 free coins on the default **Bro Tier** (100% free core trading forever). Recharge is 20 BDT per 10,000 coins (500 coins per taka), minimum 20 BDT, maximum 5,000 BDT per request, in multiples of 20, subject to admin approval. Users desiring advanced risk analytics, sector exposure breakdown, and a +10% coin bonus (550 coins per taka) can upgrade to the **Boss Tier** for 20 BDT/month (31 days) or 99 BDT/6 months (185 days) via manual bKash verification at `/boss`. Core simulation mechanics and trading remain 100% free forever. Revenue from recharges and subscriptions is a practice-realism device and project sustainability mechanism, not an aggressive paywall or speculative business model.
 
@@ -87,4 +87,4 @@ No formal WCAG conformance level has been committed to. Two product-specific nee
 - **Performance is an accessibility issue here.** On mid/low-end Android over patchy carrier data, a heavy page is an excluding page. Offline resilience and payload discipline are inclusion requirements.
 - **Bangla script must remain possible.** Type and layout decisions should not foreclose the Bangla or bilingual content already on the roadmap.
 
-Financial-literacy level is the defining inclusion factor: users are assumed to be new to markets, so unexplained jargon (T+1, LTP, circuit breaker, BO account) is an access barrier and needs plain-language support wherever it appears.
+Financial-literacy level is the defining inclusion factor: users are assumed to be new to markets, so unexplained jargon (T+2, LTP, circuit breaker, BO account) is an access barrier and needs plain-language support wherever it appears.

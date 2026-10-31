@@ -178,8 +178,8 @@ export async function generatePortfolioPdf(data: StatementData) {
     const pnlPct = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
     const mktWeight = totals.currentValue > 0 ? (marketVal / totals.currentValue) * 100 : 0;
 
-    // Mature shares vs immature (authoritative DSE T+1 Dhaka calendar-day calculation)
-    const saleable = getSaleableQuantity(item);
+    // Settled vs still-settling shares (T+2 for A/B/G/N, T+3 for Z, counted in trading days)
+    const saleable = getSaleableQuantity(item, undefined, stock?.category);
     const lockIn = Math.max(0, item.quantity - saleable);
 
     const rowObj = {

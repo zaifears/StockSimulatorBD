@@ -4,11 +4,11 @@ import { absoluteUrl } from '@/lib/siteUrl';
 
 export const metadata: Metadata = {
   title: 'DSE Stock Simulator - Practice Trading with Virtual Currency | Stock Simulator BD',
-  description: 'Practice trading Dhaka Stock Exchange (DSE) stocks with virtual currency. Learn stock market investing risk-free with real-time market data, 0.4% commission simulation, and T+1 settlement rules.',
+  description: 'Practice trading Dhaka Stock Exchange (DSE) stocks with virtual currency. Learn stock market investing risk-free with real-time market data, 0.4% commission simulation, and T+2/T+3 settlement rules.',
   keywords: ['DSE simulator', 'stock trading practice', 'Dhaka Stock Exchange', 'virtual trading', 'learn stock market', 'Bangladesh stocks', 'paper trading'],
   openGraph: {
     title: 'DSE Stock Simulator | Stock Simulator BD - Practice Trading Risk-Free',
-    description: 'Practice trading Dhaka Stock Exchange stocks with virtual currency. Real-time market data, 0.4% commission, T+1 settlement rules. No real money involved.',
+    description: 'Practice trading Dhaka Stock Exchange stocks with virtual currency. Real-time market data, 0.4% commission, T+2/T+3 settlement rules. No real money involved.',
     url: absoluteUrl('/trade'),
     type: 'website',
     images: [

@@ -64,7 +64,7 @@ const PROFILES: Record<InstrumentType, Omit<InstrumentProfile, 'type'>> = {
     explainer:
       'Listed banks are among the most heavily traded names on the Dhaka Stock Exchange. A bank earns from the spread between what it pays depositors and what it charges borrowers, so its results move with interest rates, loan growth and the quality of its loan book.',
     practiceNote:
-      'Bank shares tend to trade actively, which makes them a reasonable starting point for practising order placement and holding a position through the T+1 wait.',
+      'Bank shares tend to trade actively, which makes them a reasonable starting point for practising order placement and holding a position through the settlement wait.',
   },
   company: {
     label: 'company',

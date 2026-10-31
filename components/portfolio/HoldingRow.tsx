@@ -6,13 +6,14 @@
 // the right, cost basis and P&L underneath.
 //
 // SALEABLE is a first-class figure here rather than something the user
-// discovers when the server rejects a sell. It is the T+1 eligible quantity
+// discovers when the server rejects a sell. It is the settled (T+2 / T+3) quantity
 // (see lib/utils/portfolio.ts), and the row says plainly how many shares are
 // locked and why.
 import React from 'react';
 import Link from 'next/link';
 import { Lock, LineChart } from 'lucide-react';
 import { getCompanyName } from '@/lib/dseCompanyNames';
+import { formatUnlockDate } from '@/lib/utils/settlement';
 import NotTradedInfo from '@/components/simulator/trade/NotTradedInfo';
 import type { HoldingMetrics } from '@/lib/utils/portfolio';
 
@@ -37,6 +38,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
   const {
     symbol, quantity, saleable, locked, avgCost, cost,
     ltp, marketValue, pnl, pnlPercent, dayPnl, dayChangePercent, traded, category, sector,
+    settlementLabel, nextUnlock,
   } = holding;
 
   const companyName = getCompanyName(symbol);
@@ -49,7 +51,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
     : !traded
       ? 'This stock has not traded today'
       : saleable === 0
-        ? 'All shares were bought today and are locked until tomorrow (T+1)'
+        ? `All shares are still settling (${settlementLabel})${nextUnlock ? `, next unlock ${formatUnlockDate(nextUnlock.date)}` : ''}`
         : undefined;
 
   const handleStockClick = () => {
@@ -155,7 +157,7 @@ export default function HoldingRow({ holding, marketOpen, onTrade, lastClose }: 
         <Figure
           label="Saleable"
           value={String(saleable)}
-          hint={locked > 0 ? `${locked} locked until tomorrow (T+1)` : undefined}
+          hint={locked > 0 ? `${locked} settling (${settlementLabel})${nextUnlock ? `, unlock ${formatUnlockDate(nextUnlock.date)}` : ''}` : undefined}
           warn={locked > 0}
         />
         <Figure label="Mkt Val" value={`৳${fmt(marketValue)}`} />

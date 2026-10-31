@@ -8,7 +8,7 @@
 // 4. 21 DSE Industry Sector Distribution (LankaBangla taxonomy)
 // 5. Dry Powder & Cash Deployment Ratio
 // 6. Lifetime Brokerage Fee Drag (0.4% transaction cost erosion audit)
-// 7. T+1 Immediate Liquidity & Overnight Lockup Radar
+// 7. Settlement (T+2 / T+3) Liquidity & Lockup Radar
 // 8. Single-Stock & Top 3 Concentration Risk
 //
 // Security & DOM Isolation:
@@ -408,7 +408,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
               </div>
             </div>
 
-            {/* 7. T+1 Immediate Liquidity Radar */}
+            {/* 7. Settlement Liquidity Radar */}
             <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2.5">
@@ -417,7 +417,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-gray-900 dark:text-white">
-                      7. T+1 Immediate Liquidity & Lockup Radar
+                      7. Settlement Liquidity & Lockup Radar
                     </h4>
                     <p className="text-[10px] text-gray-400">
                       Capital ready to sell right now vs shares locked in overnight DSE clearing
@@ -437,13 +437,13 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
                     <div className="font-mono font-bold text-sm text-emerald-600">৳142,500 (72%)</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] font-bold text-gray-400">T+1 Locked</div>
+                    <div className="text-[10px] font-bold text-gray-400">Settling (T+2/T+3)</div>
                     <div className="font-mono font-bold text-sm text-amber-600">৳55,200 (28%)</div>
                   </div>
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900/10 dark:bg-black/20">
                   <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-[#1A2230]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/40 shadow-sm flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> Upgrade to Reveal T+1 Liquidity
+                    <Lock className="w-3 h-3" /> Upgrade to Reveal Settlement Liquidity
                   </span>
                 </div>
               </div>
@@ -1040,7 +1040,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
           </div>
         </div>
 
-        {/* 7. T+1 Immediate Liquidity & Overnight Clearing Radar */}
+        {/* 7. Settlement Liquidity & Clearing Radar */}
         <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2.5">
             <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
@@ -1048,7 +1048,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
             </div>
             <div>
               <h4 className="text-xs font-bold text-gray-900 dark:text-white">
-                T+1 Liquidity Radar
+                Settlement Liquidity Radar
               </h4>
               <p className="text-[10px] text-gray-400">Immediate saleable cash capacity</p>
             </div>
@@ -1073,7 +1073,7 @@ export default function PortfolioInsights({ insights, isBoss: isUnlocked = false
             <div className="text-right">
               <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-gray-400">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>Locked in T+1</span>
+                <span>Locked in settlement</span>
               </div>
               <div className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400">
                 ৳{fmt(liquidityRadar.lockedValue)}

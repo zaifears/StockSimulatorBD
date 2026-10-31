@@ -14,7 +14,8 @@ import { Minus, Plus, Search, X, ChevronDown, ChevronLeft, AlertCircle, CheckCir
 import AppShell from '@/components/app/AppShell';
 import { useSharedSimulator } from '@/contexts/SimulatorContext';
 import { searchByNameOrSymbol, getCompanyName } from '@/lib/dseCompanyNames';
-import { getSaleableQuantity, estimateOrder } from '@/lib/utils/portfolio';
+import { getSaleableQuantity, getHoldingNextUnlock, estimateOrder } from '@/lib/utils/portfolio';
+import { formatSettlement, formatUnlockDate, getSettlementDays } from '@/lib/utils/settlement';
 import NotTradedInfo from '@/components/simulator/trade/NotTradedInfo';
 
 export default function OrderPage() {
@@ -83,8 +84,10 @@ function OrderScreen() {
       .slice(0, 30);
   }, [symbolQuery, stocks]);
 
-  const saleable = holding ? getSaleableQuantity(holding) : 0;
+  const saleable = holding ? getSaleableQuantity(holding, undefined, stock?.category) : 0;
   const locked = holding ? holding.quantity - saleable : 0;
+  const settlementLabel = formatSettlement(getSettlementDays(stock?.category));
+  const nextUnlock = holding ? getHoldingNextUnlock(holding, new Date(), stock?.category) : null;
   const price = stock?.ltp || 0;
   const estimate = useMemo(() => estimateOrder(orderType, quantity, price), [orderType, quantity, price]);
 
@@ -108,7 +111,7 @@ function OrderScreen() {
               ? `Insufficient balance — need ৳${estimate.net.toFixed(2)}`
               : orderType === 'SELL' && !hasEnoughShares
                 ? saleable === 0 && holding
-                  ? 'All shares locked until tomorrow (T+1)'
+                  ? `All shares are still settling (${settlementLabel})${nextUnlock ? `, next unlock ${formatUnlockDate(nextUnlock.date)}` : ''}`
                   : `Only ${saleable} share${saleable === 1 ? '' : 's'} eligible to sell`
                 : undefined;
 
@@ -282,7 +285,7 @@ function OrderScreen() {
             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
               <span className="text-gray-500 dark:text-gray-400">You hold {holding.quantity} shares</span>
               <span className={`font-mono font-bold ${locked > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                {saleable} saleable{locked > 0 ? ` (${locked} locked)` : ''}
+                {saleable} saleable{locked > 0 ? ` (${locked} settling, ${settlementLabel})` : ''}
               </span>
             </div>
           )}

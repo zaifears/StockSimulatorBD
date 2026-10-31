@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'StockSimulatorBD: DSE Trading Simulator',
-  description: "Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+1 rules and virtual money.",
+  description: "Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+2/T+3 settlement and virtual money.",
   applicationName: 'StockSimulatorBD',
   keywords: [
     "DSE simulator", "paper trading Bangladesh", "Dhaka Stock Exchange simulator",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "StockSimulatorBD: DSE Trading Simulator. Practice Stock Trading Risk-Free",
-    description: "The only free paper trading simulator built for the Dhaka Stock Exchange. Trade 300+ DSE stocks with virtual currency, real-time market data, T+1 settlement rules, and 0.4% commission. Built for students learning the market and for new investors moving beyond Sanchayapatra and fixed deposits into stocks. Practice first, risk nothing.",
+    description: "The only free paper trading simulator built for the Dhaka Stock Exchange. Trade 300+ DSE stocks with virtual currency, real-time market data, T+2/T+3 settlement rules, and 0.4% commission. Built for students learning the market and for new investors moving beyond Sanchayapatra and fixed deposits into stocks. Practice first, risk nothing.",
     url: SITE_URL,
     siteName: "StockSimulatorBD",
     type: "website",

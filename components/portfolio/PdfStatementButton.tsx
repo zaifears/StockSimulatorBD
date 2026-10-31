@@ -220,7 +220,7 @@ export default function PdfStatementButton({
             </div>
 
             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
-              Download clean, professional DSE paper-trading portfolio statements complete with lot-by-lot T+1 lock-in maturity, gain/loss breakdowns, and portfolio equity valuation for your simulated trading records.
+              Download clean, professional DSE paper-trading portfolio statements complete with lot-by-lot T+2/T+3 settlement lock-in, gain/loss breakdowns, and portfolio equity valuation for your simulated trading records.
             </p>
 
             <div className="space-y-2 mb-6 bg-amber-50/60 dark:bg-amber-500/5 border border-amber-200/80 dark:border-amber-500/20 rounded-xl p-3.5">

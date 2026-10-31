@@ -72,7 +72,7 @@ export default function PolicyPage() {
       </p>
       <ul className="list-disc list-inside mb-4">
         <li>Nothing on this platform — including prices, charts, AI-generated analysis, or any other content — is financial, investment, tax, or legal advice. It should not be relied on to make real investment decisions.</li>
-        <li>Market data is sourced from public DSE information and may be delayed, incomplete, or occasionally inaccurate. We simulate real conditions (T+1 settlement, commission, market hours) as closely as we can, but simulated performance will not exactly match real trading outcomes.</li>
+        <li>Market data is sourced from public DSE information and may be delayed, incomplete, or occasionally inaccurate. We simulate real conditions (T+2/T+3 settlement, commission, market hours) as closely as we can, but simulated performance will not exactly match real trading outcomes.</li>
         <li>We are not registered with, endorsed by, or affiliated with the Dhaka Stock Exchange, the Bangladesh Securities and Exchange Commission, or any licensed broker.</li>
         <li>Past or simulated performance on this platform is not a guarantee or prediction of how any real investment will perform. Before investing real money, please consult a licensed financial advisor or your BO account broker.</li>
         <li>If you&apos;re new to investing — including if you&apos;re moving from safer instruments like Sanchayapatra, fixed deposits, or other government securities into the stock market — please treat this simulator as a practice space to build understanding, not as a signal of what to buy or sell with real capital.</li>

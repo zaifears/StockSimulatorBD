@@ -14,6 +14,13 @@ import {
 } from 'lucide-react';
 import type { MarketInfo, SimulatorState } from '@/hooks/useSimulator';
 import { getCompanyName } from '@/lib/dseCompanyNames';
+import {
+  formatSettlement,
+  formatUnlockDate,
+  getNextUnlock,
+  getSaleableQuantityFromLots,
+  getSettlementDays,
+} from '@/lib/utils/settlement';
 import NotTradedInfo from './NotTradedInfo';
 import { useAuth } from '@/contexts/AuthContext';
 import BossPostTradeNudge, { incrementTradeCount } from '@/components/boss/BossPostTradeNudge';
@@ -89,21 +96,20 @@ export default function TradeModal({
     const holdingQty = holding?.quantity || 0;
     const shortage = Math.max(0, Math.round((total - availableBalance) * 100) / 100);
 
-    // Shares bought today aren't sellable yet (T+1 rule). Mirrors the
-    // per-lot eligibility check in app/api/simulator/trade/route.ts —
-    // falls back to the whole holding as one lot for pre-lots portfolios.
-    const bdOpts = { timeZone: 'Asia/Dhaka' } as const;
-    const todayStr = new Date().toLocaleDateString('en-CA', bdOpts);
+    // Shares that have not finished settling (T+2 for categories A/B/G/N, T+3
+    // for Z, counted in trading days) aren't sellable yet. Mirrors the per-lot
+    // check in app/api/simulator/trade/route.ts, and falls back to the whole
+    // holding as one lot for pre-lots portfolios.
+    const now = new Date();
     const lots = holding
       ? holding.lots && holding.lots.length > 0
         ? holding.lots
         : [{ quantity: holding.quantity, purchaseDate: holding.purchaseDate }]
       : [];
-    const sellableQty = lots.reduce((sum, lot) => {
-      const lotDateStr = new Date(lot.purchaseDate).toLocaleDateString('en-CA', bdOpts);
-      return lotDateStr === todayStr ? sum : sum + lot.quantity;
-    }, 0);
-    const hasT1Restriction = holdingQty > 0 && sellableQty < holdingQty;
+    const sellableQty = getSaleableQuantityFromLots(lots, now, stockCategory);
+    const settlementLabel = formatSettlement(getSettlementDays(stockCategory));
+    const nextUnlock = getNextUnlock(lots, now, stockCategory);
+    const hasSettlementLock = holdingQty > 0 && sellableQty < holdingQty;
     const notEnoughOwned = qty > holdingQty;
     const canSellQty = qty <= sellableQty;
 
@@ -119,7 +125,9 @@ export default function TradeModal({
       sellableQty,
       canSellQty,
       shortage,
-      hasT1Restriction,
+      hasSettlementLock,
+      settlementLabel,
+      nextUnlock,
       notEnoughOwned,
       isTraded,
       lastClose,
@@ -370,6 +378,12 @@ export default function TradeModal({
                       {stockCategory}
                     </span>
                   )}
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50"
+                    title={`Shares settle ${formatSettlement(getSettlementDays(stockCategory))} (trading days) after purchase`}
+                  >
+                    {formatSettlement(getSettlementDays(stockCategory))}
+                  </span>
                 </div>
                 {companyName && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-0.5">
@@ -469,13 +483,13 @@ export default function TradeModal({
                 </div>
               )}
 
-              {tradeType === 'sell' && tradeSummary.hasT1Restriction && (
+              {tradeType === 'sell' && tradeSummary.hasSettlementLock && (
                 <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl flex items-center gap-2 text-xs w-full max-w-full">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <p className="text-amber-700 dark:text-amber-300 font-medium">
                     {tradeSummary.sellableQty > 0
-                      ? `${tradeSummary.holdingQty - tradeSummary.sellableQty} of ${tradeSummary.holdingQty} shares were bought today and locked until tomorrow (T+1 Rule).`
-                      : 'All owned shares were bought today and locked until tomorrow (T+1 Rule).'}
+                      ? `${tradeSummary.holdingQty - tradeSummary.sellableQty} of ${tradeSummary.holdingQty} shares are still settling (${tradeSummary.settlementLabel} Rule).${tradeSummary.nextUnlock ? ` ${tradeSummary.nextUnlock.quantity} unlock on ${formatUnlockDate(tradeSummary.nextUnlock.date)}.` : ''}`
+                      : `All owned shares are still settling (${tradeSummary.settlementLabel} Rule).${tradeSummary.nextUnlock ? ` They unlock on ${formatUnlockDate(tradeSummary.nextUnlock.date)}.` : ''}`}
                   </p>
                 </div>
               )}
@@ -608,7 +622,7 @@ export default function TradeModal({
                 <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-xl border border-red-200 dark:border-red-900/40 font-medium">
                   {tradeSummary.notEnoughOwned
                     ? `You only own ${tradeSummary.holdingQty} shares.`
-                    : `Only ${tradeSummary.sellableQty} shares are eligible to sell today (T+1 Rule).`}
+                    : `Only ${tradeSummary.sellableQty} shares are eligible to sell today (${tradeSummary.settlementLabel} Rule).`}
                 </div>
               )}
             </div>

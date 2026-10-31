@@ -19,6 +19,7 @@ import StockNewsSection from '@/components/stocks/StockNewsSection';
 import { SITE_URL } from '@/lib/siteUrl';
 import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 import { getCleanBrandName } from '@/lib/dseCompanyNames';
+import { formatSettlement, getSettlementDays } from '@/lib/utils/settlement';
 
 const getAllDseStocks = cache(fetchAllStocks);
 
@@ -251,7 +252,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
     },
     {
       q: `Can I practice trading ${stock.symbol} without real money?`,
-      a: `Yes. StockSimulatorBD lets you buy and sell ${stock.symbol} using a virtual balance. Orders follow the same rules the real market applies, including authentic DSE trading hours (10:00 to 14:15 BST), T+1 settlement lots and a 0.40% commission, but no real money is ever involved and the balance cannot be withdrawn.`,
+      a: `Yes. StockSimulatorBD lets you buy and sell ${stock.symbol} using a virtual balance. Orders follow the same rules the real market applies, including authentic DSE trading hours (10:00 to 14:15 BST), T+2/T+3 settlement lots (by market category) and a 0.40% commission, but no real money is ever involved and the balance cannot be withdrawn.`,
     },
     {
       q: `Do I need a BO account to analyze or trade ${stock.symbol} here?`,
@@ -340,7 +341,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
     { label: 'Exchange', value: 'DSE' },
     { label: 'Ticker', value: stock.symbol },
     { label: 'Trading hours', value: '10:00 to 14:15' },
-    { label: 'Settlement', value: 'T+1' },
+    { label: 'Settlement', value: formatSettlement(getSettlementDays(fundamentals?.category)) },
     { label: 'Commission', value: '0.40%' },
     { label: 'Practice balance', value: '৳10,000' },
   ];
@@ -449,8 +450,8 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
               <p className="mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
                 Nothing is loosened to make practice easier. An order for {stock.symbol} is
                 accepted only while the Dhaka Stock Exchange is open, commission is deducted the
-                way a broker would deduct it, and shares bought today cannot be sold until the
-                next trading day.
+                way a broker would deduct it, and shares cannot be sold until they have settled:
+                two trading days after purchase for categories A, B, G and N, three for category Z.
               </p>
 
               <dl className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-200 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">

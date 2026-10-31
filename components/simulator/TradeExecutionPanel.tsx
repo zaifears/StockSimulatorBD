@@ -17,8 +17,10 @@ interface TradeExecutionPanelProps {
   lastClose?: number;
   availableBalance: number;
   currentHoldings: number;
-  /** Mature shares eligible to sell today under the DSE T+1 settlement rule. */
+  /** Settled shares eligible to sell today (T+2 for categories A/B/G/N, T+3 for Z). */
   saleableHoldings?: number;
+  /** The stock's settlement cycle, "T+2" or "T+3". */
+  settlementLabel?: string;
   isMarketOpen: boolean;
   isAuthenticated: boolean;
   onExecute: (type: 'BUY' | 'SELL', quantity: number) => Promise<void>;
@@ -34,6 +36,7 @@ export default function TradeExecutionPanel({
   availableBalance,
   currentHoldings,
   saleableHoldings,
+  settlementLabel,
   isMarketOpen,
   isAuthenticated,
   onExecute
@@ -128,7 +131,7 @@ export default function TradeExecutionPanel({
             <p className="font-mono font-bold text-lg text-gray-900 dark:text-white tabular-nums">{currentHoldings}</p>
             {lockedHoldings > 0 && (
               <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
-                {effectiveSaleable} saleable · {lockedHoldings} T+1 locked
+                {effectiveSaleable} saleable · {lockedHoldings} settling ({settlementLabel ?? 'T+2'})
               </p>
             )}
           </div>

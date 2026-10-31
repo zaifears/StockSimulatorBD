@@ -15,7 +15,7 @@ const features = [
   {
     icon: <Clock className="w-6 h-6 text-amber-500" />,
     title: 'Realistic Rules',
-    description: 'Enforces T+1 limits and authentic 0.4% broker commissions.'
+    description: 'Enforces T+2/T+3 settlement and authentic 0.4% broker commissions.'
   },
   {
     icon: <TrendingUp className="w-6 h-6 text-indigo-500" />,

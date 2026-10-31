@@ -202,7 +202,7 @@ function ProfileTierScreen() {
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Live DSE price quotes, TradingView candlestick charts, T+1 settlement cycle, 0.40% broker commission, and ৳10,000 starting demo cash.
+                Live DSE price quotes, TradingView candlestick charts, T+2/T+3 settlement cycle, 0.40% broker commission, and ৳10,000 starting demo cash.
               </p>
             </div>
           </div>
