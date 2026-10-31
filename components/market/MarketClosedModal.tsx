@@ -208,11 +208,11 @@ export default function MarketClosedModal({
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-md bg-white dark:bg-[#161B22] border-t sm:border border-gray-200 dark:border-gray-800 rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88dvh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 sm:zoom-in-95 duration-200"
+        className="w-full sm:max-w-md bg-white dark:bg-[#161B22] border-t sm:border border-gray-200 dark:border-gray-800 rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92dvh] sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 sm:p-6 pb-4 border-b border-gray-100 dark:border-gray-800/80 flex items-start justify-between gap-3 shrink-0">
+        <div className="px-5 pt-4 pb-3 sm:px-6 border-b border-gray-100 dark:border-gray-800/80 flex items-start justify-between gap-3 shrink-0">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
               <Clock className="w-5 h-5" />
@@ -239,9 +239,9 @@ export default function MarketClosedModal({
           </button>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+        <div className="px-5 pt-4 sm:px-6 space-y-3 overflow-y-auto flex-1 overscroll-contain pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5">
           {/* Next Session Highlight Card */}
-          <div className="p-4 rounded-2xl bg-gray-50 dark:bg-[#0E1520] border border-gray-200/70 dark:border-gray-800/70 text-left">
+          <div className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-[#0E1520] border border-gray-200/70 dark:border-gray-800/70 text-left">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold tracking-wider text-gray-400 dark:text-gray-500 uppercase">
                 Next Trading Session
@@ -256,7 +256,8 @@ export default function MarketClosedModal({
             </div>
           </div>
 
-          {/* Timing Selector - Default: At market open (10:00 AM) */}
+          {/* Timing Selector - Default: At market open (10:00 AM). Hidden once a reminder is saved, so the confirmation fits without scrolling */}
+          {!isConfirmed && (
           <div>
             <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1.5">
               Remind me:
@@ -286,13 +287,14 @@ export default function MarketClosedModal({
               </button>
             </div>
           </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="space-y-2.5 pt-1">
+          <div className="space-y-2">
             <button
               type="button"
               onClick={handleGoogleCalendar}
-              className={`w-full h-12 px-4 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-between shadow-md ${
+              className={`w-full h-11 px-4 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-between shadow-md ${
                 isConfirmed
                   ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
                   : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.98] shadow-blue-600/20'
@@ -309,18 +311,21 @@ export default function MarketClosedModal({
               <ExternalLink className="w-4 h-4 opacity-70" />
             </button>
 
-            {/* Explanatory Redirect Note */}
-            <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
-              <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <span>
-                You will be redirected to Google Calendar — just click <strong>&quot;Save&quot;</strong> in the next screen.
-              </span>
-            </div>
+            {/* Explanatory Redirect Note: only before the first click, so the
+                confirmation that replaces it still fits on a short laptop screen */}
+            {!pendingGCalReturn && !isConfirmed && (
+              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
+                <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <span>
+                  You will be redirected to Google Calendar — just click <strong>&quot;Save&quot;</strong> in the next screen.
+                </span>
+              </div>
+            )}
 
             <button
               type="button"
               onClick={handleAppleIcs}
-              className="w-full h-12 px-4 rounded-xl font-bold text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white active:scale-[0.98] transition-all flex items-center justify-between border border-gray-200/80 dark:border-gray-700/80"
+              className="w-full h-11 px-4 rounded-xl font-bold text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white active:scale-[0.98] transition-all flex items-center justify-between border border-gray-200/80 dark:border-gray-700/80"
             >
               <span className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-amber-500" />
@@ -352,7 +357,7 @@ export default function MarketClosedModal({
 
           {/* Confirmed Status Card & Thank You Banner */}
           {isConfirmed && (
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/15 to-teal-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-100 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/15 to-teal-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-100 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                   <CheckCircle2 className="w-5 h-5" />
@@ -369,22 +374,20 @@ export default function MarketClosedModal({
                   <p className="text-xs text-emerald-800/85 dark:text-emerald-200/85 mt-1 leading-relaxed">
                     Thank you for setting a reminder! We look forward to seeing you when DSE trading begins at <strong className="text-emerald-950 dark:text-white">{nextSession.nextOpenDhakaFormatted}</strong>.
                   </p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-2.5 px-4 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 transition-all shadow-xs"
+                  >
+                    Done · Return to Simulator
+                  </button>
                 </div>
-              </div>
-              <div className="mt-3 pt-2.5 border-t border-emerald-500/20 flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 transition-all shadow-xs"
-                >
-                  Done · Return to Simulator
-                </button>
               </div>
             </div>
           )}
 
           {/* Status Feedback Toast */}
-          {copiedStatus && (
+          {copiedStatus && !isConfirmed && (
             <div className="py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in duration-150">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{copiedStatus}</span>
@@ -392,7 +395,7 @@ export default function MarketClosedModal({
           )}
 
           {/* Recurring Option */}
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 text-center">
+          <div className="pt-1.5 border-t border-gray-100 dark:border-gray-800/80 text-center">
             <button
               type="button"
               onClick={handleWeeklyRecurringIcs}
