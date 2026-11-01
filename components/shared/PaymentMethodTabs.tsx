@@ -56,7 +56,7 @@ export const PAYMENT_DETAILS = {
     type: 'Personal (Send Money)',
     tabLabel: 'bKash Send Money',
     badge: 'Personal Number',
-    imagePath: '',
+    imagePath: '/payment/bkash-send-money.png',
   },
   otherMfs: {
     number: '01865333143',
@@ -934,7 +934,7 @@ export default function PaymentMethodTabs({
                 </div>
               )}
 
-              {/* Sub-View 3B: bKash Send Money (Personal - QR Hidden per user request) */}
+              {/* Sub-View 3B: bKash Send Money (Personal BanglaQR) */}
               {bkashSubTab === 'personal' && (
                 <div className="rounded-2xl overflow-hidden shadow-sm border border-[#D12053]/30 bg-gradient-to-br from-[#D12053] to-[#B01040] text-white">
                   {/* Header strip */}
@@ -950,72 +950,128 @@ export default function PaymentMethodTabs({
                     </span>
                   </div>
 
-                  {/* Clean No-QR Layout */}
+                  {/* QR + Instruction Layout */}
                   <div className="p-4 sm:p-5">
-                    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#151c27] text-gray-900 dark:text-gray-100 border border-pink-300 dark:border-pink-900/40 shadow-sm space-y-4 mb-4">
-                      {/* Notice Alert */}
-                      <div className="p-3 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-800/60 text-pink-900 dark:text-pink-200 text-xs flex items-start gap-2.5">
-                        <Smartphone className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0 mt-0.5" />
-                        <div className="leading-relaxed">
-                          <strong className="font-bold">Personal Account Transfer:</strong> bKash does not provide QR codes for personal accounts anymore. Please use <strong>&ldquo;Send Money&rdquo;</strong> in your bKash app or dial <code className="bg-pink-100 dark:bg-pink-900/50 px-1 py-0.5 rounded font-mono font-bold">*247#</code> directly to our personal number below.
+                    <div className="p-4 rounded-2xl bg-white dark:bg-[#151c27] text-gray-900 dark:text-gray-100 border border-pink-300 dark:border-pink-900/40 shadow-sm flex flex-col md:flex-row items-center justify-between gap-5 mb-4">
+                      {/* QR Image Box */}
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="relative group p-2.5 bg-white rounded-2xl border-2 border-[#D12053] shadow-md">
+                          {imageErrorMap[PAYMENT_DETAILS.bkashSendMoney.imagePath] ? (
+                            <StylizedQrFallback
+                              title="bKash Personal QR"
+                              subText="Scan & Choose 'Send Money'"
+                              brandColor="pink"
+                            />
+                          ) : (
+                            <div
+                              onClick={() =>
+                                setActiveZoomModal({
+                                  src: PAYMENT_DETAILS.bkashSendMoney.imagePath,
+                                  title: 'bKash Send Money QR',
+                                  variant: 'qr',
+                                  brand: 'bkash',
+                                  caption: 'Scan with bKash or any bank app and choose "Send Money".',
+                                })
+                              }
+                              className="relative w-52 sm:w-60 aspect-[800/1060] overflow-hidden rounded-xl bg-white flex items-center justify-center cursor-pointer group"
+                              title="Click to enlarge"
+                            >
+                              <Image
+                                src={PAYMENT_DETAILS.bkashSendMoney.imagePath}
+                                alt="bKash Send Money QR"
+                                width={800}
+                                height={1060}
+                                className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform"
+                                onError={() => handleImageError(PAYMENT_DETAILS.bkashSendMoney.imagePath)}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-2.5 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveZoomModal({
+                                src: PAYMENT_DETAILS.bkashSendMoney.imagePath,
+                                title: 'bKash Send Money QR',
+                                variant: 'qr',
+                                brand: 'bkash',
+                                caption: 'Scan with bKash or any bank app and choose "Send Money".',
+                              })
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-700 dark:text-pink-400 hover:underline bg-pink-50 dark:bg-pink-950/40 px-2.5 py-1 rounded-lg border border-pink-200 dark:border-pink-800"
+                          >
+                            <Maximize2 className="w-3 h-3" />
+                            <span>View / Enlarge QR</span>
+                          </button>
+                          <a
+                            href={PAYMENT_DETAILS.bkashSendMoney.imagePath}
+                            download="StockSimulatorBD_bKash_SendMoney.png"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:underline bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700"
+                          >
+                            <span>Download</span>
+                          </a>
                         </div>
                       </div>
 
-                      {/* Manual Copy Details Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                          <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
-                              bKash Personal Number
-                            </span>
-                            <span className="font-mono text-base sm:text-lg font-black text-gray-900 dark:text-white block mt-0.5">
-                              {PAYMENT_DETAILS.bkashSendMoney.number}
-                            </span>
+                      {/* Manual Copy Details */}
+                      <div className="flex-1 space-y-3 w-full text-xs">
+                        <div className="grid grid-cols-1 gap-3 text-xs">
+                          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                                bKash Personal Number
+                              </span>
+                              <span className="font-mono text-base sm:text-lg font-black text-gray-900 dark:text-white block mt-0.5">
+                                {PAYMENT_DETAILS.bkashSendMoney.number}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(PAYMENT_DETAILS.bkashSendMoney.number, 'send_num')}
+                              className="px-3 py-2 rounded-lg bg-[#D12053] hover:bg-[#b01040] text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                            >
+                              {copiedKey === 'send_num' ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                              <span>{copiedKey === 'send_num' ? 'Copied' : 'Copy Number'}</span>
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(PAYMENT_DETAILS.bkashSendMoney.number, 'send_num')}
-                            className="px-3 py-2 rounded-lg bg-[#D12053] hover:bg-[#b01040] text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
-                          >
-                            {copiedKey === 'send_num' ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-                            <span>{copiedKey === 'send_num' ? 'Copied' : 'Copy Number'}</span>
-                          </button>
+
+                          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
+                                Exact Amount to Send
+                              </span>
+                              <span className="font-mono text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                                {formattedAmount}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(amount.toFixed(2), 'send_amt')}
+                              className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
+                            >
+                              {copiedKey === 'send_amt' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                              <span>{copiedKey === 'send_amt' ? 'Copied' : 'Copy Amount'}</span>
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#1a2130] border border-gray-200 dark:border-gray-800 flex items-center justify-between gap-2">
-                          <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block">
-                              Exact Amount to Send
-                            </span>
-                            <span className="font-mono text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
-                              {formattedAmount}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(amount.toFixed(2), 'send_amt')}
-                            className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
-                          >
-                            {copiedKey === 'send_amt' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                            <span>{copiedKey === 'send_amt' ? 'Copied' : 'Copy Amount'}</span>
-                          </button>
+                        {/* Step-by-Step Instructions */}
+                        <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80">
+                          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2">
+                            Step-by-Step Instructions:
+                          </span>
+                          <ol className="space-y-1.5 text-gray-700 dark:text-gray-300 text-xs">
+                            <li>• Open your bKash app or dial <code className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">*247#</code></li>
+                            <li>• Select <strong>&ldquo;Send Money&rdquo;</strong> (or scan the QR)</li>
+                            <li>• Enter Personal Number <strong>{PAYMENT_DETAILS.bkashSendMoney.number}</strong></li>
+                            <li>• Enter Amount <strong>{formattedAmount}</strong></li>
+                            <li>• Enter your bKash PIN to confirm transfer</li>
+                            <li>• Copy the <strong>Transaction ID (TrxID)</strong> from confirmation SMS or app receipt</li>
+                            <li>• Paste TrxID in the box below (Mandatory). Optional: add your WhatsApp number for ease.</li>
+                          </ol>
                         </div>
-                      </div>
-
-                      {/* Step-by-Step Instructions */}
-                      <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80">
-                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block mb-2">
-                          Step-by-Step Instructions:
-                        </span>
-                        <ol className="space-y-1.5 text-gray-700 dark:text-gray-300 text-xs">
-                          <li>• Open your bKash app or dial <code className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">*247#</code></li>
-                          <li>• Select <strong>&ldquo;Send Money&rdquo;</strong></li>
-                          <li>• Enter Personal Number <strong>{PAYMENT_DETAILS.bkashSendMoney.number}</strong></li>
-                          <li>• Enter Amount <strong>{formattedAmount}</strong></li>
-                          <li>• Enter your bKash PIN to confirm transfer</li>
-                          <li>• Copy the <strong>Transaction ID (TrxID)</strong> from confirmation SMS or app receipt</li>
-                          <li>• Paste TrxID in the box below (Mandatory). Optional: add your WhatsApp number for ease.</li>
-                        </ol>
                       </div>
                     </div>
                   </div>
