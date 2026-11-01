@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       if (activeMarketOpen && ageMinutes > 15) {
         isStale = true;
         priceStatus = 'stale';
-      } else if (source === 'lankabd-failsafe') {
+      } else if (source === 'lankabd-failsafe' || source === 'dse-direct') {
         priceStatus = 'failsafe-active';
       }
     } else {

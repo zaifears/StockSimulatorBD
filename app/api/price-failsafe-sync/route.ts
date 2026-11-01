@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/firebaseAdmin';
 import { isMarketOpenCorroborated } from '@/lib/utils/marketHours';
 import { sendAdminAlertEmail } from '@/lib/resendAdmin';
 import { verifyCronSecret } from '@/lib/utils/cronAuth';
+import { fetchDseDirect } from '@/lib/dseDirect';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,33 @@ interface FailsafeStatus {
 function adminPanelLink(): string {
   const domain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'https://www.stocksimulator.tech';
   return `${domain.replace(/\/+$/, '')}/admin`;
+}
+
+async function fetchLankaPrices(): Promise<unknown[]> {
+  const pythonRes = await fetch(buildSyncUrl(), {
+    headers: { 'User-Agent': 'StockSimulatorBD-PriceFailsafeSync/1.0' },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!pythonRes.ok) {
+    const body = await pythonRes.text();
+    throw new Error(`lanka_price_sync HTTP ${pythonRes.status}: ${body.slice(0, 300)}`);
+  }
+
+  const contentType = pythonRes.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const body = await pythonRes.text();
+    throw new Error(`lanka_price_sync returned non-JSON (${contentType}). Body: ${body.slice(0, 300)}`);
+  }
+
+  const payload = await pythonRes.json();
+  const stocks = payload?.stocks;
+  if (!Array.isArray(stocks) || stocks.length < MIN_TOTAL_SYMBOLS) {
+    throw new Error(
+      `lanka_price_sync returned ${Array.isArray(stocks) ? stocks.length : 'non-array'} stocks (need >= ${MIN_TOTAL_SYMBOLS})`
+    );
+  }
+  return stocks;
 }
 
 export async function GET(request: NextRequest) {
@@ -125,7 +153,7 @@ export async function GET(request: NextRequest) {
           </div>
           <div style="background: #f7fafc; padding: 20px; border: 1px solid #e2e8f0;">
             <p style="color: #1a202c;">api/market_sync.py is writing fresh data again as of ${nowIso}.</p>
-            <p style="color: #1a202c;">The lankabd.com failsafe (Scraper B) has been deactivated. It had been active since ${status.activatedAt ?? 'an earlier check'}.</p>
+            <p style="color: #1a202c;">The failsafe has been deactivated. It had been active since ${status.activatedAt ?? 'an earlier check'}.</p>
           </div>
           <div style="background: white; padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-top: none;">
             <a href="${adminPanelLink()}" style="display: inline-block; background: #16a34a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open Admin Panel</a>
@@ -150,7 +178,7 @@ export async function GET(request: NextRequest) {
 
   // ── Primary stale during market hours — activate the failsafe ───────────
   console.warn(
-    `[price-failsafe-sync] Primary stale (age ${Math.round(ageMs / 60000)}m, lastUpdated=${primaryLastUpdated ?? 'never'}) — trying lankabd.com failsafe`
+    `[price-failsafe-sync] Primary stale (age ${Math.round(ageMs / 60000)}m, lastUpdated=${primaryLastUpdated ?? 'never'}) — trying direct DSE, then lankabd.com failsafe`
   );
 
   const shouldAlert =
@@ -158,35 +186,27 @@ export async function GET(request: NextRequest) {
 
   let scrapedStocks: unknown[] | null = null;
   let scrapeError: string | null = null;
+  let scrapedSource: 'dse-direct' | 'lankabd-failsafe' = 'lankabd-failsafe';
+  let scrapedMarketStatus: string | null = null;
 
+  // Cheapest, most reliable option first: DSE's own feed, fetched from this
+  // function. Only if that fails do we try the VPS-hosted lankabd scraper.
   try {
-    const pythonRes = await fetch(buildSyncUrl(), {
-      headers: { 'User-Agent': 'StockSimulatorBD-PriceFailsafeSync/1.0' },
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!pythonRes.ok) {
-      const body = await pythonRes.text();
-      throw new Error(`lanka_price_sync HTTP ${pythonRes.status}: ${body.slice(0, 300)}`);
-    }
-
-    const contentType = pythonRes.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      const body = await pythonRes.text();
-      throw new Error(`lanka_price_sync returned non-JSON (${contentType}). Body: ${body.slice(0, 300)}`);
-    }
-
-    const payload = await pythonRes.json();
-    const stocks = payload?.stocks;
-    if (!Array.isArray(stocks) || stocks.length < MIN_TOTAL_SYMBOLS) {
-      throw new Error(
-        `lanka_price_sync returned ${Array.isArray(stocks) ? stocks.length : 'non-array'} stocks (need >= ${MIN_TOTAL_SYMBOLS})`
-      );
-    }
-    scrapedStocks = stocks;
+    const direct = await fetchDseDirect();
+    scrapedStocks = direct.stocks;
+    scrapedSource = 'dse-direct';
+    scrapedMarketStatus = direct.marketStatus;
   } catch (err: any) {
-    scrapeError = err.message || 'Unknown scrape error';
-    console.error('[price-failsafe-sync] lankabd scrape failed:', scrapeError);
+    console.warn(`[price-failsafe-sync] ${err.message}; trying lankabd.com failsafe`);
+  }
+
+  if (!scrapedStocks) {
+    try {
+      scrapedStocks = await fetchLankaPrices();
+    } catch (err: any) {
+      scrapeError = err.message || 'Unknown scrape error';
+      console.error('[price-failsafe-sync] lankabd scrape failed:', scrapeError);
+    }
   }
 
   const baseStatus: FailsafeStatus = {
@@ -208,7 +228,7 @@ export async function GET(request: NextRequest) {
             <h1 style="color: white; margin: 0;">🆘 DSE price scraper down — failsafe also failed</h1>
           </div>
           <div style="background: #f7fafc; padding: 20px; border: 1px solid #e2e8f0;">
-            <p style="color: #1a202c;">api/market_sync.py hasn't written fresh data since ${primaryLastUpdated ?? 'unknown'} (~${Math.round(ageMs / 60000)} minutes ago), and the lankabd.com failsafe scrape just failed too:</p>
+            <p style="color: #1a202c;">api/market_sync.py hasn't written fresh data since ${primaryLastUpdated ?? 'unknown'} (~${Math.round(ageMs / 60000)} minutes ago), and both the direct DSE fetch and the lankabd.com failsafe just failed too:</p>
             <p style="color: #991b1b; font-family: monospace; background: #fef2f2; padding: 10px; border-radius: 4px;">${scrapeError}</p>
             <p style="color: #1a202c;">Prices shown in the app are currently stale. This needs manual attention.</p>
           </div>
@@ -218,7 +238,7 @@ export async function GET(request: NextRequest) {
         </div>
       `;
       const emailResult = await sendAdminAlertEmail({
-        subject: '🆘 DSE price scraper down AND lankabd failsafe failed',
+        subject: '🆘 DSE price scraper down AND all failsafes failed',
         html,
       });
       alertSent = emailResult.success;
@@ -239,8 +259,8 @@ export async function GET(request: NextRequest) {
     stocks: scrapedStocks,
     lastUpdated: nowIso,
     totalStocks: scrapedStocks.length,
-    marketStatus: null, // lankabd doesn't publish DSE's own open/closed banner
-    source: 'lankabd-failsafe',
+    marketStatus: scrapedMarketStatus, // null for lankabd: it doesn't publish DSE's open/closed banner
+    source: scrapedSource,
     primaryLastUpdated,
   });
 
@@ -253,7 +273,7 @@ export async function GET(request: NextRequest) {
         </div>
         <div style="background: #f7fafc; padding: 20px; border: 1px solid #e2e8f0;">
           <p style="color: #1a202c;">api/market_sync.py hasn't written fresh data since ${primaryLastUpdated ?? 'unknown'} (~${Math.round(ageMs / 60000)} minutes ago).</p>
-          <p style="color: #1a202c;">The app is now running on the lankabd.com backup source (Scraper B) — ${scrapedStocks.length} symbols synced as of ${nowIso}. Trading continues normally on this data, but the primary DSE scraper (dsebd.org) needs to be checked.</p>
+          <p style="color: #1a202c;">The app is now running on ${scrapedSource === 'dse-direct' ? 'a direct DSE fetch from Vercel (the VPS path is not producing data)' : 'the lankabd.com backup source (Scraper B)'} — ${scrapedStocks.length} symbols synced as of ${nowIso}. Trading continues normally on this data, but the primary DSE scraper (dsebd.org) needs to be checked.</p>
           <p style="color: #718096; font-size: 12px;">You'll get another email if this is still ongoing in an hour, and a recovery email once the primary starts writing again.</p>
         </div>
         <div style="background: white; padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-top: none;">
@@ -262,7 +282,7 @@ export async function GET(request: NextRequest) {
       </div>
     `;
     const emailResult = await sendAdminAlertEmail({
-      subject: `🚨 DSE price scraper down — lankabd failsafe active (${scrapedStocks.length} stocks)`,
+      subject: `🚨 DSE price scraper down — ${scrapedSource === 'dse-direct' ? 'direct DSE fallback' : 'lankabd failsafe'} active (${scrapedStocks.length} stocks)`,
       html,
     });
     alertSent = emailResult.success;
@@ -272,7 +292,7 @@ export async function GET(request: NextRequest) {
 
   await statusRef.set(baseStatus, { merge: true });
 
-  console.log(`[price-failsafe-sync] ✓ Failsafe active — wrote ${scrapedStocks.length} stocks from lankabd.com`);
+  console.log(`[price-failsafe-sync] ✓ Failsafe active — wrote ${scrapedStocks.length} stocks from ${scrapedSource}`);
 
   return NextResponse.json({
     success: true,

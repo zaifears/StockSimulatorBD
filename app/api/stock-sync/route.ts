@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { verifyCronSecret } from '@/lib/utils/cronAuth';
+import { fetchDseDirect } from '@/lib/dseDirect';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
+
+// A healthy VPS answers in well under a second. Waiting longer on a dead one
+// just burns function time on every cron tick (Vercel Hobby has a monthly
+// compute budget), so give up early and fall through to the direct DSE fetch.
+const VPS_TIMEOUT_MS = 6000;
+
+// Once the VPS has failed and we've served prices straight from DSE, don't
+// re-probe it on every tick (~3 min). Retry only this often to notice recovery.
+const VPS_RETRY_COOLDOWN_MS = 15 * 60 * 1000;
+
+type PriceSource = 'dse' | 'dse-direct' | 'lankabd-failsafe';
 
 function getPythonApiBase(): string {
   const envUrl = process.env.PYTHON_API_URL?.trim();
@@ -23,6 +35,38 @@ function buildLankaFailsafeUrl(): string {
   return `${getPythonApiBase()}/api/lanka_price_sync`;
 }
 
+async function fetchVpsPrices(url: string): Promise<{ stocks: unknown[]; marketStatus: string | null }> {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'StockSimulatorBD-Sync/1.0' },
+    signal: AbortSignal.timeout(VPS_TIMEOUT_MS),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Python scraper HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const body = await res.text();
+    throw new Error(
+      `Python scraper returned non-JSON (${contentType}). ` +
+      `Route misconfigured? Body: ${body.slice(0, 300)}`
+    );
+  }
+
+  const payload = await res.json();
+
+  // api/market_sync.py used to return a bare array and now returns
+  // { stocks, marketStatus }. Accept both so the Python function and this
+  // route can never be out of step, in either direction.
+  const stocks = Array.isArray(payload) ? payload : payload?.stocks;
+  if (!Array.isArray(stocks) || stocks.length < 50) {
+    throw new Error(`Primary scraper returned insufficient stocks (${Array.isArray(stocks) ? stocks.length : 'non-array'})`);
+  }
+  return { stocks, marketStatus: typeof payload?.marketStatus === 'string' ? payload.marketStatus : null };
+}
+
 export async function GET(request: NextRequest) {
   // ── Auth ──────────────────────────────────────────────────────────────────
   const authResult = verifyCronSecret(request);
@@ -33,58 +77,72 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
-  // ── Scrape Primary (DSE) ──────────────────────────────────────────────────
-  const scrapeUrl = buildSyncUrl();
-  console.log(`[stock-sync] Fetching primary DSE: ${scrapeUrl}`);
-
-  let marketData: unknown[] | null = null;
-  // DSE's own "Market Status: Open/Closed" as printed on the board we
-  // scrape. null when the scraper couldn't find it (older payload shape, or
-  // a parse miss) — consumers treat null as "no opinion" and fall back to
-  // the holiday calendar. See lib/utils/marketHours.ts.
-  let marketStatus: string | null = null;
-  let source: 'dse' | 'lankabd-failsafe' = 'dse';
-  let primaryError: string | null = null;
-
-  try {
-    const pythonRes = await fetch(scrapeUrl, {
-      headers: { 'User-Agent': 'StockSimulatorBD-Sync/1.0' },
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!pythonRes.ok) {
-      const body = await pythonRes.text();
-      throw new Error(`Python scraper HTTP ${pythonRes.status}: ${body.slice(0, 300)}`);
-    }
-
-    const contentType = pythonRes.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      const body = await pythonRes.text();
-      throw new Error(
-        `Python scraper returned non-JSON (${contentType}). ` +
-        `Route misconfigured? Body: ${body.slice(0, 300)}`
-      );
-    }
-
-    const payload = await pythonRes.json();
-
-    // api/market_sync.py used to return a bare array and now returns
-    // { stocks, marketStatus }. Accept both so the Python function and this
-    // route can never be out of step, in either direction.
-    const stocks = Array.isArray(payload) ? payload : payload?.stocks;
-    if (Array.isArray(stocks) && stocks.length >= 50) {
-      marketData = stocks;
-      marketStatus = typeof payload?.marketStatus === 'string' ? payload.marketStatus : null;
-    } else {
-      throw new Error(`Primary scraper returned insufficient stocks (${Array.isArray(stocks) ? stocks.length : 'non-array'})`);
-    }
-
-  } catch (err: any) {
-    primaryError = err.message || 'Unknown error';
-    console.warn(`[stock-sync] Primary DSE scrape failed (${primaryError}), attempting automatic LankaBangla fallback...`);
+  const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID;
+  if (!appId) {
+    return NextResponse.json({ error: 'DB write failed: NEXT_PUBLIC_SIMULATOR_APP_ID env var is not set' }, { status: 500 });
   }
 
-  // ── Automatic Fallback to LankaBangla if Primary Failed ──────────────────
+  const marketRef = getAdminDb()
+    .collection('artifacts')
+    .doc(appId)
+    .collection('public')
+    .doc('data')
+    .collection('market_info')
+    .doc('latest');
+
+  // ── VPS circuit breaker ───────────────────────────────────────────────────
+  // One Firestore read. If the last write came from the direct-DSE fallback
+  // and we probed the VPS recently, skip it this tick.
+  const nowMs = Date.now();
+  let vpsLastTriedAt: string | null = null;
+  let skipVps = false;
+  try {
+    const prev = (await marketRef.get()).data();
+    if (prev?.source === 'dse-direct' && typeof prev.vpsLastTriedAt === 'string') {
+      vpsLastTriedAt = prev.vpsLastTriedAt;
+      skipVps = nowMs - new Date(prev.vpsLastTriedAt).getTime() < VPS_RETRY_COOLDOWN_MS;
+    }
+  } catch (err: any) {
+    console.warn('[stock-sync] Could not read previous state, trying VPS anyway:', err.message);
+  }
+
+  let marketData: unknown[] | null = null;
+  // DSE's own "Market Status: Open/Closed". null when unavailable — consumers
+  // treat null as "no opinion" and fall back to the holiday calendar. See
+  // lib/utils/marketHours.ts.
+  let marketStatus: string | null = null;
+  let source: PriceSource = 'dse';
+  let primaryError: string | null = null;
+
+  // ── 1. Primary: Oracle VPS running api/market_sync.py ─────────────────────
+  if (skipVps) {
+    primaryError = `VPS skipped (failed recently, retrying every ${VPS_RETRY_COOLDOWN_MS / 60000}m)`;
+  } else {
+    const scrapeUrl = buildSyncUrl();
+    console.log(`[stock-sync] Fetching primary DSE: ${scrapeUrl}`);
+    vpsLastTriedAt = new Date(nowMs).toISOString();
+    try {
+      ({ stocks: marketData, marketStatus } = await fetchVpsPrices(scrapeUrl));
+    } catch (err: any) {
+      primaryError = err.message || 'Unknown error';
+      console.warn(`[stock-sync] VPS scrape failed (${primaryError}), fetching DSE directly...`);
+    }
+  }
+
+  // ── 2. Fallback: straight from DSE, from this function ────────────────────
+  if (!marketData) {
+    try {
+      const direct = await fetchDseDirect();
+      marketData = direct.stocks;
+      marketStatus = direct.marketStatus;
+      source = 'dse-direct';
+      console.log(`[stock-sync] Direct DSE fetch OK — ${direct.stocks.length} stocks from ${direct.url}`);
+    } catch (directErr: any) {
+      console.warn(`[stock-sync] ${directErr.message}; trying LankaBangla failsafe...`);
+    }
+  }
+
+  // ── 3. Last resort: LankaBangla failsafe (also hosted on the VPS) ─────────
   if (!marketData) {
     const failsafeUrl = buildLankaFailsafeUrl();
     console.log(`[stock-sync] Fetching fallback backup: ${failsafeUrl}`);
@@ -92,7 +150,7 @@ export async function GET(request: NextRequest) {
     try {
       const failsafeRes = await fetch(failsafeUrl, {
         headers: { 'User-Agent': 'StockSimulatorBD-SyncFallback/1.0' },
-        signal: AbortSignal.timeout(25000),
+        signal: AbortSignal.timeout(VPS_TIMEOUT_MS),
       });
 
       if (!failsafeRes.ok) {
@@ -117,12 +175,12 @@ export async function GET(request: NextRequest) {
         throw new Error(`Lanka failsafe returned insufficient stocks (${Array.isArray(stocks) ? stocks.length : 'non-array'})`);
       }
     } catch (fallbackErr: any) {
-      console.error('[stock-sync] Dual failure — primary DSE and LankaBangla failsafe both failed:', {
+      console.error('[stock-sync] All sources failed — VPS, direct DSE and LankaBangla failsafe:', {
         primaryError,
         fallbackError: fallbackErr.message,
       });
       return NextResponse.json(
-        { error: `Dual scrape failure: Primary (${primaryError}), Fallback (${fallbackErr.message})` },
+        { error: `All scrape sources failed: Primary (${primaryError}), Fallback (${fallbackErr.message})` },
         { status: 502 }
       );
     }
@@ -130,27 +188,13 @@ export async function GET(request: NextRequest) {
 
   // ── Write to Firestore ────────────────────────────────────────────────────
   try {
-    const db = getAdminDb();
-    const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID;
-
-    if (!appId) {
-      throw new Error('NEXT_PUBLIC_SIMULATOR_APP_ID env var is not set');
-    }
-
-    const marketRef = db
-      .collection('artifacts')
-      .doc(appId)
-      .collection('public')
-      .doc('data')
-      .collection('market_info')
-      .doc('latest');
-
     await marketRef.set({
       stocks:      marketData,
       lastUpdated: new Date().toISOString(),
       totalStocks: marketData.length,
       marketStatus,
       source,
+      ...(vpsLastTriedAt ? { vpsLastTriedAt } : {}),
       ...(primaryError ? { primaryError } : {}),
     });
 
@@ -158,13 +202,18 @@ export async function GET(request: NextRequest) {
       `[stock-sync] ✓ Wrote ${marketData.length} stocks to ${appId} (source: ${source}, DSE status: ${marketStatus ?? 'unknown'})`
     );
 
+    const message =
+      source === 'dse'
+        ? `Successfully synced ${marketData.length} stocks from DSE.`
+        : source === 'dse-direct'
+          ? `VPS unavailable (${primaryError}); synced ${marketData.length} stocks directly from DSE.`
+          : `Primary DSE failed (${primaryError}); successfully synced ${marketData.length} stocks from LankaBangla backup.`;
+
     return NextResponse.json(
       {
         success:     true,
         source,
-        message:     source === 'dse'
-          ? `Successfully synced ${marketData.length} stocks from DSE.`
-          : `Primary DSE failed (${primaryError}); successfully synced ${marketData.length} stocks from LankaBangla backup.`,
+        message,
         marketStatus,
         appId,
         timestamp:   new Date().toISOString(),
