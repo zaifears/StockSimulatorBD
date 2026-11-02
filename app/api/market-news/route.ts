@@ -37,13 +37,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Fallback to direct DSE news
-  for (const dseUrl of ['https://new.dsebd.org/api/live/news', 'https://www.dsebd.org/api/live/news']) {
+  for (const dseUrl of ['https://www.dsebd.org/api/live/news', 'https://dsebd.org/api/live/news']) {
     try {
       const directRes = await fetch(dseUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
           'Accept': 'application/json',
-          'Referer': 'https://new.dsebd.org/',
+          'Referer': 'https://www.dsebd.org/',
         },
         next: { revalidate: 60 },
         signal: AbortSignal.timeout(6000),

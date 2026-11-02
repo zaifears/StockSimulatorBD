@@ -171,19 +171,21 @@ All client SDK writes are strictly validated:
 
 ## Market Feeds, Scrapers & DSE Modern Architecture
 
+- **Hosts**: `dsebd.org`, `www.dsebd.org` and `new.dsebd.org` are one CloudFront distribution serving identical data. Use `www.dsebd.org` (apex `dsebd.org` as the second attempt); `new.dsebd.org` is not needed. Every legacy `.php` page (`latest_share_price_scroll_l.php`, `latest_share_price_scroll_group.php`, `company_listing.php`, `day_end_archive.php`) returns **HTTP 410 Gone** — there is no HTML fallback anymore.
+- **Where scrapers run**: the Python scrapers run on the Oracle VPS (`scripts/vps/`, served at `https://dse.shahoriar.bd`); root `api/*.py` are copies kept in step for local dev (`dev.ps1`) and are excluded from Vercel by `.vercelignore`. The Vercel sync routes (`app/api/stock-sync`, `category-sync`, `lanka-sector-sync`, `price-failsafe-sync`) call the VPS first; stock-sync and category-sync fall back to fetching DSE directly (`lib/dseDirect.ts`) when it is down.
 - **Primary Live Price Sync (`api/market_sync.py`)**:
-  - Dual-engine architecture supporting both the modern DSE platform (`https://new.dsebd.org/api/live/prices`) and the legacy scroll board (`https://www.dsebd.org/latest_share_price_scroll_l.php`).
+  - Reads `https://www.dsebd.org/api/live/prices`. The second attempt adds a cache-busting query string, because CloudFront (~15s TTL) occasionally caches a transient empty response and the query string is part of its cache key.
+  - **Pre-open gap**: between DSE's pre-open reset (~9:00 BST) and the session start, the feed omits ~24 corporate bonds/debentures (`*PBOND`, `DEB*`, `BEXGSUKUK`). stock-sync carries such symbols forward as "not traded today" rows (`missingSince`, dropped after 7 days) and category-sync keeps their last category, so holdings never vanish or get valued at ৳0.
   - **Government Securities Filter**: Strictly excludes all 215 Treasury Bonds (`assetType: GOVDBT`, `sector: TBond`, `board: YIELDDBT`, `symbol.startswith('TB')`), preserving pure equity/corporate trading parity.
-  - **Auto-Failover**: Automatically tries the primary engine, seamlessly falling back to the alternative engine if an outage, timeout, or low stock count (`< 50`) occurs.
+  - **Failover**: Tries the next dsebd.org host on an outage, timeout, or low stock count (`< 50`).
   - **Real-Time Market Status**: Extracts authoritative exchange matching engine state from `session.isOpen` (`"Open"` vs `"Closed"`).
 - **Stock Categories Sync (`api/category_sync.py`)**:
   - **Instant Single-Pass Engine**: Consumes `/api/live/prices` to map all 419 instruments to categories (`A`, `B`, `N`, `Z`) in < 200ms in a single request, eliminating fragile multi-threaded HTML scraping.
-  - **Classic Fallback**: Retains multi-threaded scraping across A/B/G/N/Z boards if the modern API is unreachable.
   - **Health Monitoring Parity**: Fully compatible with `app/api/health/route.ts` and Uptime Kuma monitoring (`scrapers.categorySync.status == 'healthy'`).
 - **Industry Sectors (`api/lanka_sector_sync.py`)**: 21 LankaBangla sectors sync with audit changelog.
 - **Price Failsafe (`api/lanka_price_sync.py`)**: Backup price scraper activating only when primary heartbeat is stale.
 
-### Modern DSE Endpoints & Discovered Feeds (`new.dsebd.org`)
+### DSE Endpoints & Discovered Feeds (`www.dsebd.org`)
 - **`/api/live/depth?code=[symbol]`**: Real-time Level 2 Market Depth (Bids & Asks Order Book with price, quantity, order count, and spread).
 - **`/api/live/news`**: 500-item live feed of Price Sensitive Information (PSI), dividend declarations, and corporate disclosures in clean JSON.
 - **`/api/live/market`**: Official real-time indices (`DSEX`, `DS30`, `DSES`), market breadth (`advanced`, `declined`, `unchanged`), market turnover, volume, and top movers.

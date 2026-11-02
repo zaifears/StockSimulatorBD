@@ -2,8 +2,8 @@
 """
 crawl_fundamentals.py - Resilient Overnight Fundamentals Crawler for DSE Equities.
 
-Crawls company profiles from https://new.dsebd.org/company/{symbol}
-(with automatic mirror failover to https://www.dsebd.org/company/{symbol})
+Crawls company profiles from https://www.dsebd.org/company/{symbol}
+(with failover to the apex https://dsebd.org/company/{symbol})
 Extracts audited valuation ratios, 52-week ranges, shareholding distributions,
 and corporate disclosures. Saves atomically to data/fundamentals.json.
 
@@ -36,12 +36,12 @@ FUNDAMENTALS_FILE = os.path.join(DATA_DIR, "fundamentals.json")
 CURSOR_FILE = os.path.join(DATA_DIR, "crawler_cursor.json")
 
 DSE_PRICES_APIS = [
-    "https://new.dsebd.org/api/live/prices",
     "https://www.dsebd.org/api/live/prices",
+    "https://dsebd.org/api/live/prices",
 ]
 COMPANY_BASE_URLS = [
-    "https://new.dsebd.org/company",
     "https://www.dsebd.org/company",
+    "https://dsebd.org/company",
 ]
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
@@ -69,7 +69,7 @@ def get_active_symbols():
                 headers={
                     "User-Agent": USER_AGENT,
                     "Accept-Encoding": "gzip",
-                    "Referer": "https://new.dsebd.org/",
+                    "Referer": "https://www.dsebd.org/",
                 },
             )
             with urllib.request.urlopen(req, context=_SSL_CONTEXT, timeout=15) as resp:
@@ -183,7 +183,7 @@ def crawl_symbol(symbol: str, retries: int = 3) -> dict | None:
             headers={
                 "User-Agent": USER_AGENT,
                 "Accept-Encoding": "gzip",
-                "Referer": "https://new.dsebd.org/",
+                "Referer": "https://www.dsebd.org/",
             },
         )
         try:
@@ -193,7 +193,7 @@ def crawl_symbol(symbol: str, retries: int = 3) -> dict | None:
             data = extract_rsc_fundamentals(html)
             if data and data.get("code"):
                 data["_scrapedAt"] = int(time.time() * 1000)
-                data["_source"] = "new.dsebd.org"
+                data["_source"] = "dsebd.org"
                 return data
 
             logger.warning("[%s] RSC payload not found on attempt %d (%s)", symbol, attempt, base_url)

@@ -1,6 +1,6 @@
 // lib/marketOverview.ts
 // DSE's own market overview (indices, breadth, session totals), as published at
-// new.dsebd.org/api/live/market and mirrored by the VPS at /api/market_overview.
+// www.dsebd.org/api/live/market and mirrored by the VPS at /api/market_overview.
 // Used by the homepage index board. Only index-level and market-wide figures are
 // read here: no company-level data leaves this module.
 import { VPS_BASE_URL } from '@/lib/vpsClient';
@@ -56,12 +56,12 @@ export function pickMarketOverview(raw: any): MarketOverview | null {
 export async function fetchMarketOverview(revalidateSeconds = 300): Promise<MarketOverview | null> {
   const sources: Array<{ url: string; headers: Record<string, string> }> = [
     { url: `${VPS_BASE_URL}/api/market_overview`, headers: { 'User-Agent': 'StockSimulatorBD-Web/1.0' } },
-    ...['https://new.dsebd.org/api/live/market', 'https://www.dsebd.org/api/live/market'].map((url) => ({
+    ...['https://www.dsebd.org/api/live/market', 'https://dsebd.org/api/live/market'].map((url) => ({
       url,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         Accept: 'application/json',
-        Referer: 'https://new.dsebd.org/',
+        Referer: 'https://www.dsebd.org/',
       },
     })),
   ];

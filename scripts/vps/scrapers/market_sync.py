@@ -1,25 +1,21 @@
 import gzip
-import html as html_lib
 import json
 import os
-import re
 import ssl
+import time
 import urllib.parse
 import urllib.request
-from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler
 
 # ==============================================================================
-# DSE Market Sync (Modern DSE Default + Multi-Domain Failover)
+# DSE Market Sync
 #
-# Official DSE Platform:
-# 1. Primary: https://new.dsebd.org/api/live/prices
-# 2. Mirror:  https://www.dsebd.org/api/live/prices (main domain cutover)
-# 3. Legacy:  https://www.dsebd.org/latest_share_price_scroll_l.php (retired / 410)
+# Source: DSE's live prices JSON feed on www.dsebd.org (the apex dsebd.org is
+# tried second). dsebd.org, www.dsebd.org and new.dsebd.org are all the same
+# CloudFront distribution serving identical data, so only the canonical host
+# is used. The old PHP scroll board (latest_share_price_scroll_l.php) was
+# retired by DSE and returns HTTP 410, so there is no HTML fallback anymore.
 #
-# Key Features:
-# - Default engine is now the modern DSE JSON API (new.dsebd.org/api/live/prices).
-# - Automatic failover across new.dsebd.org and www.dsebd.org JSON feeds.
 # - Government Securities Filter: Strictly filters out all 215 Treasury Bonds
 #   (assetType: GOVDBT, sector: TBond, board: YIELDDBT, code prefix TB) to
 #   maintain pure equity and corporate trading parity.
@@ -29,11 +25,19 @@ from http.server import BaseHTTPRequestHandler
 #   from session.isOpen, including on government-declared working Saturdays.
 # ==============================================================================
 
-CLASSIC_DSE_URL = "https://www.dsebd.org/latest_share_price_scroll_l.php"
-NEW_DSE_BASE_URL = "https://new.dsebd.org"
-NEW_DSE_API_URL = "https://new.dsebd.org/api/live/prices"
-MAIN_DSE_API_URL = "https://www.dsebd.org/api/live/prices"
-NEW_DSE_PAGE_URL = "https://new.dsebd.org/markets/latest-share-price"
+# The second attempt adds a cache-busting query string: all dsebd.org
+# hostnames sit behind one CloudFront cache (~15s TTL) that occasionally holds
+# a transient empty/partial response, and the query string is part of its
+# cache key, so this reaches DSE's origin instead of re-reading that cache.
+DSE_API_URLS = [
+    "https://www.dsebd.org/api/live/prices",
+    "https://dsebd.org/api/live/prices",
+]
+
+
+def _attempt_url(i: int, api_url: str) -> str:
+    return api_url if i == 0 else f"{api_url}?_={int(time.time() * 1000)}"
+DSE_PAGE_URL = "https://www.dsebd.org/markets/latest-share-price"
 
 DEFAULT_NEW_COLS = [
     "code", "ltp", "ycp", "open", "high", "low", "close",
@@ -47,82 +51,7 @@ USER_AGENT = (
 )
 
 # ------------------------------------------------------------------------------
-# Classic DSE Helpers & Parser (Legacy Fallback Only)
-# ------------------------------------------------------------------------------
-
-MARKET_STATUS_RE = re.compile(r'Market\s*Status\s*:\s*([A-Za-z][A-Za-z \-]{0,30})', re.I)
-
-def extract_market_status(html_text):
-    text = html_lib.unescape(re.sub(r'<[^>]+>', ' ', html_text))
-    match = MARKET_STATUS_RE.search(text)
-    if not match:
-        return None
-    return ' '.join(match.group(1).split()).split('  ')[0].strip() or None
-
-
-class DSEMarketParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.in_td = False
-        self.current_cell_data = []
-        self.current_row = []
-        self.stocks = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag == 'tr':
-            self.current_row = []
-        elif tag == 'td':
-            self.in_td = True
-            self.current_cell_data = []
-
-    def handle_endtag(self, tag):
-        if tag == 'td':
-            self.in_td = False
-            cell_text = "".join(self.current_cell_data).strip().replace(',', '')
-            self.current_row.append(cell_text)
-        elif tag == 'tr':
-            if len(self.current_row) >= 10:
-                symbol = self.current_row[1]
-                if symbol != 'TRADING CODE' and symbol != '':
-                    try:
-                        ltp = float(self.current_row[2]) if self.current_row[2] not in ['--', '', '0'] else 0.0
-                        high = float(self.current_row[3]) if self.current_row[3] not in ['--', ''] else 0.0
-                        low = float(self.current_row[4]) if self.current_row[4] not in ['--', ''] else 0.0
-                        close = float(self.current_row[5]) if self.current_row[5] not in ['--', ''] else 0.0
-                        ycp = float(self.current_row[6]) if self.current_row[6] not in ['--', ''] else 0.0
-                        change = float(self.current_row[7]) if self.current_row[7] not in ['--', ''] else 0.0
-                        trade = float(self.current_row[8]) if self.current_row[8] not in ['--', ''] else 0.0
-                        value_mn = float(self.current_row[9]) if self.current_row[9] not in ['--', ''] else 0.0
-                        value = round(value_mn * 1_000_000, 2)
-                        volume = float(self.current_row[10]) if len(self.current_row) > 10 and self.current_row[10] not in ['--', ''] else 0.0
-
-                        changePercent = round((change / ycp) * 100, 2) if ycp > 0 else 0.0
-                        traded = trade > 0
-
-                        self.stocks.append({
-                            "symbol": symbol,
-                            "ltp": ltp,
-                            "high": high,
-                            "low": low,
-                            "close": close,
-                            "ycp": ycp,
-                            "change": change,
-                            "changePercent": changePercent,
-                            "trade": trade,
-                            "value": value,
-                            "volume": volume,
-                            "traded": traded
-                        })
-                    except ValueError:
-                        pass
-
-    def handle_data(self, data):
-        if self.in_td:
-            self.current_cell_data.append(data)
-
-
-# ------------------------------------------------------------------------------
-# Modern DSE Helpers & Parser (new.dsebd.org / www.dsebd.org)
+# DSE Live Prices Parser
 # ------------------------------------------------------------------------------
 
 def is_government_security(code, asset_type="", sector="", board=""):
@@ -149,7 +78,7 @@ def is_government_security(code, asset_type="", sector="", board=""):
 
 def parse_new_dse_payload(data, exclude_gov=True, public_only=False):
     """
-    Parses the JSON payload returned by https://new.dsebd.org/api/live/prices.
+    Parses the JSON payload returned by https://www.dsebd.org/api/live/prices.
     """
     cols = data.get("cols") or DEFAULT_NEW_COLS
     rows = data.get("rows") or []
@@ -242,7 +171,7 @@ def parse_new_dse_payload(data, exclude_gov=True, public_only=False):
 # Fetchers
 # ------------------------------------------------------------------------------
 
-ALLOWED_DSE_HOSTS = ("new.dsebd.org", "www.dsebd.org", "dsebd.org")
+ALLOWED_DSE_HOSTS = ("www.dsebd.org", "dsebd.org")
 
 
 def _validate_dse_url(url: str) -> str:
@@ -272,11 +201,11 @@ def _read_response_text(response) -> str:
     return raw.decode("utf-8", errors="ignore")
 
 
-def fetch_new_dse(api_url=None, exclude_gov=True, public_only=False, timeout=20.0):
+def fetch_new_dse(api_url=None, exclude_gov=True, public_only=False, timeout=10.0):
     """
-    Fetches live market data from modern DSE API.
+    Fetches live market data from DSE's live prices API.
     """
-    target_api = _validate_dse_url(api_url or NEW_DSE_API_URL)
+    target_api = _validate_dse_url(api_url or DSE_API_URLS[0])
     ctx = _create_ssl_context()
     req = urllib.request.Request(
         target_api,
@@ -284,7 +213,7 @@ def fetch_new_dse(api_url=None, exclude_gov=True, public_only=False, timeout=20.
             'User-Agent': USER_AGENT,
             'Accept': 'application/json',
             'Accept-Encoding': 'gzip',
-            'Referer': NEW_DSE_PAGE_URL
+            'Referer': DSE_PAGE_URL
         }
     )
     with urllib.request.urlopen(req, context=ctx, timeout=timeout) as response:
@@ -298,89 +227,28 @@ def fetch_new_dse(api_url=None, exclude_gov=True, public_only=False, timeout=20.
     return stocks, market_status
 
 
-def fetch_classic_dse(page_url=None, timeout=15.0):
-    """
-    Fetches live market data from classic DSE scroll page (legacy fallback).
-    """
-    target_page = _validate_dse_url(page_url or CLASSIC_DSE_URL)
-    ctx = _create_ssl_context()
-    req = urllib.request.Request(
-        target_page,
-        headers={'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip'}
-    )
-    with urllib.request.urlopen(req, context=ctx, timeout=timeout) as response:
-        html = _read_response_text(response)
-
-    parser = DSEMarketParser()
-    parser.feed(html)
-
-    if len(parser.stocks) < 50:
-        raise ValueError(f"Classic DSE scraper returned unusually low count ({len(parser.stocks)})")
-
-    try:
-        market_status = extract_market_status(html)
-    except Exception:
-        market_status = None
-
-    return parser.stocks, market_status
-
-
 def scrape_market(source="auto", custom_url=None, exclude_gov=True, public_only=False):
     """
-    High-level scraper dispatcher with modern DSE (new.dsebd.org) as default
-    and multi-domain failover (www.dsebd.org/api/live/prices).
+    Fetches DSE live prices, trying each dsebd.org hostname in turn.
+
+    `source` is accepted for backward compatibility with older callers
+    ("auto" / "new" / "classic") but no longer changes anything: the classic
+    PHP board is gone (HTTP 410), so there is only one engine.
     """
-    # 1. Custom URL explicitly targeting allowlisted DSE host (programmatic use only)
     if custom_url:
-        custom_url = _validate_dse_url(custom_url)
-        parsed_custom = urllib.parse.urlparse(custom_url)
-        if (parsed_custom.hostname or "").lower() == "new.dsebd.org" or "/api/live/prices" in parsed_custom.path:
-            target_api = NEW_DSE_API_URL if "markets/latest-share-price" in parsed_custom.path else custom_url
-            stocks, status = fetch_new_dse(api_url=target_api, exclude_gov=exclude_gov, public_only=public_only)
-            return stocks, status, "new-dse-custom"
-        else:
-            stocks, status = fetch_classic_dse(page_url=custom_url)
-            return stocks, status, "classic-dse-custom"
+        stocks, status = fetch_new_dse(api_url=custom_url, exclude_gov=exclude_gov, public_only=public_only)
+        return stocks, status, "dse-custom"
 
-    # 2. Explicit source request
-    if source == "new":
+    errors = []
+    for i, api_url in enumerate(DSE_API_URLS):
         try:
-            stocks, status = fetch_new_dse(api_url=NEW_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
-            return stocks, status, "new-dse"
-        except Exception:
-            stocks, status = fetch_new_dse(api_url=MAIN_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
-            return stocks, status, "new-dse-main-domain"
-
-    if source == "classic":
-        stocks, status = fetch_classic_dse()
-        return stocks, status, "classic-dse"
-
-    # 3. Auto mode: new.dsebd.org is now the official default (old PHP site returns HTTP 410 Gone)
-    prefer_new = os.environ.get("DSE_PREFER_NEW", "true").lower() not in ("0", "false", "no")
-
-    if prefer_new:
-        try:
-            stocks, status = fetch_new_dse(api_url=NEW_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
-            return stocks, status, "new-dse"
-        except Exception as e_new:
-            # First failover: try modern JSON API on main www.dsebd.org domain
-            try:
-                stocks, status = fetch_new_dse(api_url=MAIN_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
-                return stocks, status, "new-dse-main-domain"
-            except Exception as e_main:
-                # Last resort failover to classic
-                try:
-                    stocks, status = fetch_classic_dse()
-                    return stocks, status, f"classic-dse-fallback (new failed: {str(e_new)[:80]})"
-                except Exception:
-                    raise RuntimeError(f"Modern DSE endpoints failed (new: {e_new}; main: {e_main})")
-    else:
-        try:
-            stocks, status = fetch_classic_dse()
-            return stocks, status, "classic-dse"
+            stocks, status = fetch_new_dse(api_url=_attempt_url(i, api_url), exclude_gov=exclude_gov, public_only=public_only)
+            host = urllib.parse.urlparse(api_url).hostname
+            return stocks, status, "new-dse" if host == "www.dsebd.org" else f"new-dse ({host})"
         except Exception as e:
-            stocks, status = fetch_new_dse(api_url=NEW_DSE_API_URL, exclude_gov=exclude_gov, public_only=public_only)
-            return stocks, status, f"new-dse-fallback (classic failed: {str(e)[:100]})"
+            errors.append(f"{urllib.parse.urlparse(api_url).hostname}: {e}")
+
+    raise RuntimeError(f"DSE live prices failed on every host ({'; '.join(errors)})")
 
 
 # ------------------------------------------------------------------------------

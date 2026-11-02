@@ -125,7 +125,7 @@ export function isMarketOpenCorroborated(
   const dateStr = `${year}-${String(bdTime.getUTCMonth() + 1).padStart(2, '0')}-${String(bdTime.getUTCDate()).padStart(2, '0')}`;
   const isWeekend = (dayOfWeek === 5 || dayOfWeek === 6) && !isSpecialWorkingDay(dateStr);
 
-  // DSE's own fresh status (<= 20 minutes old) from new.dsebd.org/api/live/prices
+  // DSE's own fresh status (<= 20 minutes old) from www.dsebd.org/api/live/prices
   // (session.isOpen) outranks both the holiday calendar AND the weekend rule.
   // When the Bangladesh Government / DSE declares a special working Saturday
   // (such as Saturday 2026-10-17 ahead of Durga Puja), a fresh "Open" reading

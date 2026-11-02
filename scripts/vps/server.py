@@ -165,7 +165,7 @@ def health_check():
 
 @app.get("/api/market_sync")
 def api_market_sync(
-    source: str = Query("auto", description="Scrape source: auto, new, or classic"),
+    source: str = Query("auto", description="Ignored; kept for backward compatibility"),
     exclude_gov: bool = Query(True, description="Exclude Treasury bonds"),
     public_only: bool = Query(False, description="Filter public board only"),
 ):
@@ -188,7 +188,7 @@ def api_market_sync(
 
 @app.get("/api/category_sync")
 def api_category_sync(
-    source: str = Query("auto", description="Scrape source: auto, new, or classic"),
+    source: str = Query("auto", description="Ignored; kept for backward compatibility"),
 ):
     try:
         res = category_sync.get_categories(source=source)
@@ -276,36 +276,59 @@ def api_dse_chart(symbol: str = Query(..., description="Stock ticker symbol (e.g
     raise HTTPException(status_code=404, detail=f"No chart data found for {sym}")
 
 
+def _fetch_lanka_matrix(module, label: str) -> str:
+    """Fetches lankabd.com's DataMatrix page with the same guards the scraper
+    module's own HTTP handler applies: 429 on a block signal, 502 on transport
+    failure or a challenge-sized body."""
+    try:
+        html_text = module.fetch_data_matrix_html()
+    except module.BlockedError as e:
+        logger.error("%s blocked: %s", label, e)
+        raise HTTPException(status_code=429, detail=f"{label} blocked: {e}")
+    except Exception as e:
+        logger.error("%s transport failed: %s", label, e)
+        raise HTTPException(status_code=502, detail=f"{label} transport error: {e}")
+
+    if len(html_text) < module.MIN_HTML_BYTES:
+        raise HTTPException(
+            status_code=502,
+            detail=f"{label}: response body unusually small ({len(html_text)} bytes) — likely a block/challenge page",
+        )
+    return html_text
+
+
 @app.get("/api/lanka_sector_sync")
 def api_lanka_sector_sync():
-    try:
-        html_text = lanka_sector_sync.fetch_data_matrix_html()
-        parser = lanka_sector_sync.DataMatrixSectorParser()
-        parser.feed(html_text)
-        return {
-            "sectors": parser.sectors,
-            "total": len(parser.sectors),
-        }
-    except Exception as e:
-        logger.error("lanka_sector_sync failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Lanka Sector Sync Error: {str(e)}")
+    html_text = _fetch_lanka_matrix(lanka_sector_sync, "Lanka Sector Sync")
+    parser = lanka_sector_sync.DataMatrixSectorParser()
+    parser.feed(html_text)
+    if len(parser.sectors) < lanka_sector_sync.MIN_TOTAL_SYMBOLS:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Lanka Sector Sync: parsed only {len(parser.sectors)} symbols — table structure likely changed",
+        )
+    return {
+        "sectors": parser.sectors,
+        "total": len(parser.sectors),
+    }
 
 
 @app.get("/api/lanka_price_sync")
 def api_lanka_price_sync():
-    try:
-        html_text = lanka_price_sync.fetch_data_matrix_html()
-        parser = lanka_price_sync.DataMatrixPriceParser()
-        parser.feed(html_text)
-        return {
-            "stocks": parser.stocks,
-            "marketStatus": None,
-            "source": "lankabd-price",
-            "totalStocks": len(parser.stocks),
-        }
-    except Exception as e:
-        logger.error("lanka_price_sync failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Lanka Price Sync Error: {str(e)}")
+    html_text = _fetch_lanka_matrix(lanka_price_sync, "Lanka Price Sync")
+    parser = lanka_price_sync.DataMatrixPriceParser()
+    parser.feed(html_text)
+    if len(parser.stocks) < lanka_price_sync.MIN_TOTAL_SYMBOLS:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Lanka Price Sync: parsed only {len(parser.stocks)} symbols — table structure likely changed",
+        )
+    return {
+        "stocks": parser.stocks,
+        "marketStatus": None,
+        "source": "lankabd-price",
+        "totalStocks": len(parser.stocks),
+    }
 
 
 # ── Company Fundamentals Cache Mirror ──────────────────────────────────────────
@@ -354,7 +377,7 @@ def _fetch_dse_json(urls: list[str], timeout: float = 10.0) -> dict:
                     "User-Agent": BROWSER_USER_AGENT,
                     "Accept": "application/json",
                     "Accept-Encoding": "gzip",
-                    "Referer": "https://new.dsebd.org/",
+                    "Referer": "https://www.dsebd.org/",
                 },
             )
             with urllib.request.urlopen(req, context=market_sync._SSL_CONTEXT, timeout=timeout) as resp:
@@ -380,8 +403,8 @@ def api_market_overview():
 
     try:
         data = _fetch_dse_json([
-            "https://new.dsebd.org/api/live/market",
             "https://www.dsebd.org/api/live/market",
+            "https://dsebd.org/api/live/market",
         ])
         _market_overview_cache = data
         _market_overview_time = now
@@ -407,8 +430,8 @@ def api_market_news(symbol: Optional[str] = Query(None, description="Optional st
     else:
         try:
             data = _fetch_dse_json([
-                "https://new.dsebd.org/api/live/news",
                 "https://www.dsebd.org/api/live/news",
+                "https://dsebd.org/api/live/news",
             ])
             _market_news_cache = data
             _market_news_time = now

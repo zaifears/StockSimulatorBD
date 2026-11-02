@@ -5,40 +5,42 @@ import ssl
 import time
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler
 
 # ==============================================================================
 # api/category_sync.py
 #
-# Scrapes each DSE market-category board (A, B, G, N, Z) and returns a flat
-# { symbol: category } map and counts.
+# Returns a flat { symbol: category } map (A/B/G/N/Z) and per-category counts.
 #
-# Upgraded with modern DSE architecture:
-# - Primary Engine (Instant Single-Pass): Queries https://new.dsebd.org/api/live/prices
-#   (with automatic mirror failover to https://www.dsebd.org/api/live/prices)
-#   where market categories (A, B, N, Z) are available for all instruments in a single
-#   high-speed CloudFront-cached JSON response (< 200ms).
-# - Fallback Engine (Multi-Threaded Classic): Legacy HTML fallback if needed.
-# - Government Securities Filter: Automatically filters out Treasury Bonds (GOVDBT/TBond).
+# Source: the same live prices JSON feed market_sync.py reads
+# (www.dsebd.org/api/live/prices, apex dsebd.org second) — it carries the
+# market category for every instrument in a single response. The old
+# per-board PHP pages (latest_share_price_scroll_group.php) were retired by
+# DSE and return HTTP 410, so there is no HTML fallback anymore.
+# Government Securities (GOVDBT/TBond) are filtered out.
 # ==============================================================================
 
 CATEGORIES = ["A", "B", "G", "N", "Z"]
 MIN_TOTAL_SYMBOLS = 200
 
-NEW_DSE_API_URL = "https://new.dsebd.org/api/live/prices"
-MAIN_DSE_API_URL = "https://www.dsebd.org/api/live/prices"
-NEW_DSE_PAGE_URL = "https://new.dsebd.org/markets/latest-share-price"
+# The second attempt adds a cache-busting query string: all dsebd.org
+# hostnames sit behind one CloudFront cache (~15s TTL) that occasionally holds
+# a transient empty/partial response, and the query string is part of its
+# cache key, so this reaches DSE's origin instead of re-reading that cache.
+DSE_API_URLS = [
+    "https://www.dsebd.org/api/live/prices",
+    "https://dsebd.org/api/live/prices",
+]
+
+
+def _attempt_url(i: int, api_url: str) -> str:
+    return api_url if i == 0 else f"{api_url}?_={int(time.time() * 1000)}"
+DSE_PAGE_URL = "https://www.dsebd.org/markets/latest-share-price"
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
-
-REQUEST_TIMEOUT_SECONDS = 12.0
-MAX_ATTEMPTS_PER_CATEGORY = 3
-RETRY_BACKOFF_SECONDS = 1.5
 
 
 _SSL_CONTEXT = ssl.create_default_context()
@@ -73,11 +75,11 @@ def is_government_security(code, asset_type="", sector="", board=""):
 
 
 # ------------------------------------------------------------------------------
-# Modern Single-Pass Engine (new.dsebd.org / www.dsebd.org)
+# Single-Pass Engine (DSE live prices feed)
 # ------------------------------------------------------------------------------
 
-def fetch_categories_from_new_dse(api_url=None, timeout=15.0):
-    target_api = api_url or NEW_DSE_API_URL
+def fetch_categories_from_new_dse(api_url=None, timeout=10.0):
+    target_api = api_url or DSE_API_URLS[0]
     ctx = _create_ssl_context()
     req = urllib.request.Request(
         target_api,
@@ -85,7 +87,7 @@ def fetch_categories_from_new_dse(api_url=None, timeout=15.0):
             'User-Agent': USER_AGENT,
             'Accept': 'application/json',
             'Accept-Encoding': 'gzip',
-            'Referer': NEW_DSE_PAGE_URL
+            'Referer': DSE_PAGE_URL
         }
     )
     with urllib.request.urlopen(req, context=ctx, timeout=timeout) as res:
@@ -134,114 +136,23 @@ def fetch_categories_from_new_dse(api_url=None, timeout=15.0):
 
 
 # ------------------------------------------------------------------------------
-# Classic Multi-Threaded HTML Engine (Legacy Fallback)
-# ------------------------------------------------------------------------------
-
-class CategoryTableParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.in_table = False
-        self.symbols = []
-
-    def handle_starttag(self, tag, attrs):
-        attrs_dict = dict(attrs)
-        if tag == "table" and "shares-table" in (attrs_dict.get("class") or ""):
-            self.in_table = True
-        elif tag == "a" and self.in_table:
-            href = attrs_dict.get("href") or ""
-            if "displayCompany.php" in href:
-                query = urllib.parse.urlparse(href).query
-                name = urllib.parse.parse_qs(query).get("name", [None])[0]
-                if name:
-                    self.symbols.append(name.strip().upper())
-
-    def handle_endtag(self, tag):
-        if tag == "table" and self.in_table:
-            self.in_table = False
-
-
-def fetch_category_once(group: str, ctx: ssl.SSLContext) -> list:
-    url = f"https://www.dsebd.org/latest_share_price_scroll_group.php?group={group}"
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, context=ctx, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        html = response.read().decode("utf-8", errors="ignore")
-    parser = CategoryTableParser()
-    parser.feed(html)
-    return parser.symbols
-
-
-def fetch_category_with_retry(group: str, ctx: ssl.SSLContext) -> tuple:
-    last_error = None
-    for attempt in range(1, MAX_ATTEMPTS_PER_CATEGORY + 1):
-        try:
-            symbols = fetch_category_once(group, ctx)
-            return (group, symbols, None)
-        except Exception as e:
-            last_error = str(e)
-            if attempt < MAX_ATTEMPTS_PER_CATEGORY:
-                time.sleep(RETRY_BACKOFF_SECONDS)
-    return (group, [], last_error)
-
-
-def fetch_all_categories_classic() -> dict:
-    ctx = _create_ssl_context()
-    categories = {}
-    counts = {}
-    errors = {}
-
-    with ThreadPoolExecutor(max_workers=len(CATEGORIES)) as pool:
-        futures = [pool.submit(fetch_category_with_retry, group, ctx) for group in CATEGORIES]
-        for future in as_completed(futures):
-            group, symbols, error = future.result()
-            counts[group] = len(symbols)
-            if error:
-                errors[group] = error
-            for symbol in symbols:
-                categories[symbol] = group
-
-    if errors:
-        raise ValueError(f"Failed to fetch {len(errors)} category boards: {errors}")
-
-    if len(categories) < MIN_TOTAL_SYMBOLS:
-        raise ValueError(f"Classic category scraper returned too few symbols ({len(categories)})")
-
-    return {"categories": categories, "counts": counts}
-
-
-# ------------------------------------------------------------------------------
 # Dispatcher & HTTP Handler
 # ------------------------------------------------------------------------------
 
 def get_categories(source="auto"):
-    if source == "new":
+    """`source` is kept for backward compatibility ("auto" / "new" / "classic")
+    but no longer changes anything — the classic boards are gone (HTTP 410)."""
+    errors = []
+    for i, api_url in enumerate(DSE_API_URLS):
         try:
-            res = fetch_categories_from_new_dse(api_url=NEW_DSE_API_URL)
-            res["source"] = "new-dse-single-pass"
+            res = fetch_categories_from_new_dse(api_url=_attempt_url(i, api_url))
+            host = urllib.parse.urlparse(api_url).hostname
+            res["source"] = "new-dse-single-pass" if host == "www.dsebd.org" else f"new-dse-single-pass ({host})"
             return res
-        except Exception:
-            res = fetch_categories_from_new_dse(api_url=MAIN_DSE_API_URL)
-            res["source"] = "new-dse-main-domain"
-            return res
+        except Exception as e:
+            errors.append(f"{urllib.parse.urlparse(api_url).hostname}: {e}")
 
-    if source == "classic":
-        res = fetch_all_categories_classic()
-        res["source"] = "classic-dse-multi-thread"
-        return res
-
-    # Auto mode: try fast modern API on new.dsebd.org, then www.dsebd.org mirror
-    try:
-        res = fetch_categories_from_new_dse(api_url=NEW_DSE_API_URL)
-        res["source"] = "new-dse-single-pass"
-        return res
-    except Exception as e_new:
-        try:
-            res = fetch_categories_from_new_dse(api_url=MAIN_DSE_API_URL)
-            res["source"] = "new-dse-main-domain"
-            return res
-        except Exception:
-            res = fetch_all_categories_classic()
-            res["source"] = f"classic-dse-fallback (new failed: {str(e_new)[:80]})"
-            return res
+    raise RuntimeError(f"DSE category feed failed on every host ({'; '.join(errors)})")
 
 
 class handler(BaseHTTPRequestHandler):

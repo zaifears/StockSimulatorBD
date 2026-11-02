@@ -12,8 +12,8 @@ USER_AGENT = (
 )
 
 COMPANY_BASE_URLS = [
-    "https://new.dsebd.org/company",
     "https://www.dsebd.org/company",
+    "https://dsebd.org/company",
 ]
 
 _SSL_CONTEXT = ssl.create_default_context()
@@ -33,7 +33,7 @@ def _read_response_text(resp) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def fetch_from_modern_dse(symbol: str, base_url: str = "https://new.dsebd.org/company") -> list:
+def fetch_from_modern_dse(symbol: str, base_url: str = "https://www.dsebd.org/company") -> list:
     """Extracts daily candles from modern DSE company page RSC flight stream."""
     url = f"{base_url}/{symbol.upper()}"
     ctx = _create_ssl_context()
@@ -42,7 +42,7 @@ def fetch_from_modern_dse(symbol: str, base_url: str = "https://new.dsebd.org/co
         headers={
             "User-Agent": USER_AGENT,
             "Accept-Encoding": "gzip",
-            "Referer": "https://new.dsebd.org/",
+            "Referer": "https://www.dsebd.org/",
         },
     )
 

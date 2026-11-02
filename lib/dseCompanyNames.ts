@@ -4,8 +4,7 @@
  * punctuation-resilient search across Dhaka Stock Exchange instruments.
  * 
  * Sources:
- * - https://new.dsebd.org/api/live/companies/search (Modern DSE Platform)
- * - https://www.dsebd.org/company_listing.php (Classic DSE Board)
+ * - https://www.dsebd.org/api/live/companies/search (DSE live platform)
  * 
  * Complete verified list of all 422 DSE-listed equities and funds (Treasury Bonds excluded).
  */

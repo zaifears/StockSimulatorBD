@@ -17,6 +17,43 @@ const VPS_RETRY_COOLDOWN_MS = 15 * 60 * 1000;
 
 type PriceSource = 'dse' | 'dse-direct' | 'lankabd-failsafe';
 
+// DSE's live feed drops some instruments (corporate bonds, debentures) between
+// its pre-open reset and the session start, then adds them back. A write in
+// that window would make those holdings vanish from market_info/latest and be
+// valued at ৳0. Carry them forward as "not traded today" rows instead — the
+// same shape the feed uses for an untraded stock, so they're valued at their
+// last price and can't be traded. A symbol absent this long is gone for real.
+const CARRY_FORWARD_MAX_MS = 7 * 24 * 60 * 60 * 1000;
+
+type StockRow = Record<string, any> & { symbol: string };
+
+function carryForwardMissing(fresh: StockRow[], previous: unknown, nowMs: number): StockRow[] {
+  if (!Array.isArray(previous)) return [];
+  const present = new Set(fresh.map((s) => s.symbol));
+  const carried: StockRow[] = [];
+  for (const prev of previous as StockRow[]) {
+    if (!prev || typeof prev.symbol !== 'string' || present.has(prev.symbol)) continue;
+    if (typeof prev.missingSince === 'string') {
+      if (nowMs - new Date(prev.missingSince).getTime() <= CARRY_FORWARD_MAX_MS) carried.push(prev);
+      continue;
+    }
+    const lastPrice = prev.traded !== false && prev.ltp > 0 ? prev.ltp : prev.ycp || 0;
+    carried.push({
+      ...prev,
+      ltp: 0,
+      ycp: lastPrice,
+      change: 0,
+      changePercent: 0,
+      trade: 0,
+      value: 0,
+      volume: 0,
+      traded: false,
+      missingSince: new Date(nowMs).toISOString(),
+    });
+  }
+  return carried;
+}
+
 function getPythonApiBase(): string {
   const envUrl = process.env.PYTHON_API_URL?.trim();
   if (envUrl) {
@@ -96,8 +133,10 @@ export async function GET(request: NextRequest) {
   const nowMs = Date.now();
   let vpsLastTriedAt: string | null = null;
   let skipVps = false;
+  let previousStocks: unknown = null;
   try {
     const prev = (await marketRef.get()).data();
+    previousStocks = prev?.stocks;
     if (prev?.source === 'dse-direct' && typeof prev.vpsLastTriedAt === 'string') {
       vpsLastTriedAt = prev.vpsLastTriedAt;
       skipVps = nowMs - new Date(prev.vpsLastTriedAt).getTime() < VPS_RETRY_COOLDOWN_MS;
@@ -184,6 +223,15 @@ export async function GET(request: NextRequest) {
         { status: 502 }
       );
     }
+  }
+
+  const carried = carryForwardMissing(marketData as StockRow[], previousStocks, nowMs);
+  if (carried.length > 0) {
+    // Keep DSE's own symbol order so the carried rows sit where they always did.
+    marketData = [...(marketData as StockRow[]), ...carried].sort((a, b) =>
+      a.symbol < b.symbol ? -1 : a.symbol > b.symbol ? 1 : 0
+    );
+    console.log(`[stock-sync] Carried forward ${carried.length} symbols missing from this snapshot`);
   }
 
   // ── Write to Firestore ────────────────────────────────────────────────────

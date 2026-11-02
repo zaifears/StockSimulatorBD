@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { verifyCronSecret } from '@/lib/utils/cronAuth';
+import { fetchDsePricesPayload, parseDseCategories } from '@/lib/dseDirect';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
+
+const VPS_TIMEOUT_MS = 8000;
 
 function buildSyncUrl(): string {
   if (process.env.CATEGORY_SYNC_URL) return process.env.CATEGORY_SYNC_URL;
@@ -44,11 +47,14 @@ export async function GET(request: NextRequest) {
 
   let categories: Record<string, string>;
   let counts: Record<string, number>;
+  let source: 'vps' | 'dse-direct' = 'vps';
 
   try {
     const pythonRes = await fetch(scrapeUrl, {
       headers: { 'User-Agent': 'StockSimulatorBD-CategorySync/1.0' },
-      signal: AbortSignal.timeout(25000),
+      // A healthy VPS answers in well under a second; don't burn function
+      // time on a dead one before falling back to DSE directly.
+      signal: AbortSignal.timeout(VPS_TIMEOUT_MS),
     });
 
     if (!pythonRes.ok) {
@@ -68,8 +74,18 @@ export async function GET(request: NextRequest) {
     categories = payload.categories;
     counts = payload.counts;
   } catch (err: any) {
-    console.error('[category-sync] Scrape failed:', err.message);
-    return NextResponse.json({ error: `Scrape failed: ${err.message}` }, { status: 502 });
+    // Same feed api/category_sync.py reads, fetched from this function instead.
+    console.warn(`[category-sync] VPS scrape failed (${err.message}), fetching DSE directly...`);
+    try {
+      ({ result: { categories, counts } } = await fetchDsePricesPayload(parseDseCategories));
+      source = 'dse-direct';
+    } catch (directErr: any) {
+      console.error('[category-sync] Scrape failed:', err.message, '|', directErr.message);
+      return NextResponse.json(
+        { error: `Scrape failed: VPS (${err.message}), direct DSE (${directErr.message})` },
+        { status: 502 }
+      );
+    }
   }
 
   const symbolCount = categories ? Object.keys(categories).length : 0;
@@ -100,7 +116,8 @@ export async function GET(request: NextRequest) {
     // enough to trust as a baseline — the very first run, or one recovering
     // from an already-bad state, has nothing meaningful to compare against.
     const existingSnap = await categoriesRef.get();
-    const previousTotal = existingSnap.exists ? (existingSnap.data()?.totalCategorized as number | undefined) : undefined;
+    const previousData = existingSnap.exists ? existingSnap.data() : undefined;
+    const previousTotal = previousData?.totalCategorized as number | undefined;
 
     if (typeof previousTotal === 'number' && previousTotal >= MIN_CATEGORIZED) {
       const dropFraction = (previousTotal - symbolCount) / previousTotal;
@@ -114,18 +131,38 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // DSE's feed drops some instruments (corporate bonds, debentures) between
+    // its pre-open reset and the session start. Keep their last known category
+    // rather than deleting it, or a sync in that window would silently move
+    // them to the default T+2 settlement. A leftover entry for a delisted
+    // symbol is inert: it has no price row, so nothing ever looks it up.
+    const previousCategories: Record<string, string> = previousData?.categories || {};
+    let carried = 0;
+    for (const [symbol, category] of Object.entries(previousCategories)) {
+      if (categories[symbol] === undefined && typeof category === 'string') {
+        categories[symbol] = category;
+        counts[category] = (counts[category] || 0) + 1;
+        carried++;
+      }
+    }
+    const totalCategorized = symbolCount + carried;
+
     await categoriesRef.set({
       categories,
       counts,
       lastUpdated: new Date().toISOString(),
-      totalCategorized: symbolCount,
+      totalCategorized,
     });
 
-    console.log(`[category-sync] ✓ Wrote ${symbolCount} categories to ${appId}`, counts);
+    console.log(
+      `[category-sync] ✓ Wrote ${totalCategorized} categories to ${appId} (source: ${source}, ${carried} carried forward)`,
+      counts
+    );
 
     return NextResponse.json({
       success: true,
-      message: `Successfully synced ${symbolCount} stock categories.`,
+      source,
+      message: `Successfully synced ${symbolCount} stock categories${carried ? ` (+${carried} carried forward)` : ''}.`,
       counts,
       appId,
       timestamp: new Date().toISOString(),
