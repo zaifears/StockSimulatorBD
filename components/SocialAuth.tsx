@@ -22,14 +22,41 @@ interface SocialAuthProps {
 const FacebookIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
     <path
-      fill="currentColor"
+      fill="#1877F2"
       d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.971H15.83c-1.491 0-1.956.93-1.956 1.886v2.264h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"
     />
   </svg>
 );
 
+// Tactile per DESIGN.md "The Lift Is Feedback Rule": every button rests on a
+// soft shadow, rises under the cursor and compresses under a thumb, so a
+// nervous first-time user can tell it is live before tapping.
 const btnBase =
-  'w-full min-h-[44px] py-2.5 px-3 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-3 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#1A1F26]';
+  'w-full min-h-[44px] py-2.5 px-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 ' +
+  'shadow-sm transition-[transform,box-shadow,background-color,border-color] duration-200 ease-out ' +
+  'hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] active:shadow-sm ' +
+  'motion-reduce:transform-none motion-reduce:transition-colors ' +
+  'disabled:opacity-50 disabled:pointer-events-none ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#1A1F26]';
+
+// Google's own button themes (developers.google.com/identity/branding-guidelines):
+// "light" = white fill, #747775 outline, #1F1F1F text. The light theme is
+// used in dark mode too: Google's dark fill (#131314) sat darker than our
+// navy card and read as disabled, while white is the highest-contrast,
+// unmistakably live option the guidelines allow.
+const googleBtn =
+  'bg-white text-[#1F1F1F] border border-[#747775] hover:bg-[#F8F9FA] hover:border-[#5F6368] ' +
+  'dark:border-white dark:hover:bg-[#F1F3F4] dark:hover:border-[#F1F3F4] focus-visible:ring-blue-500';
+
+// Deliberately quiet while Meta's App Review is pending (only app-role
+// accounts can sign in until then): neutral grey, listed last. Meta's brand
+// rules allow a custom button as long as the "f" logo itself is unaltered,
+// so the logo keeps Facebook Blue. Swap back to bg-[#1877F2] text-white
+// after the app is published.
+const facebookBtn =
+  'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 ' +
+  'dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-800 ' +
+  'focus-visible:ring-gray-400';
 
 const SocialAuth: React.FC<SocialAuthProps> = ({
   handleGoogleSignIn,
@@ -54,7 +81,7 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
       type="button"
       onClick={handleFacebookSignIn}
       disabled={isLoading}
-      className={`${btnBase} bg-[#1877F2] hover:bg-[#166FE5] text-white focus:ring-[#1877F2]`}
+      className={`${btnBase} ${facebookBtn}`}
     >
       <FacebookIcon />
       Continue with Facebook
@@ -66,7 +93,7 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
       type="button"
       onClick={handleGitHubSignIn}
       disabled={isLoading}
-      className={`${btnBase} bg-gray-900 dark:bg-gray-800 hover:bg-gray-800 dark:hover:bg-gray-700 text-white focus:ring-gray-500`}
+      className={`${btnBase} bg-gray-900 dark:bg-gray-800 hover:bg-gray-800 dark:hover:bg-gray-700 text-white focus-visible:ring-gray-500`}
     >
       <GitHubIcon />
       Continue with GitHub
@@ -127,12 +154,11 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
           </p>
         </div>
 
-        {redirectSignInWorks && facebookButton}
 
         <button
           type="button"
           onClick={handleOpenInBrowser}
-          className={`${btnBase} bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500`}
+          className={`${btnBase} bg-blue-600 hover:bg-blue-700 text-white focus-visible:ring-blue-500`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -143,12 +169,13 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
         <button
           type="button"
           onClick={handleCopyLink}
-          className={`${btnBase} bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 focus:ring-gray-400`}
+          className={`${btnBase} bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 focus-visible:ring-gray-400`}
         >
           {linkCopied ? '✓ Link copied, paste it in your browser' : 'Copy link'}
         </button>
 
         {redirectSignInWorks && githubButton}
+        {redirectSignInWorks && facebookButton}
 
         <p className="text-gray-500 dark:text-slate-400 text-xs text-center">
           Email sign-in (password or a sign-in link) works right here.
@@ -163,13 +190,13 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
         type="button"
         onClick={handleGoogleSignIn}
         disabled={isLoading}
-        className={`${btnBase} bg-white dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1A1F26] focus:ring-blue-500`}
+        className={`${btnBase} ${googleBtn}`}
       >
         <GoogleIcon />
         Continue with Google
       </button>
-      {facebookButton}
       {githubButton}
+      {facebookButton}
     </div>
   );
 };

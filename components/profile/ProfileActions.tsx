@@ -12,6 +12,15 @@ interface ProfileActionsProps {
   hasPassword?: boolean;  // ✅ NEW: Show password button only if user has password
 }
 
+// Shared sizing so the three actions always match: equal grid columns, one
+// fixed height, a label that never wraps. Only the colour differs per action.
+// Sized so "Change Password" (176px at text-sm/px-3) fits the narrowest
+// three-column case: 181px per column at a 640px viewport.
+const actionBtn =
+  'w-full h-14 group flex items-center justify-center gap-2 px-3 whitespace-nowrap rounded-xl text-sm font-semibold ' +
+  'transition-all duration-300 transform hover:scale-105 active:scale-95 motion-reduce:transform-none shadow-md hover:shadow-lg border ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900';
+
 function ProfileActions({
   isEditing,
   onEdit,
@@ -23,10 +32,10 @@ function ProfileActions({
 }: ProfileActionsProps) {
   if (!isEditing) {
     return (
-      <div className={`flex flex-col ${hasPassword ? 'sm:flex-row' : 'sm:flex-row'} gap-4 ${hasPassword ? 'max-w-2xl' : 'max-w-md'} mx-auto`}>
+      <div className={`grid grid-cols-1 gap-3 mx-auto ${hasPassword ? 'sm:grid-cols-3 max-w-2xl' : 'sm:grid-cols-2 max-w-md'}`}>
         <button 
           onClick={onEdit} 
-          className="group flex items-center justify-center gap-3 flex-1 px-6 py-4 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg border border-blue-200 dark:border-blue-800"
+          className={`${actionBtn} bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 focus-visible:ring-blue-500`}
         >
           <EditIcon />
           <span>Edit Profile</span>
@@ -36,21 +45,21 @@ function ProfileActions({
         {hasPassword && (
           <button 
             onClick={onChangePassword} 
-            className="group flex items-center justify-center gap-3 flex-1 px-6 py-4 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg border border-purple-200 dark:border-purple-800"
+            className={`${actionBtn} bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 focus-visible:ring-purple-500`}
           >
             <LockIcon />
             <span>Change Password</span>
           </button>
         )}
         
-        <form onSubmit={(e) => { e.preventDefault(); onLogout(); }}>
+        <form className="w-full" onSubmit={(e) => { e.preventDefault(); onLogout(); }}>
           {/* WebMCP Schema Injection */}
           <script type="application/webmcp+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
             tools: [{ name: "logout_user", description: "Log out of the current account." }]
           }) }} />
           <button 
             type="submit"
-            className="w-full group flex items-center justify-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg border border-red-200 dark:border-red-800"
+            className={`${actionBtn} bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 focus-visible:ring-red-500`}
           >
             <LogoutIcon />
             <span>Logout</span>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, Component } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
-import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, facebookProvider, isFacebookLoginEnabled, isSameSiteAuthDomain, isMetaInAppBrowser, signInWithSocialProviderAndCreateProfile, isInAppBrowser, sendMagicSignInLink, isMagicSignInLink, getPendingMagicLinkEmail, completeMagicSignIn } from '../../lib/firebase'
+import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, facebookProvider, isFacebookLoginEnabled, isFacebookLoginLive, isSameSiteAuthDomain, isMetaInAppBrowser, signInWithSocialProviderAndCreateProfile, isInAppBrowser, sendMagicSignInLink, isMagicSignInLink, getPendingMagicLinkEmail, completeMagicSignIn } from '../../lib/firebase'
 import { useRouter } from 'next/navigation'
 import { validateEmail, validatePassword, sanitizeError, rateLimit, PASSWORD_RULES } from '../../lib/authUtils'
 import { humanizeAuthError } from '../../lib/authErrorHandler'
@@ -12,6 +12,7 @@ import GoogleOneTap from '../../components/GoogleOneTap'
 import { Eye, EyeOff, Check, Circle, Mail } from 'lucide-react'
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3'
 import { useRecaptcha } from '@/hooks/useRecaptcha'
+import { trackAuthClick, markPendingAuthMethod } from '@/lib/authMethodTracking'
 
 // Inner component that uses reCAPTCHA
 function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
@@ -87,6 +88,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     }
     setIsLoading(true)
     setMessage('Signing you in…')
+    markPendingAuthMethod('email_link')
     completeMagicSignIn(saved, window.location.href)
       .catch((err) => {
         setMessage('')
@@ -239,6 +241,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
         phone: formData.phone?.trim()
       }
 
+      trackAuthClick('email_password')
       await signUpWithEmailPasswordAndProfile(profileData, formData.password)
       setMessage('Account created! Please check your email for verification.')
       setShowSignupSuccess(true)
@@ -284,6 +287,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     setShowSignupSuccess(false)
 
     try {
+      trackAuthClick('email_password')
       await signInWithEmailAndPassword(auth, formData.email.trim().toLowerCase(), formData.password)
     } catch (err: any) {
       setError(humanizeAuthError(err))
@@ -305,6 +309,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     setError('')
     setShowSignupSuccess(false)
     setMessage('Connecting to Google...')
+    trackAuthClick('google')
 
     try {
       await signInWithSocialProviderAndCreateProfile(googleProvider)
@@ -330,6 +335,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     setShowSignupSuccess(false)
 
     try {
+      trackAuthClick('github')
       await signInWithSocialProviderAndCreateProfile(githubProvider)
     } catch (err: any) {
       setError(humanizeAuthError(err))
@@ -364,6 +370,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
       setIsLoading(true)
       setError('')
       setMessage('')
+      trackAuthClick('email_link')
       await sendMagicSignInLink(email, getSafeRedirect())
       setMagicLinkSentTo(email)
     } catch (err: any) {
@@ -383,6 +390,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     setIsLoading(true)
     setError('')
     try {
+      markPendingAuthMethod('email_link')
       await completeMagicSignIn(email, window.location.href)
       setMessage('Signing you in…')
     } catch (err: any) {
@@ -406,9 +414,22 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     setShowSignupSuccess(false)
 
     try {
+      trackAuthClick('facebook')
       await signInWithSocialProviderAndCreateProfile(facebookProvider)
     } catch (err: any) {
-      setError(humanizeAuthError(err))
+      const code = String(err?.code || '')
+      const closedWithoutSigningIn =
+        code.includes('auth/popup-closed-by-user') || code.includes('auth/cancelled-popup-request')
+      // While Meta's App Review is pending, Facebook shows non-tester accounts
+      // an "App not active" page and the person just closes the popup. Say
+      // what's going on instead of "Sign-in was cancelled". Set
+      // NEXT_PUBLIC_FACEBOOK_LOGIN_LIVE=true on Vercel once the Meta app is
+      // published to switch this back to the normal message.
+      if (closedWithoutSigningIn && !isFacebookLoginLive) {
+        setError('Facebook sign-in is being activated. Please use Google or email for now.')
+      } else {
+        setError(humanizeAuthError(err))
+      }
     } finally {
       setIsLoading(false)
     }

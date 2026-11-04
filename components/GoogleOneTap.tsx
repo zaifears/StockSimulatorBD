@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import Script from 'next/script'
 import { signInWithGoogleOneTapCredential } from '../lib/firebase'
+import { trackAuthClick } from '../lib/authMethodTracking'
 
 declare global {
   interface Window {
@@ -43,6 +44,7 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
     inFlightRef.current = true
     onSigningIn?.(true)
     try {
+      trackAuthClick('google_one_tap')
       await signInWithGoogleOneTapCredential(response.credential)
       // Firebase's onAuthStateChanged (in AuthContext) takes it from here —
       // welcome bonus, user-doc creation, and the /auth page's own

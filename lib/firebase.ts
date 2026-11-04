@@ -74,6 +74,11 @@ let facebookProvider: any;
 // configured (see docs/login-facebook-and-in-app-browsers.md).
 export const isFacebookLoginEnabled = process.env.NEXT_PUBLIC_ENABLE_FACEBOOK_LOGIN === 'true';
 
+// Meta app published (App Review approved). Until then only accounts with a
+// role on the Meta app can sign in; everyone else sees "App not active", so
+// /auth explains that when the popup is closed.
+export const isFacebookLoginLive = process.env.NEXT_PUBLIC_FACEBOOK_LOGIN_LIVE === 'true';
+
 /**
  * True when Firebase's auth handler is served from this site's own domain
  * (the /__/auth rewrite in next.config.mjs + NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN

@@ -11,6 +11,7 @@ import { fetchWithToken, fetchWithFreshToken } from '@/lib/utils/fetchWithToken'
 import SiteAnalyticsSection, { SiteAnalyticsData } from '@/components/admin/SiteAnalyticsSection';
 import AnalyticsExportModal from '@/components/admin/AnalyticsExportModal';
 import { useRejectReasonDialog } from '@/components/admin/RejectReasonDialog';
+import AuthMethodStats from '@/components/admin/AuthMethodStats';
 import {
   generateAdminAnalyticsMarkdown,
   generateAdminAnalyticsJson,
@@ -265,13 +266,12 @@ export default function AdminDashboard() {
     fetchStats();
   }, [user, authLoading]);
 
+  // Analytics is deliberately NOT remembered between visits: every /admin
+  // load starts with it off, so Site Analytics and sign-in stats only cost
+  // Firestore reads after an explicit "Turn on Analytics" click. (It used to
+  // persist in localStorage, which silently kept it on across refreshes.)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('admin_analytics_active');
-      if (saved === 'true') {
-        setAnalyticsActive(true);
-      }
-    } catch {}
+    try { localStorage.removeItem('admin_analytics_active'); } catch {}
   }, []);
 
   const fetchSiteAnalytics = useCallback(
@@ -307,19 +307,9 @@ export default function AdminDashboard() {
     }
   }, [analyticsActive, fetchSiteAnalytics]);
 
-  const handleEnableAnalytics = () => {
-    setAnalyticsActive(true);
-    try {
-      localStorage.setItem('admin_analytics_active', 'true');
-    } catch {}
-  };
+  const handleEnableAnalytics = () => setAnalyticsActive(true);
 
-  const handleDisableAnalytics = () => {
-    setAnalyticsActive(false);
-    try {
-      localStorage.setItem('admin_analytics_active', 'false');
-    } catch {}
-  };
+  const handleDisableAnalytics = () => setAnalyticsActive(false);
 
   const handleQuickExportMarkdown = async () => {
     if (!siteAnalytics) {
@@ -814,6 +804,10 @@ export default function AdminDashboard() {
             />
           </div>
         )}
+
+        {/* Sign-in button usage — loads only after "Turn on Analytics", like
+            Site Analytics above, so a plain /admin visit costs no extra reads */}
+        {analyticsActive && <AuthMethodStats enabled={isAdminMode} />}
 
         {/* Requests Breakdown */}
         <div>

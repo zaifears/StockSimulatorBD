@@ -13,6 +13,7 @@ import { auth, db, handleSocialSignInResult } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { isBossActive, isBossExpired } from '@/lib/tier';
 import { isWelcomeBonusEligible } from '@/lib/welcomeBonusEligibility';
+import { reportAuthSuccess } from '@/lib/authMethodTracking';
 
 // ✅ localStorage cache interface
 interface CachedUserData {
@@ -242,6 +243,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         setUser(user);
+
+        // Sign-in button tracker: only counts if a button was clicked in this
+        // tab moments ago, so a restored session on page load is ignored.
+        if (user) reportAuthSuccess(user);
         
         if (user) {
           // Immediately establish email verification status from in-memory user object
