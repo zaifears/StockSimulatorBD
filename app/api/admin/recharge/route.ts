@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { verifyAdminAccess } from '@/lib/utils/adminVerification';
 import { isBossActive, isBossExpired } from '@/lib/tier';
+import { normalizeRejectionReason } from '@/lib/rejectionReasons';
+import { RejectError, notifyRejection } from '@/lib/rejectionEmail';
 
 // Ensure Firebase Admin is initialized with full credentials
 import '@/lib/firebaseAdmin';
@@ -58,33 +60,48 @@ export async function POST(req: NextRequest) {
     // REJECT
     // ─────────────────────────────────────────────
     if (action === 'reject') {
-      // Verify request exists and is still pending
-      const requestDoc = await requestRef.get();
-      if (!requestDoc.exists) {
-        return NextResponse.json(
-          { success: false, error: 'Recharge request not found' },
-          { status: 404 }
-        );
+      const reason = normalizeRejectionReason(rejectionReason, 'Payment could not be verified');
+
+      // Transaction, not get-then-update: an approve landing between the read
+      // and the write would otherwise be overwritten to "rejected" after the
+      // coins were already credited.
+      let requestData: FirebaseFirestore.DocumentData | undefined;
+      try {
+        requestData = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(requestRef);
+          if (!snap.exists) throw new RejectError('Recharge request not found', 404);
+          const data = snap.data();
+          if (data?.status !== 'pending') throw new RejectError(`Request is already ${data?.status}`, 409);
+          tx.update(requestRef, {
+            status: 'rejected',
+            processedAt: FieldValue.serverTimestamp(),
+            processedBy: adminCheck.uid,
+            rejectionReason: reason,
+          });
+          return data;
+        });
+      } catch (err) {
+        if (err instanceof RejectError) {
+          return NextResponse.json({ success: false, error: err.message }, { status: err.status });
+        }
+        throw err;
       }
 
-      const requestData = requestDoc.data();
-      if (requestData?.status !== 'pending') {
-        return NextResponse.json(
-          { success: false, error: `Request is already ${requestData?.status}` },
-          { status: 409 }
-        );
-      }
-
-      await requestRef.update({
-        status: 'rejected',
-        processedAt: FieldValue.serverTimestamp(),
-        processedBy: adminCheck.uid,
-        rejectionReason: rejectionReason || 'No reason provided',
+      const email = await notifyRejection(requestData?.userId, {
+        userName: requestData?.userName,
+        kind: 'recharge',
+        amountBdt: requestData?.amount,
+        coins: requestData?.totalCoins ?? requestData?.coins,
+        trxId: requestData?.trxId || requestData?.transactionId,
+        reason,
       });
+      // Only the boolean: the trader can read this doc, provider errors stay in server logs.
+      await requestRef.update({ rejectionEmailSent: email.sent }).catch(() => {});
 
       return NextResponse.json({
         success: true,
-        message: `Request from ${userName || 'user'} rejected`,
+        emailSent: email.sent,
+        message: `Request from ${userName || requestData?.userName || 'user'} rejected${email.sent ? ' and emailed' : ` (email not sent: ${email.error})`}`,
       });
     }
 

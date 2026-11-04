@@ -19,6 +19,7 @@ import {
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import BossBadge from '@/components/ui/BossBadge';
 import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
+import { useRejectReasonDialog } from '@/components/admin/RejectReasonDialog';
 
 type TierTab = 'pending' | 'active' | 'approved' | 'rejected' | 'expired' | 'manual';
 
@@ -77,6 +78,7 @@ export interface ExpiredBossUser {
 
 export default function TierList() {
   const { user } = useAuth();
+  const { askReason, rejectDialog } = useRejectReasonDialog();
   const [activeTab, setActiveTab] = useState<TierTab>('pending');
   const [requests, setRequests] = useState<BossRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,13 +198,18 @@ export default function TierList() {
     const baseCol = collection(db, 'boss_requests');
     const q = activeTab === 'manual'
       ? query(baseCol, orderBy('createdAt', 'desc'))
-      : query(baseCol, where('status', '==', activeTab), orderBy('createdAt', 'desc'));
+      // Equality filter only, sorted below: status + orderBy(createdAt) needs a
+      // composite index this project doesn't have.
+      : query(baseCol, where('status', '==', activeTab));
+    const toMillis = (v: any): number =>
+      typeof v?.toMillis === 'function' ? v.toMillis() : new Date(v ?? 0).getTime() || 0;
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         if (!isSubscribed) return;
-        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as BossRequest[];
+        const data = (snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as BossRequest[])
+          .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
         setRequests(data);
         setLoading(false);
       },
@@ -293,8 +300,8 @@ export default function TierList() {
       setMessage({
         text: action === 'approve'
           ? `Approved! ${req.userName} is now on Boss tier for ${req.durationDays} days.`
-          : `Request from ${req.userName} has been rejected.`,
-        type: 'success',
+          : `Request from ${req.userName} has been rejected.${json.emailSent ? ' Email sent.' : ' Email NOT sent — tell them on WhatsApp.'}`,
+        type: action === 'approve' || json.emailSent ? 'success' : 'error',
       });
       fetchStats();
     } catch (err: any) {
@@ -557,6 +564,7 @@ export default function TierList() {
 
   return (
     <div className="max-w-6xl mx-auto px-3.5 sm:px-4 py-2 sm:py-6">
+      {rejectDialog}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
         <div>
@@ -1623,8 +1631,11 @@ export default function TierList() {
                         <button
                           type="button"
                           disabled={actionInProgress === req.id}
-                          onClick={() => {
-                            const reason = window.prompt('Enter rejection reason (optional):', 'Transaction ID not found in bKash account');
+                          onClick={async () => {
+                            const reason = await askReason({
+                              title: 'Reject Boss upgrade',
+                              subtitle: `${req.userName || req.userEmail || 'User'} · ৳${req.amount ?? '?'} · TrxID ${req.transactionId || '—'}`,
+                            });
                             if (reason !== null) handleAction('reject', req, reason);
                           }}
                           className="flex-1 md:flex-none justify-center px-3.5 py-2.5 min-h-[44px] rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"

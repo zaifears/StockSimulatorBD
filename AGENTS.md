@@ -126,6 +126,8 @@ The application operates a clear two-tier model:
   - `POST action: 'manual_grant'`: Accepts either `userId` or `email`, clamps duration through `safeDays()`, and updates the tier.
   - `POST action: 'revoke'`: Reverts user document to `'Bro'` tier and zeroes `bossUntil`.
   - **Safe Days Whitelist**: `ALLOWED_DAYS = [7, 31, 185, 365]`. Invalid or arbitrary day counts (e.g. 100 years) are clamped safely.
+- **Rejections (Boss & recharge)**: every admin Reject button opens `components/admin/RejectReasonDialog.tsx` (preset reasons in `lib/rejectionReasons.ts` + custom text). The reject routes flip the status inside a transaction, then `lib/rejectionEmail.ts` emails the trader the reason plus the `https://wa.me/zaifears` dispute link and stores `rejectionEmailSent`. The recipient is the trader's **Firebase Auth** email, never the request doc's client-written `userEmail`. Traders see the reason on `/coins` (top banner + Recent Requests) and `/boss` (`components/boss/BossRequestHistory.tsx`).
+- **No composite indexes**: the repo has no `firestore.indexes.json`. `boss_requests` listeners filter on one field and sort client-side; don't add `where(...) + orderBy(...)` on another field without creating the index.
 
 ---
 

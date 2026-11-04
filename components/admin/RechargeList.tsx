@@ -10,6 +10,7 @@ import {
   ArrowLeft, Copy,
 } from 'lucide-react';
 import ScrollableHorizontal from '@/components/ui/ScrollableHorizontal';
+import { useRejectReasonDialog } from '@/components/admin/RejectReasonDialog';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -45,6 +46,7 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
 
   const PAGE_SIZE = 30;
   const [requests, setRequests] = useState<RechargeRequest[]>([]);
+  const { askReason, rejectDialog } = useRejectReasonDialog();
   const [processing, setProcessing] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedTrxId, setCopiedTrxId] = useState<string | null>(null);
@@ -163,8 +165,12 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
     }
   };
 
-  const handleReject = async (requestId: string, userName: string) => {
-    const reason = prompt('Rejection reason (optional):');
+  const handleReject = async (req: RechargeRequest) => {
+    const { id: requestId, userName } = req;
+    const reason = await askReason({
+      title: 'Reject coin recharge',
+      subtitle: `${userName || req.userEmail || 'User'} · ৳${req.amount} · TrxID ${req.trxId || '—'}`,
+    });
     if (reason === null) return;
 
     setProcessing(requestId);
@@ -188,7 +194,7 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
           action: 'reject',
           requestId,
           userName,
-          rejectionReason: reason || 'No reason provided',
+          rejectionReason: reason,
         }),
       });
 
@@ -274,6 +280,7 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
 
   return (
     <div className="min-h-screen pt-20 sm:pt-28 px-3.5 sm:px-4 pb-24 sm:pb-12 bg-gray-50/50 dark:bg-[#090E17]">
+      {rejectDialog}
       {/* WebMCP Schema Injection */}
       <script
         type="application/webmcp+json"
@@ -509,7 +516,7 @@ export default function RechargeList({ statusFilter }: { statusFilter: StatusFil
                           <span>Approve</span>
                         </button>
                       </form>
-                      <form className="flex-1 lg:flex-none flex" onSubmit={(e) => { e.preventDefault(); handleReject(req.id, req.userName); }}>
+                      <form className="flex-1 lg:flex-none flex" onSubmit={(e) => { e.preventDefault(); handleReject(req); }}>
                         <input type="hidden" name="request_id" value={req.id} />
                         <button
                           type="submit"

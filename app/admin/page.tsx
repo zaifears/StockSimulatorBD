@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, getCountFromServer, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, getCountFromServer, query, where, onSnapshot } from 'firebase/firestore';
 import { checkAdminMode } from '@/lib/admin';
 import { fetchWithToken, fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import SiteAnalyticsSection, { SiteAnalyticsData } from '@/components/admin/SiteAnalyticsSection';
 import AnalyticsExportModal from '@/components/admin/AnalyticsExportModal';
+import { useRejectReasonDialog } from '@/components/admin/RejectReasonDialog';
 import {
   generateAdminAnalyticsMarkdown,
   generateAdminAnalyticsJson,
@@ -25,6 +26,7 @@ import {
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { askReason, rejectDialog } = useRejectReasonDialog();
   const [stats, setStats] = useState({
     totalUsers: 0,
     pendingRequests: 0,
@@ -62,15 +64,18 @@ export default function AdminDashboard() {
   // permission-denied errors in the console and wastes a listener slot.
   useEffect(() => {
     if (!user || authLoading || !isAdminMode) return;
-    const q = query(
-      collection(db, 'boss_requests'),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
-    );
+    // Equality filter only, sorted client-side: status + orderBy(createdAt)
+    // needs a composite index this project doesn't have, and the pending
+    // queue is always small.
+    const q = query(collection(db, 'boss_requests'), where('status', '==', 'pending'));
+    const toMillis = (v: any): number =>
+      typeof v?.toMillis === 'function' ? v.toMillis() : new Date(v ?? 0).getTime() || 0;
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const list = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as any)
+          .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
         setPendingBossRequests(list);
       },
       (err) => console.error('Error listening to pending boss requests:', err)
@@ -124,7 +129,10 @@ export default function AdminDashboard() {
   };
 
   const handleRejectBoss = async (req: any) => {
-    const reason = window.prompt('Rejection reason (optional):', 'Transaction ID not verified in bKash');
+    const reason = await askReason({
+      title: 'Reject Boss upgrade',
+      subtitle: `${req.userName || req.userEmail || 'User'} · ৳${req.amount ?? '?'} · TrxID ${req.transactionId || '—'}`,
+    });
     if (reason === null) return;
     setBossActionLoading(req.id);
     setBossFeedback(null);
@@ -150,7 +158,10 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to reject request');
 
-      setBossFeedback({ text: `Rejected request for ${req.userName || req.userEmail}.`, type: 'success' });
+      setBossFeedback({
+        text: `Rejected request for ${req.userName || req.userEmail}.${data.emailSent ? ' Email sent.' : ' Email NOT sent — tell them on WhatsApp.'}`,
+        type: data.emailSent ? 'success' : 'error',
+      });
     } catch (err: any) {
       setPendingBossRequests(previousPending);
       setStats((prev) => ({
@@ -366,6 +377,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-[#090E17]">
+      {rejectDialog}
       {/* Header Section — grid + ambient glow, matching the homepage hero treatment */}
       <div className="relative border-b border-gray-100 dark:border-gray-800/60 overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,#3b82f615_1px,transparent_1px),linear-gradient(to_bottom,#3b82f615_1px,transparent_1px)]"></div>

@@ -30,6 +30,7 @@ import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import BossBadge from '@/components/ui/BossBadge';
 import PaymentMethodTabs, { PaymentTabId, PAYMENT_DETAILS } from '@/components/shared/PaymentMethodTabs';
 import BankSelector from '@/components/shared/BankSelector';
+import RejectionNotice from '@/components/shared/RejectionNotice';
 
 const BKASH_NUMBER = PAYMENT_DETAILS.bkashSendMoney.number;
 const COINS_PER_BDT = 300; // 1 BDT = 300 Coins (Bro tier base rate)
@@ -274,6 +275,24 @@ function FundsScreen() {
   return (
     <div className="max-w-2xl sm:max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-8">
       <h1 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Funds</h1>
+
+      {/* Latest request was rejected recently: surface it at the top, not
+          only in the history list further down the page. */}
+      {(() => {
+        const latest = requests[0];
+        if (latest?.status !== 'rejected') return null;
+        const processed = latest.processedAt?.toMillis?.() ?? 0;
+        if (processed && Date.now() - processed > 14 * 24 * 60 * 60 * 1000) return null;
+        return (
+          <div className="mb-4 rounded-2xl border border-rose-200 dark:border-rose-800/60 bg-white dark:bg-[#1A1F26] p-4 shadow-sm">
+            <p className="text-sm font-bold text-gray-900 dark:text-white">
+              Your recharge of {latest.amount} BDT was not approved
+            </p>
+            <p className="text-[11px] text-gray-500 font-mono mt-0.5">TrxID: {latest.trxId || latest.transactionId}</p>
+            <RejectionNotice reason={latest.rejectionReason} />
+          </div>
+        );
+      })()}
 
       {/* Balance card */}
       <div className="bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-5 mb-4">
@@ -735,8 +754,9 @@ function FundsScreen() {
               {requests.map((req) => (
                 <div
                   key={req.id}
-                  className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#111418] flex items-center justify-between gap-3"
+                  className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#111418]"
                 >
+                <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-bold text-sm text-gray-900 dark:text-white flex flex-wrap items-center gap-1.5">
                       <span>{req.amount} BDT <span className="text-gray-400 font-normal mx-0.5">→</span> {(req.creditedCoins || req.totalCoins || req.coins)?.toLocaleString()} Coins</span>
@@ -767,6 +787,8 @@ function FundsScreen() {
                   >
                     {req.status.toUpperCase()}
                   </span>
+                </div>
+                {req.status === 'rejected' && <RejectionNotice reason={req.rejectionReason} />}
                 </div>
               ))}
             </div>

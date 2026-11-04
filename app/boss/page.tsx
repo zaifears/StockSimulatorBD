@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import BossBadge from '@/components/ui/BossBadge';
 import Footer from '@/components/shared/Footer';
+import BossRequestHistory from '@/components/boss/BossRequestHistory';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import {
   Crown,
@@ -737,6 +738,9 @@ export default function BossPage() {
               Scan via BanglaQR (Any Bank or MFS app), bKash (Make Payment or Send Money), Other MFS, or direct Bank Transfer.
             </p>
           </div>
+
+          {/* Trader's own requests, incl. rejection reasons */}
+          <BossRequestHistory />
 
           {/* Promo Code Instant Activation Card */}
           <div className="bg-white dark:bg-[#131822] border border-amber-300 dark:border-amber-500/30 rounded-3xl p-4 sm:p-6 mb-6 shadow-sm">

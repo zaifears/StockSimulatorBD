@@ -7,6 +7,8 @@ import { getAuth } from 'firebase-admin/auth';
 import { verifyAdminAccess } from '@/lib/utils/adminVerification';
 import { isBossActive, isBossExpired, isBossLifetime, parseBossUntilMs } from '@/lib/tier';
 import { autoDowngradeExpiredBossUsers } from '@/lib/serverTier';
+import { normalizeRejectionReason } from '@/lib/rejectionReasons';
+import { RejectError, notifyRejection } from '@/lib/rejectionEmail';
 import '@/lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
@@ -293,24 +295,47 @@ export async function POST(req: NextRequest) {
       }
 
       const requestRef = db.collection('boss_requests').doc(requestId);
-      const requestDoc = await requestRef.get();
+      const reason = normalizeRejectionReason(rejectionReason, 'Payment could not be verified');
 
-      if (!requestDoc.exists) {
-        return NextResponse.json({ success: false, error: 'Request not found' }, { status: 404 });
+      // Transaction so a concurrent approve can't be overwritten to "rejected".
+      let requestData: FirebaseFirestore.DocumentData | undefined;
+      try {
+        requestData = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(requestRef);
+          if (!snap.exists) throw new RejectError('Request not found', 404);
+          const data = snap.data();
+          if (data?.status !== 'pending') throw new RejectError('Request is already processed', 409);
+          tx.update(requestRef, {
+            status: 'rejected',
+            processedAt: FieldValue.serverTimestamp(),
+            processedBy: adminCheck.uid,
+            rejectionReason: reason,
+          });
+          return data;
+        });
+      } catch (err) {
+        if (err instanceof RejectError) {
+          return NextResponse.json({ success: false, error: err.message }, { status: err.status });
+        }
+        throw err;
       }
 
-      if (requestDoc.data()?.status !== 'pending') {
-        return NextResponse.json({ success: false, error: 'Request is already processed' }, { status: 409 });
-      }
-
-      await requestRef.update({
-        status: 'rejected',
-        processedAt: FieldValue.serverTimestamp(),
-        processedBy: adminCheck.uid,
-        rejectionReason: rejectionReason || 'Payment verification failed',
+      const email = await notifyRejection(requestData?.userId, {
+        userName: requestData?.userName,
+        kind: 'boss',
+        amountBdt: requestData?.amount,
+        planName: requestData?.planName,
+        trxId: requestData?.transactionId,
+        reason,
       });
+      // Only the boolean: the trader can read this doc, provider errors stay in server logs.
+      await requestRef.update({ rejectionEmailSent: email.sent }).catch(() => {});
 
-      return NextResponse.json({ success: true, message: 'Boss request rejected' });
+      return NextResponse.json({
+        success: true,
+        emailSent: email.sent,
+        message: email.sent ? 'Boss request rejected and emailed' : `Boss request rejected (email not sent: ${email.error})`,
+      });
     }
 
     // ─────────────────────────────────────────────
