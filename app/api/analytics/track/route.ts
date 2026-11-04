@@ -30,7 +30,10 @@ export const dynamic = 'force-dynamic';
 
 const VALID_ACTIONS = new Set(['start', 'heartbeat', 'end']);
 const VALID_DEVICE_TYPES = new Set(['mobile', 'tablet', 'desktop', 'unknown']);
-const MAX_DELTA_SECONDS = 120; // clamp per-beacon active-time delta (heartbeat interval is 60s)
+// Clamp per-beacon active-time delta at 2x the heartbeat interval (5 min in
+// components/VisitTracker.tsx). Keep these in step: a cap below the interval
+// silently truncates real active time.
+const MAX_DELTA_SECONDS = 600;
 const MAX_PAGE_COUNT = 2000;
 
 // ── Tiered Retention Policy (Dividing the Data) ──────────────────────────
@@ -346,7 +349,11 @@ export async function POST(req: NextRequest) {
     };
     if (lastPath) sessionUpdate.lastPath = lastPath;
 
-    const incomingIdentity = await tryVerifyIdentity(body?.idToken);
+    // The verified identity is only used to link a still-anonymous session to
+    // a user (below). Once the session has a uid, re-checking the token on
+    // every heartbeat is pure CPU (an RS256 signature check) with no effect on
+    // the data, so skip it.
+    const incomingIdentity = session.uid ? null : await tryVerifyIdentity(body?.idToken);
     const incomingUid = incomingIdentity?.uid || null;
 
     // Promotion logic: if an ephemeral bounce becomes an active guest or a user logs in,

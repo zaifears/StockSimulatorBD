@@ -56,7 +56,8 @@ export const PAYMENT_DETAILS = {
     type: 'Personal (Send Money)',
     tabLabel: 'bKash Send Money',
     badge: 'Personal Number',
-    imagePath: '/payment/bkash-send-money.png',
+    // bKash's full official card (QR + number + "send money" instruction).
+    imagePath: '/payment/personal_sendMoney.jpg',
   },
   otherMfs: {
     number: '01865333143',

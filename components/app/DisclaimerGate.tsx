@@ -26,7 +26,7 @@ import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
 type Status = 'loading' | 'pending' | 'agreed';
 
-function useDisclaimerStatus(uid: string | undefined): Status {
+export function useDisclaimerStatus(uid: string | undefined): Status {
   const [status, setStatus] = useState<Status>('loading');
 
   useEffect(() => {
@@ -82,7 +82,41 @@ export default function DisclaimerGate({ children }: { children: React.ReactNode
   return <DisclaimerModal onAgreed={() => setAgreedUid(uid ?? null)} />;
 }
 
-function DisclaimerModal({ onAgreed }: { onAgreed: () => void }) {
+/**
+ * Gate an *action* instead of a whole page (Boss payment submit, the trade
+ * panel on public stock pages). Returns requireAgreement(): true if the
+ * signed-in user has already agreed (or isn't signed in, so other checks
+ * apply); otherwise opens the same notice and returns false. Render
+ * `disclaimerModal` once in the component.
+ */
+export function useDisclaimerCheck() {
+  const { user } = useAuth();
+  const uid = user?.uid;
+  const status = useDisclaimerStatus(uid);
+  const [open, setOpen] = useState(false);
+  const [agreedUid, setAgreedUid] = useState<string | null>(null);
+  const agreed = status === 'agreed' || Boolean(uid && agreedUid === uid);
+
+  const requireAgreement = () => {
+    if (!uid || agreed) return true;
+    setOpen(true);
+    return false;
+  };
+
+  const disclaimerModal = open ? (
+    <DisclaimerModal
+      onAgreed={() => {
+        setAgreedUid(uid ?? null);
+        setOpen(false);
+      }}
+      onDecline={() => setOpen(false)}
+    />
+  ) : null;
+
+  return { requireAgreement, disclaimerModal };
+}
+
+export function DisclaimerModal({ onAgreed, onDecline }: { onAgreed: () => void; onDecline?: () => void }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +136,8 @@ function DisclaimerModal({ onAgreed }: { onAgreed: () => void }) {
     }
   };
 
-  const handleDecline = () => router.push('/');
+  // Full-page gate sends decliners home; action gates just close the notice.
+  const handleDecline = () => (onDecline ? onDecline() : router.push('/'));
 
   return (
     <div

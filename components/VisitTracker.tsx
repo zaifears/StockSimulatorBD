@@ -8,7 +8,11 @@ import { postVpsAnalyticsWithFallback } from '@/lib/vpsClient'
 const TRACK_URL = '/api/analytics/track'
 const SESSION_KEY = 'sb_analytics_sid' // sessionStorage — resets per tab/browser-restart
 const GUEST_KEY = 'sb_analytics_gid'   // localStorage — persists across sessions on this browser
-const HEARTBEAT_INTERVAL_MS = 60000
+// 5 min: active time is still exact (it is also flushed when the tab hides
+// or closes); this only bounds how much of a hard-killed tab can be lost.
+// Keep MAX_DELTA_SECONDS in app/api/analytics/track and ACTIVE_NOW_WINDOW_MS
+// in app/api/admin/site-analytics in step with this value.
+const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000
 
 function readGeoCookie(): string | undefined {
   if (typeof document === 'undefined') return undefined

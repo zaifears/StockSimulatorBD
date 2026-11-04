@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { generateLlmsFullTxt } from '@/lib/seo/llms';
 
-export const revalidate = 3600; // 1 hour cache
+export const revalidate = 86400; // daily; the Contentful webhook refreshes it on publish
 
 export async function GET() {
   const content = await generateLlmsFullTxt();

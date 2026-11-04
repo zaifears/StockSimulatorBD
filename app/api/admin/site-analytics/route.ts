@@ -38,9 +38,10 @@ const TRADE_FETCH_CAP = 3000;
 // without starving blog posts with fewer views than the 60th stock page.
 const PAGES_SCAN_LIMIT = 1000;
 // "Currently online" window — a session pinging within this window (and not
-// yet ended) counts as live. Matches the ~25s heartbeat interval with room
-// for one missed beat.
-const ACTIVE_NOW_WINDOW_MS = 5 * 60 * 1000;
+// yet ended) counts as live. The heartbeat is every 5 min
+// (components/VisitTracker.tsx), so 11 min tolerates one missed beat plus
+// network slack without visitors flickering out of the count.
+const ACTIVE_NOW_WINDOW_MS = 11 * 60 * 1000;
 const RECHARGE_FETCH_CAP = 20_000;
 // A single account this far above what normal recharge + trading activity
 // could plausibly produce gets flagged for manual review. Well under
@@ -410,7 +411,7 @@ export async function GET(req: NextRequest) {
     const registrations30 = useAuth ? countAuthSince(dhakaDateKeyToUtcMidnightISO(trendKeys[0])) : reg30Docs.data().count;
     const totalRegisteredUsers = useAuth ? authAccounts.length : totalUserDocs;
 
-    // ── Live right now — sessions that pinged within the last 5 minutes and
+    // ── Live right now — sessions that pinged within ACTIVE_NOW_WINDOW_MS and
     // haven't ended, deduped by identity (uid, else the session itself for
     // guests) so two tabs from one visitor count once. Single-field range
     // query only (endedAt filtered in JS) so this never needs a new

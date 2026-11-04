@@ -33,7 +33,7 @@ import { resolvePageMetadata } from '@/lib/seo/metadataResolver';
 
 const baseUrl = SITE_URL;
 
-export const revalidate = 3600;
+export const revalidate = 86400; // daily safety net; the Contentful webhook refreshes a post on publish
 
 interface FaqItem {
   question: string;

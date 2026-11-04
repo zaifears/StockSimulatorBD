@@ -66,6 +66,11 @@ app = FastAPI(
     title="StockSimulatorBD VPS Daemon",
     description="High-performance background synchronization and fundamentals cache engine",
     version="1.1.0",
+    # Interactive docs and schema are disabled in production so the internal API
+    # surface is not enumerable by anonymous internet clients.
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # Enable CORS for Next.js frontend and edge calls
@@ -163,26 +168,53 @@ def health_check():
 
 # ── Market Sync Endpoints ─────────────────────────────────────────────────────
 
+# These endpoints are unauthenticated by design (the Vercel app and browsers call
+# them directly), so each one is fronted by a short single-flight TTL cache. A
+# burst of callers shares one live scrape instead of each triggering their own,
+# which caps CPU/RAM on this 1 GB box and avoids getting the VPS IP rate-limited
+# by dsebd.org. On a scrape failure the last good payload is served when present.
+_market_cache: dict[tuple, tuple[dict, float]] = {}
+_market_lock = threading.Lock()
+MARKET_TTL_SEC = 15.0  # near-live, but bounds scrape rate under any request volume
+
+_category_cache: dict[str, tuple[Any, float]] = {}
+_category_lock = threading.Lock()
+CATEGORY_TTL_SEC = 300.0  # sector classifications change rarely
+
+
 @app.get("/api/market_sync")
 def api_market_sync(
     source: str = Query("auto", description="Ignored; kept for backward compatibility"),
     exclude_gov: bool = Query(True, description="Exclude Treasury bonds"),
     public_only: bool = Query(False, description="Filter public board only"),
 ):
+    key = (exclude_gov, public_only)
+    now = time.time()
+    with _market_lock:
+        cached = _market_cache.get(key)
+        if cached and (now - cached[1]) < MARKET_TTL_SEC:
+            return JSONResponse(content=cached[0], headers={"X-Cache": "HIT"})
     try:
         stocks, status_val, engine = market_sync.scrape_market(
             source=source,
             exclude_gov=exclude_gov,
             public_only=public_only,
         )
-        return {
+        payload = {
             "stocks": stocks,
             "marketStatus": status_val,
             "source": engine,
             "totalStocks": len(stocks),
         }
+        with _market_lock:
+            _market_cache[key] = (payload, now)
+        return JSONResponse(content=payload, headers={"X-Cache": "MISS"})
     except Exception as e:
         logger.error("market_sync failed: %s", e)
+        with _market_lock:
+            stale = _market_cache.get(key)
+        if stale and stale[0]:
+            return JSONResponse(content=stale[0], headers={"X-Cache": "STALE"})
         raise HTTPException(status_code=500, detail=f"DSE Market Sync Error: {str(e)}")
 
 
@@ -190,11 +222,22 @@ def api_market_sync(
 def api_category_sync(
     source: str = Query("auto", description="Ignored; kept for backward compatibility"),
 ):
+    now = time.time()
+    with _category_lock:
+        cached = _category_cache.get(source)
+        if cached and (now - cached[1]) < CATEGORY_TTL_SEC:
+            return JSONResponse(content=cached[0], headers={"X-Cache": "HIT"})
     try:
         res = category_sync.get_categories(source=source)
-        return res
+        with _category_lock:
+            _category_cache[source] = (res, now)
+        return JSONResponse(content=res, headers={"X-Cache": "MISS"})
     except Exception as e:
         logger.error("category_sync failed: %s", e)
+        with _category_lock:
+            stale = _category_cache.get(source)
+        if stale and stale[0]:
+            return JSONResponse(content=stale[0], headers={"X-Cache": "STALE"})
         raise HTTPException(status_code=500, detail=f"Category Sync Error: {str(e)}")
 
 

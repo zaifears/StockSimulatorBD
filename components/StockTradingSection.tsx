@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSimulator } from '@/hooks/useSimulator';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDisclaimerCheck } from '@/components/app/DisclaimerGate';
 import TradeExecutionPanel from '@/components/simulator/TradeExecutionPanel';
 import { getSaleableQuantity } from '@/lib/utils/portfolio';
 import { formatSettlement, getSettlementDays } from '@/lib/utils/settlement';
@@ -23,6 +24,9 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
     transactionMessage, 
     resetTransaction 
   } = useSimulator();
+  // Public stock pages aren't behind the app-shell disclaimer gate, so ask
+  // here, at the moment of the first trade (the trade API also refuses it).
+  const { requireAgreement, disclaimerModal } = useDisclaimerCheck();
 
   const [clientPrice, setClientPrice] = useState<number>(fallbackPrice);
 
@@ -81,8 +85,12 @@ export default function StockTradingSection({ symbol, fallbackPrice }: StockTrad
         settlementLabel={settlementLabel}
         isMarketOpen={isMarketOpen()}
         isAuthenticated={!!user} // Tells the panel if the user is logged in
-        onExecute={(type, qty) => executeTrade(symbol, type, qty)}
+        onExecute={async (type, qty) => {
+          if (!requireAgreement()) return;
+          await executeTrade(symbol, type, qty);
+        }}
       />
+      {disclaimerModal}
 
       {/* ── Transaction Notification HUD ── */}
       {transactionStatus !== 'idle' && (

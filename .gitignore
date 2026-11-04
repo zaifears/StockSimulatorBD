@@ -167,3 +167,6 @@ brag-output*/
 # Claude Code local config (preview launch settings)
 .claude/
 
+
+# Hallmark design tool working files (screenshots, logs)
+.hallmark/

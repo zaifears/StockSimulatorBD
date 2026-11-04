@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import BossBadge from '@/components/ui/BossBadge';
 import Footer from '@/components/shared/Footer';
 import BossRequestHistory from '@/components/boss/BossRequestHistory';
+import { useDisclaimerCheck } from '@/components/app/DisclaimerGate';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import {
   Crown,
@@ -269,6 +270,7 @@ export default function BossPage() {
     trxId: string;
   } | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { requireAgreement, disclaimerModal } = useDisclaimerCheck();
   const [auditFilter, setAuditFilter] = useState<'all' | 'boss_only'>('all');
 
   // Promo code states
@@ -358,6 +360,11 @@ export default function BossPage() {
       router.push('/auth?redirect=/boss#payment');
       return;
     }
+
+    // Real money is changing hands here, so the "this is a simulator, not a
+    // brokerage" notice must have been accepted first (the app shell's gate
+    // never runs on /boss). firestore.rules enforces the same thing.
+    if (!requireAgreement()) return;
 
     // BanglaQR: Phone/WhatsApp number is MANDATORY
     if (activePaymentTab === 'banglaqr') {
@@ -1565,6 +1572,7 @@ export default function BossPage() {
         </div>
       </section>
 
+      {disclaimerModal}
       <Footer />
     </div>
   );

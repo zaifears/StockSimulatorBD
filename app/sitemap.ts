@@ -5,7 +5,7 @@ import { SITE_URL } from '@/lib/siteUrl';
 
 const baseUrl = SITE_URL;
 
-export const revalidate = 3600;
+export const revalidate = 86400; // daily; the Contentful webhook refreshes it on publish
 
 /**
  * `lastModified` is a trust signal, not a timestamp of when the sitemap was built.

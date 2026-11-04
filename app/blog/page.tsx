@@ -9,7 +9,7 @@ import './blog.css';
 
 const baseUrl = SITE_URL;
 
-export const revalidate = 3600;
+export const revalidate = 86400; // daily safety net; the Contentful webhook (app/api/contentful/revalidate) refreshes on publish
 
 export const metadata: Metadata = {
   title: 'Bangladesh Stock Market Blog | DSE Guides & Investing Education',

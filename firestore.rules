@@ -26,6 +26,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.get('admin', false) == true;
     }
     
+    // The "educational simulator, not a brokerage" notice
+    // (components/app/DisclaimerGate.tsx) must be accepted before any
+    // real-money request. disclaimerAgreedAt is server-written only.
+    function hasAgreedDisclaimer() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disclaimerAgreedAt', null) != null;
+    }
+
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
     }
@@ -144,7 +152,8 @@ service cloud.firestore {
         // ignores whatever is stored here, but rejecting the write here stops
         // a forged request from ever landing in the pending queue an admin
         // has to review by eye.
-        && request.resource.data.coins == request.resource.data.amount * 300;
+        && request.resource.data.coins == request.resource.data.amount * 300
+        && hasAgreedDisclaimer();
       allow update, delete: if false;
     }
     
@@ -157,7 +166,8 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.amount in [20, 99]
-        && request.resource.data.durationDays in [31, 185];
+        && request.resource.data.durationDays in [31, 185]
+        && hasAgreedDisclaimer();
       allow update, delete: if false;
     }
     

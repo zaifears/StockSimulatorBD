@@ -1754,7 +1754,10 @@ export default function SiteAnalyticsSection({
             <Icon.TrendUp />
             Site Visits
           </h2>
-          <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 text-green-700 dark:text-green-400 text-xs font-bold shrink-0">
+          <span
+            title="Visitors with the site open and active in the last ~10 minutes (pages report in every 5 minutes)"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 text-green-700 dark:text-green-400 text-xs font-bold shrink-0"
+          >
             <Radio className="w-3 h-3 animate-pulse" />
             {data.activeRightNow.toLocaleString()} online now
           </span>
