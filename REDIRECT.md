@@ -81,6 +81,11 @@ Phase 3.
 | Firebase Auth | Firebase console → Authentication → Settings → Authorized domains | Add the new domain **before** the switch or email/password and Google sign-in break |
 | Google OAuth client | Google Cloud Console → APIs & Services → Credentials → Authorized JavaScript origins | Separate from Firebase Auth above — different console. Breaks Google One Tap (`components/GoogleOneTap.tsx`) silently if missed |
 | reCAPTCHA | google.com/recaptcha/admin → the site key's domain list | Breaks signup verification (`app/auth/page.tsx`, `app/api/verify-recaptcha/route.ts`) if missed |
+| Firebase auth handler domain | Vercel env `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` (+ the `/__/auth` rewrite in `next.config.mjs`) | If it is set to the site host (see `docs/login-facebook-and-in-app-browsers.md` Part 1), it must move to the new host on switch day, or Google/GitHub/Facebook redirect sign-in breaks |
+| Google OAuth redirect URI | Google Cloud Console → Credentials → OAuth client → **Authorized redirect URIs** | `https://<host>/__/auth/handler`. Different list from "Authorized JavaScript origins" in the row above |
+| GitHub OAuth app | GitHub → Settings → Developer settings → OAuth Apps → **Authorization callback URL** | GitHub allows **only one** callback URL, so this is a swap, not an add. Change it in the same sitting as `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` |
+| **Meta app (Log in with Facebook)** | developers.facebook.com → the StockSimulatorBD app | App domains, Valid OAuth Redirect URIs, Privacy policy / Terms / Data deletion URLs. See Phase 2 step 4 and Phase 3 step 11. Missing redirect URIs = "URL blocked" error on Facebook login; dead policy URLs = Meta can restrict the app |
+| Email sign-in links | Firebase console → Authentication → Settings → Authorized domains | The magic link returns people to `https://<current host>/auth`. Covered by the Firebase Authorized-domains row above. Links emailed **before** the switch still point at the old host and work during the Phase 4 hold |
 | cron-job.org | job URLs for `/api/stock-sync` and `/api/category-sync` | Must move the same day as the redirect flip — see Phase 3. Silent breakage otherwise: price/category sync just stops |
 | Google Search Console | console | New property, see Phase 3 |
 | Contentful | Settings → Webhooks → the revalidate webhook's URL | Blog publishes stop revalidating and stop pinging IndexNow if missed |
@@ -144,6 +149,18 @@ duplicate-content signals for no benefit.
      `stocksimulator.shahoriar.bd`. Used client-side in `app/auth/page.tsx`
      and verified server-side in `app/api/verify-recaptcha/route.ts`; without
      this, signup verification fails on the new domain.
+
+   - **Google Cloud Console** → the same OAuth client → **Authorized redirect URIs**:
+     add `https://stocksimulator.shahoriar.bd/__/auth/handler` (keep the old
+     host's and the `firebaseapp.com` entries).
+   - **Meta app** (developers.facebook.com → StockSimulatorBD), all additive:
+     - App settings → Basic → **App domains**: add `stocksimulator.shahoriar.bd`
+       next to `stocksimulator.tech`.
+     - Facebook Login → Settings → **Valid OAuth Redirect URIs**: add
+       `https://stocksimulator.shahoriar.bd/__/auth/handler`. Keep
+       `https://skilldash-c588d.firebaseapp.com/__/auth/handler` and the old host's entry.
+     - Do **not** change the Privacy policy / Terms / Data deletion URLs yet.
+       They must keep pointing at the canonical (old) domain until Phase 3.
 
    (`GOOGLE_CALENDAR_API_KEY`, used server-side only in `app/api/holidays/route.ts`,
    does not need this treatment — referrer-based restrictions, if any, only
@@ -215,7 +232,27 @@ this sitting.
    Links required — see the APK note above; existing installs won't auto-update).
 10. Rotate the Resend sending domain — verify a new sending domain in Resend
     first, then update `RESEND_FROM_EMAIL`.
-11. Verification sweep — services that are **not** domain-scoped, so this is
+11. **Sign-in providers.** Same sitting as step 1, because these are swaps:
+    - Vercel env (Production): if `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` is the old
+      site host, set it to `stocksimulator.shahoriar.bd` and redeploy together
+      with step 1. If it is still `skilldash-c588d.firebaseapp.com`, leave it alone.
+    - GitHub OAuth app → Authorization callback URL →
+      `https://stocksimulator.shahoriar.bd/__/auth/handler` (only if the env
+      above was moved; it must match the auth domain).
+    - **Meta app → App settings → Basic**: change **Privacy policy URL** and
+      **Terms of Service URL** to `https://stocksimulator.shahoriar.bd/policy`,
+      and **Data deletion instructions URL** to
+      `https://stocksimulator.shahoriar.bd/policy#data-deletion`. Meta re-crawls
+      these, and the old domain lapses on 2027-06-18. A dead privacy URL is a
+      policy violation that can get the app restricted, which would switch off
+      Facebook login for everyone.
+    - **Meta app → Facebook Login → Settings**: confirm the new
+      `/__/auth/handler` URI from Phase 2 is present. Then test Log in with
+      Facebook on the new domain: desktop popup, and inside the Messenger
+      in-app browser.
+    - No SEO/LLM impact: none of these are crawled as site content. The only
+      user-visible risk is sign-in failing, which the tests above catch.
+12. Verification sweep — services that are **not** domain-scoped, so this is
     "confirm nothing needs changing" rather than an action:
     - **GA4 / Google Tag Manager**: the property and container aren't
       domain-restricted; check GTM's own workspace for any trigger or tag that
@@ -244,6 +281,11 @@ this sitting.
 
 Let it lapse. By then Google has been serving the new URLs for months. Assume the
 old domain will be picked up by someone else, so nothing should still depend on it.
+
+Before it lapses, remove the old host from the Meta app (App domains, Valid OAuth
+Redirect URIs) and from the Google OAuth client's redirect URIs and JavaScript origins.
+Whoever registers the domain next must not be able to receive OAuth redirects
+meant for our app.
 
 ---
 

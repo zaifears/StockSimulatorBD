@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useRef, Component } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
-import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, signInWithSocialProviderAndCreateProfile, isInAppBrowser } from '../../lib/firebase'
+import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, facebookProvider, isFacebookLoginEnabled, isSameSiteAuthDomain, isMetaInAppBrowser, signInWithSocialProviderAndCreateProfile, isInAppBrowser, sendMagicSignInLink, isMagicSignInLink, getPendingMagicLinkEmail, completeMagicSignIn } from '../../lib/firebase'
 import { useRouter } from 'next/navigation'
-import { validateEmail, validatePassword, sanitizeError, rateLimit } from '../../lib/authUtils'
+import { validateEmail, validatePassword, sanitizeError, rateLimit, PASSWORD_RULES } from '../../lib/authUtils'
 import { humanizeAuthError } from '../../lib/authErrorHandler'
 import OptimizedImage from '../../components/shared/OptimizedImage'
 import SocialAuth from '../../components/SocialAuth'
 import GoogleOneTap from '../../components/GoogleOneTap'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Check, Circle, Mail } from 'lucide-react'
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3'
 import { useRecaptcha } from '@/hooks/useRecaptcha'
 
@@ -33,6 +33,12 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
   const [showSignupSuccess, setShowSignupSuccess] = useState(false)
   const [inAppBrowser, setInAppBrowser] = useState(false)
+  const [metaInAppBrowser, setMetaInAppBrowser] = useState(false)
+  const [redirectSignInWorks, setRedirectSignInWorks] = useState(false)
+  // Magic link: address the link was sent to, and whether we're finishing a
+  // link opened on a device/browser that doesn't know the address.
+  const [magicLinkSentTo, setMagicLinkSentTo] = useState<string | null>(null)
+  const [finishingMagicLink, setFinishingMagicLink] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
   // Guards for Google One Tap: don't initialize/prompt once we already know
   // a session exists (about to redirect away) or a redirect-based OAuth
@@ -63,6 +69,30 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
   // Detect in-app browser on mount
   useEffect(() => {
     setInAppBrowser(isInAppBrowser())
+    setMetaInAppBrowser(isMetaInAppBrowser())
+    setRedirectSignInWorks(isSameSiteAuthDomain())
+  }, [])
+
+  // Opened from a magic sign-in link: finish signing in. If this browser
+  // doesn't have the address saved (link opened on another device, or in the
+  // mail app's own browser), ask for it instead of failing.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isMagicSignInLink(window.location.href)) return
+    const saved = getPendingMagicLinkEmail()
+    if (!saved) {
+      setFinishingMagicLink(true)
+      setIsSignUp(false)
+      setMessage('Confirm your email address to finish signing in.')
+      return
+    }
+    setIsLoading(true)
+    setMessage('Signing you in…')
+    completeMagicSignIn(saved, window.location.href)
+      .catch((err) => {
+        setMessage('')
+        setError(humanizeAuthError(err))
+      })
+      .finally(() => setIsLoading(false))
   }, [])
 
   // reCAPTCHA verification helper
@@ -161,17 +191,9 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     submitInFlightRef.current = true
 
     try {
-    if (!rateLimit(`signup:${formData.email}`)) {
-      setError('Too many signup attempts. Please try again later.')
-      return
-    }
-
-    // Enforce reCAPTCHA only in production for credential flows.
-    if (enforceRecaptcha) {
-      const isHuman = await verifyRecaptcha('signup')
-      if (!isHuman) return
-    }
-
+    // Local checks first: a typo here must never count as an attempt
+    // against the rate limit below (it used to lock people out after five
+    // tries without ever reaching Firebase).
     if (!validateEmail(formData.email)) {
       setError('Please enter a valid email address.')
       return
@@ -191,6 +213,17 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     if (!formData.name?.trim() || formData.name.length < 2) {
       setError('Please enter a valid name (at least 2 characters).')
       return
+    }
+
+    if (!rateLimit(`signup:${formData.email.trim().toLowerCase()}`)) {
+      setError('Too many sign-up attempts from this browser. Please wait 15 minutes, or continue with Google.')
+      return
+    }
+
+    // Enforce reCAPTCHA only in production for credential flows.
+    if (enforceRecaptcha) {
+      const isHuman = await verifyRecaptcha('signup')
+      if (!isHuman) return
     }
 
     setIsLoading(true)
@@ -225,8 +258,18 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     submitInFlightRef.current = true
 
     try {
-    if (!rateLimit(`signin:${formData.email}`)) {
-      setError('Too many login attempts. Please try again later.')
+    if (!validateEmail(formData.email)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+
+    if (!formData.password) {
+      setError('Please enter your password.')
+      return
+    }
+
+    if (!rateLimit(`signin:${formData.email.trim().toLowerCase()}`)) {
+      setError('Too many sign-in attempts from this browser. Wait 15 minutes, or use "Forgot password?" to reset it.')
       return
     }
 
@@ -234,11 +277,6 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     if (enforceRecaptcha) {
       const isHuman = await verifyRecaptcha('signin')
       if (!isHuman) return
-    }
-
-    if (!validateEmail(formData.email)) {
-      setError('Please enter a valid email address.')
-      return
     }
 
     setIsLoading(true)
@@ -300,6 +338,82 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     }
   }
 
+  const getSafeRedirect = (): string | null => {
+    const q = new URLSearchParams(window.location.search).get('redirect')
+    if (q && q.startsWith('/') && !q.startsWith('//')) return q
+    return sessionStorage.getItem('redirectAfterLogin')
+  }
+
+  const handleSendMagicLink = async () => {
+    if (submitInFlightRef.current) return
+    const email = formData.email.trim().toLowerCase()
+    if (!validateEmail(email)) {
+      setError('Enter your email address above first, then tap "Email me a sign-in link".')
+      return
+    }
+    if (!rateLimit(`emaillink:${email}`)) {
+      setError('Too many sign-in links requested from this browser. Please wait 15 minutes and check your inbox for the earlier ones.')
+      return
+    }
+    submitInFlightRef.current = true
+    try {
+      if (enforceRecaptcha) {
+        const isHuman = await verifyRecaptcha('email_link')
+        if (!isHuman) return
+      }
+      setIsLoading(true)
+      setError('')
+      setMessage('')
+      await sendMagicSignInLink(email, getSafeRedirect())
+      setMagicLinkSentTo(email)
+    } catch (err: any) {
+      setError(humanizeAuthError(err))
+    } finally {
+      setIsLoading(false)
+      submitInFlightRef.current = false
+    }
+  }
+
+  const handleFinishMagicLink = async () => {
+    const email = formData.email.trim().toLowerCase()
+    if (!validateEmail(email)) {
+      setError('Please enter the email address the link was sent to.')
+      return
+    }
+    setIsLoading(true)
+    setError('')
+    try {
+      await completeMagicSignIn(email, window.location.href)
+      setMessage('Signing you in…')
+    } catch (err: any) {
+      const code = String(err?.code || '')
+      setError(code.includes('auth/invalid-email')
+        ? 'That email doesn\u2019t match the address this link was sent to.'
+        : humanizeAuthError(err))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleFacebookSignIn = async () => {
+    if (!canUseSocialOAuthHere()) {
+      setError('Facebook sign-in requires HTTPS (or localhost).')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+    setShowSignupSuccess(false)
+
+    try {
+      await signInWithSocialProviderAndCreateProfile(facebookProvider)
+    } catch (err: any) {
+      setError(humanizeAuthError(err))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleForgotPassword = async () => {
     if (!formData.email?.trim()) {
       setError('Please enter your email address first.')
@@ -345,6 +459,10 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
       return
     }
     if (isLoading) return
+    if (finishingMagicLink) {
+      handleFinishMagicLink()
+      return
+    }
     isSignUp ? handleSignUp() : handleSignIn()
   }
 
@@ -426,6 +544,8 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                       <input
                         name="email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
                         required
                         value={formData.email}
                         onChange={handleInputChange}
@@ -434,6 +554,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                       />
                     </div>
 
+                    {!finishingMagicLink && (<>
                     {/* Password */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
@@ -441,10 +562,11 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                         <input
                           name="password"
                           type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
                           required
                           value={formData.password}
                           onChange={handleInputChange}
-                          placeholder="••••••••"
+                          placeholder="Enter your password"
                           className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
                         />
                         <button
@@ -474,6 +596,8 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                       </button>
                     </div>
 
+                    </>)}
+
                     {/* Log In Button */}
                     <button
                       type="submit"
@@ -488,11 +612,44 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                           </svg>
                           Signing In...
                         </>
+                      ) : finishingMagicLink ? (
+                        'Finish signing in'
                       ) : (
                         'Log In'
                       )}
                     </button>
                   </form>
+
+                  {/* Passwordless option: also works inside Facebook / Messenger browsers */}
+                  {!finishingMagicLink && (
+                    magicLinkSentTo ? (
+                      <div className="mt-4 rounded-2xl border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20 p-4" role="status">
+                        <p className="flex items-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-200">
+                          <Mail className="w-4 h-4 shrink-0" aria-hidden="true" /> Check your inbox
+                        </p>
+                        <p className="mt-1 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                          We sent a sign-in link to <strong className="break-all">{magicLinkSentTo}</strong>. Open it on this device to sign in. No password needed. It can take a minute, and may land in Spam or Promotions.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setMagicLinkSentTo(null)}
+                          className="mt-2 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:underline"
+                        >
+                          Use a different email
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendMagicLink}
+                        disabled={isLoading || (enforceRecaptcha && !isRecaptchaReady)}
+                        className="mt-3 w-full min-h-[44px] py-2.5 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <Mail className="w-4 h-4" aria-hidden="true" />
+                        Email me a sign-in link instead
+                      </button>
+                    )
+                  )}
                 </>
               )}
 
@@ -541,6 +698,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                         <input
                           name="name"
                           type="text"
+                          autoComplete="name"
                           required
                           value={formData.name}
                           onChange={handleInputChange}
@@ -555,6 +713,8 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                         <input
                           name="email"
                           type="email"
+                          autoComplete="email"
+                          inputMode="email"
                           required
                           value={formData.email}
                           onChange={handleInputChange}
@@ -564,33 +724,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                       </div>
                     </div>
 
-                    {/* Phone & Age */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
-                        <input
-                          name="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          placeholder="(optional)"
-                          className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Age</label>
-                        <input
-                          name="age"
-                          type="number"
-                          min="13"
-                          max="100"
-                          value={formData.age}
-                          onChange={handleInputChange}
-                          placeholder="(optional)"
-                          className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                        />
-                      </div>
-                    </div>
+                    {/* Phone and age moved to /profile: sign-up asks only what's needed */}
 
                     {/* Password & Confirm Password in two columns on lg */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-3">
@@ -601,10 +735,12 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                           <input
                             name="password"
                             type={showPassword ? "text" : "password"}
+                            autoComplete="new-password"
+                            aria-describedby="password-rules"
                             required
                             value={formData.password}
                             onChange={handleInputChange}
-                            placeholder="••••••••"
+                            placeholder="Create a password"
                             className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
                           />
                           <button
@@ -629,10 +765,12 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                           <input
                             name="confirmPassword"
                             type={showConfirmPassword ? "text" : "password"}
+                            autoComplete="new-password"
+                            aria-describedby="password-match"
                             required
                             value={formData.confirmPassword}
                             onChange={handleInputChange}
-                            placeholder="••••••••"
+                            placeholder="Re-enter password"
                             className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
                           />
                           <button
@@ -649,6 +787,35 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                           </button>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Live password rules: visible before submit, tick as you type */}
+                    <div className="rounded-xl bg-gray-50 dark:bg-[#111418] border border-gray-200 dark:border-gray-800 px-3 py-2.5">
+                      <p className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Your password needs:</p>
+                      <ul id="password-rules" className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 gap-y-1" aria-label="Password requirements">
+                        {PASSWORD_RULES.map((rule) => {
+                          const ok = rule.test(formData.password)
+                          return (
+                            <li
+                              key={rule.label}
+                              className={`flex items-center gap-1.5 text-xs transition-colors ${ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}
+                            >
+                              {ok ? <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> : <Circle className="w-3 h-3 shrink-0" aria-hidden="true" />}
+                              <span>{rule.label}<span className="sr-only">{ok ? ' (done)' : ' (not yet)'}</span></span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      {formData.confirmPassword && (
+                        <p
+                          id="password-match"
+                          aria-live="polite"
+                          className={`mt-1.5 flex items-center gap-1.5 text-xs ${formData.password === formData.confirmPassword ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+                        >
+                          {formData.password === formData.confirmPassword ? <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> : <Circle className="w-3 h-3 shrink-0" aria-hidden="true" />}
+                          {formData.password === formData.confirmPassword ? 'Passwords match' : 'Passwords do not match yet'}
+                        </p>
+                      )}
                     </div>
 
                     {/* Sign Up Button */}
@@ -744,41 +911,46 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                 <div className="flex-1 border-t border-gray-200 dark:border-gray-800"></div>
               </div>
 
-              {/* Social Buttons */}
-              <div className="space-y-3">
-                <button
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="w-full py-2 px-3 rounded-xl bg-white dark:bg-[#111418] text-gray-900 dark:text-white border border-gray-200 dark:border-gray-800 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-[#1A1F26] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-[#1A1F26] transition flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  Continue with Google
-                </button>
-
-                <button
-                  onClick={handleGitHubSignIn}
-                  disabled={isLoading}
-                  className="w-full py-2 px-3 rounded-xl bg-gray-900 dark:bg-gray-800 text-white font-semibold text-sm hover:bg-gray-800 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.603-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.544 2.914 1.182.092-.923.35-1.543.636-1.897-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.578.688.48C19.138 20.194 22 16.44 22 12.017 22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-                  </svg>
-                  Continue with GitHub
-                </button>
-              </div>
+              {/* Social Buttons (shared with mobile) */}
+              <SocialAuth
+                handleGoogleSignIn={handleGoogleSignIn}
+                handleGitHubSignIn={handleGitHubSignIn}
+                handleFacebookSignIn={handleFacebookSignIn}
+                showFacebook={isFacebookLoginEnabled}
+                isLoading={isLoading}
+                isInAppBrowser={inAppBrowser}
+                isMetaInAppBrowser={metaInAppBrowser}
+                redirectSignInWorks={redirectSignInWorks}
+              />
             </div>
           </div>
 
           {/* Mobile Alternate Actions & Social Auth */}
           <div className="lg:hidden mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+            {/* Social Auth Header */}
+            <div className="flex items-center mb-4">
+              <div className="flex-1 border-t border-gray-200 dark:border-gray-800"></div>
+              <span className="px-3 text-gray-500 dark:text-gray-400 text-xs">
+                {isSignUp ? 'Or sign up with' : 'Or sign in with'}
+              </span>
+              <div className="flex-1 border-t border-gray-200 dark:border-gray-800"></div>
+            </div>
+
+            {/* Social Auth Component */}
+            <SocialAuth
+              handleGoogleSignIn={handleGoogleSignIn}
+              handleGitHubSignIn={handleGitHubSignIn}
+              handleFacebookSignIn={handleFacebookSignIn}
+              showFacebook={isFacebookLoginEnabled}
+              isLoading={isLoading}
+              isInAppBrowser={inAppBrowser}
+              isMetaInAppBrowser={metaInAppBrowser}
+              redirectSignInWorks={redirectSignInWorks}
+            />
+
             {/* New Here Registration Box (Only show during Sign In) */}
             {!isSignUp && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-5 mb-6">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-5 mt-6">
                 <p className="text-gray-700 dark:text-gray-300 text-sm font-semibold mb-3">New here?</p>
                 <button
                   type="button"
@@ -797,26 +969,19 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                 </p>
               </div>
             )}
-
-            {/* Social Auth Header */}
-            <div className="flex items-center mb-6 mt-2">
-              <div className="flex-1 border-t border-gray-200 dark:border-gray-800"></div>
-              <span className="px-3 text-gray-500 dark:text-gray-400 text-xs">
-                {isSignUp ? 'Or sign up with' : 'Or sign in with'}
-              </span>
-              <div className="flex-1 border-t border-gray-200 dark:border-gray-800"></div>
-            </div>
-
-            {/* Social Auth Component */}
-            <SocialAuth
-              handleGoogleSignIn={handleGoogleSignIn}
-              handleGitHubSignIn={handleGitHubSignIn}
-              isLoading={isLoading}
-              isInAppBrowser={inAppBrowser}
-            />
           </div>
 
         </div>
+
+        {/* reCAPTCHA attribution: required by Google when the floating badge
+            is hidden (it is on mobile, where it covered the Google button). */}
+        {recaptchaEnabled && (
+          <p className="mt-4 text-center text-[11px] text-gray-400 dark:text-gray-500 font-spaceGrotesk">
+            Protected by reCAPTCHA. Google{' '}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600 dark:hover:text-gray-300">Privacy Policy</a>{' '}and{' '}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600 dark:hover:text-gray-300">Terms</a>{' '}apply.
+          </p>
+        )}
       </div>
     </div>
   )

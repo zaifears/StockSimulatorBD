@@ -97,6 +97,13 @@ The application operates a clear two-tier model:
 
 ---
 
+## Sign-in & Welcome Bonus
+
+- **Welcome bonus eligibility** lives in one place, `lib/welcomeBonusEligibility.ts`: verified email **or** a Google/GitHub/Facebook sign-in (Firebase marks GitHub/Facebook emails unverified). `app/api/auth/grant-social-bonus` enforces it against the Auth user record; `AuthContext` uses the same rule to decide when to ask. Sign-in itself never depends on it.
+- **Client rate limit** (`lib/authUtils.ts` `rateLimit`) must only be called after local validation passes, so typos never lock people out. Password rules shown live come from `PASSWORD_RULES` — keep in step with `validatePassword`.
+- **Facebook login** is wired but off until `NEXT_PUBLIC_ENABLE_FACEBOOK_LOGIN=true`. **Auth domain proxy**: `next.config.mjs` rewrites `/__/auth/*` and `/__/firebase/*` to `<project>.firebaseapp.com`; it only takes effect when `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` is the site host. Setup steps and rollback: `docs/login-facebook-and-in-app-browsers.md`.
+- Facebook/Messenger/Instagram browsers: Google sign-in is blocked by Google there, so `components/SocialAuth.tsx` shows "open in browser" guidance plus Facebook/GitHub (only when the auth domain is same-site).
+
 ## Trading is Fully Server-Side
 
 `hooks/useSimulator.ts`'s `executeTrade()` does **not** write Firestore directly — it POSTs to `app/api/simulator/trade/route.ts`, which is the only handler allowed to write `simulator/state`. That route:

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminAuth, getAdminDb } from '@/lib/firebaseAdmin';
+import { isWelcomeBonusEligible } from '@/lib/welcomeBonusEligibility';
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Too many attempts. Please slow down.' },
         { status: 429 }
+      );
+    }
+
+    // 🔒 Eligibility is checked against the Auth user record, not the client
+    // or the ID token: the record is always current (no stale email_verified
+    // claim right after the user clicks the verification link). Unverified
+    // email/password accounts are told to verify; sign-in is never affected —
+    // this route only runs after sign-in has already succeeded.
+    const userRecord = await adminAuth.getUser(userId);
+    if (!isWelcomeBonusEligible(userRecord)) {
+      return NextResponse.json(
+        { success: false, code: 'email_not_verified', error: 'Verify your email to receive the welcome bonus.' },
+        { status: 403 }
       );
     }
 

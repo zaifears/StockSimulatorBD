@@ -4,6 +4,14 @@ export const validateEmail = (email: string): boolean => {
   return emailRegex.test(email) && email.length <= 100;
 };
 
+// Shown live under the sign-up password field. Must stay in step with
+// validatePassword below.
+export const PASSWORD_RULES: { label: string; test: (pw: string) => boolean }[] = [
+  { label: 'At least 6 characters', test: (pw) => pw.length >= 6 && pw.length <= 128 },
+  { label: 'One uppercase letter (A–Z)', test: (pw) => /[A-Z]/.test(pw) },
+  { label: 'One lowercase letter (a–z)', test: (pw) => /[a-z]/.test(pw) },
+];
+
 export const validatePassword = (password: string): { isValid: boolean; message: string } => {
   if (password.length < 6) {
     return { isValid: false, message: 'Password must be at least 6 characters long' };

@@ -5,6 +5,7 @@ import {
     getAuth, 
     GoogleAuthProvider, 
     GithubAuthProvider,
+    FacebookAuthProvider,
     onAuthStateChanged, 
     signInWithPopup,
     signInWithRedirect,
@@ -67,6 +68,24 @@ let auth: any;
 let db: any;
 let googleProvider: any;
 let githubProvider: any;
+let facebookProvider: any;
+
+// Facebook login is wired but off until the Meta app + Firebase provider are
+// configured (see docs/login-facebook-and-in-app-browsers.md).
+export const isFacebookLoginEnabled = process.env.NEXT_PUBLIC_ENABLE_FACEBOOK_LOGIN === 'true';
+
+/**
+ * True when Firebase's auth handler is served from this site's own domain
+ * (the /__/auth rewrite in next.config.mjs + NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ * set to the site host). Redirect sign-in only works reliably inside
+ * Facebook/Instagram/Messenger browsers and Safari when this is true,
+ * because otherwise it needs third-party storage those browsers block.
+ */
+export const isSameSiteAuthDomain = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const domain = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '').trim().toLowerCase();
+    return !!domain && domain === window.location.hostname.toLowerCase();
+};
 
 if (firebaseConfig.apiKey) {
   try {
@@ -99,6 +118,10 @@ if (firebaseConfig.apiKey) {
     githubProvider.setCustomParameters({
       allow_signup: 'true'
     });
+
+    facebookProvider = new FacebookAuthProvider();
+    facebookProvider.addScope('email');
+    facebookProvider.addScope('public_profile');
   } catch (error) {
     console.error('Firebase initialization error:', error);
   }
@@ -152,6 +175,12 @@ export const handleSocialSignInResult = async (user: any) => {
  * Detect if user is in an in-app browser (Instagram, Facebook, TikTok, LinkedIn, etc.)
  * These browsers block Google OAuth with 403: disallowed_useragent
  */
+/** Facebook, Messenger or Instagram's built-in browser specifically. */
+export const isMetaInAppBrowser = (): boolean => {
+    if (typeof window === 'undefined' || !navigator?.userAgent) return false;
+    return /fban|fbav|fb_iab|fbios|messenger|instagram/i.test(navigator.userAgent);
+};
+
 export const isInAppBrowser = (): boolean => {
     if (typeof window === 'undefined' || !navigator?.userAgent) return false;
     const ua = navigator.userAgent.toLowerCase();
@@ -174,7 +203,7 @@ const hasAuthErrorCode = (error: any, code: string): boolean => {
 };
 
 export const signInWithSocialProviderAndCreateProfile = async (
-    provider: GoogleAuthProvider | GithubAuthProvider
+    provider: GoogleAuthProvider | GithubAuthProvider | FacebookAuthProvider
 ) => {
   if (!auth) {
     const configError = new Error('Firebase Auth is not initialized.') as Error & { code?: string };
@@ -338,6 +367,41 @@ export const handleRedirectResult = async () => {
 // returned after their first (interrupted) session. Doing the doc write
 // immediately, with a retry, shrinks that window to as small as this
 // client can make it.
+export const VERIFICATION_SENT_KEY = 'stocksimulatorbd_verification_sent_at';
+
+// ── Passwordless email-link ("magic link") sign-in ───────────────────────
+// Signs in an existing account or creates a new one; either way the email is
+// verified by the act of clicking, so the welcome bonus applies straight away.
+// Needs "Email link (passwordless sign-in)" enabled under the Email/Password
+// provider in the Firebase console.
+export const EMAIL_LINK_STORAGE_KEY = 'stocksimulatorbd_email_for_signin';
+
+export const sendMagicSignInLink = async (email: string, redirectPath?: string | null) => {
+    const continueUrl = new URL('/auth', window.location.origin);
+    continueUrl.searchParams.set('finishSignIn', '1');
+    if (redirectPath && redirectPath.startsWith('/') && !redirectPath.startsWith('//')) {
+        continueUrl.searchParams.set('redirect', redirectPath);
+    }
+    await sendSignInLinkToEmail(auth, email, { url: continueUrl.toString(), handleCodeInApp: true });
+    try { localStorage.setItem(EMAIL_LINK_STORAGE_KEY, email); } catch {}
+};
+
+export const isMagicSignInLink = (href: string): boolean => {
+    return !!auth && isSignInWithEmailLink(auth, href);
+};
+
+/** The address saved when the link was requested on this device, if any. */
+export const getPendingMagicLinkEmail = (): string | null => {
+    try { return localStorage.getItem(EMAIL_LINK_STORAGE_KEY); } catch { return null; }
+};
+
+export const completeMagicSignIn = async (email: string, href: string) => {
+    const result = await signInWithEmailLink(auth, email, href);
+    try { localStorage.removeItem(EMAIL_LINK_STORAGE_KEY); } catch {}
+    // users/{uid} is created/backfilled by AuthContext's onAuthStateChanged.
+    return result.user;
+};
+
 export const signUpWithEmailPasswordAndProfile = async (profileData: SignUpProfileData, password: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, profileData.email, password);
     const user = userCredential.user;
@@ -373,6 +437,9 @@ export const signUpWithEmailPasswordAndProfile = async (profileData: SignUpProfi
 
     await updateProfile(user, { displayName: profileData.name });
     await sendEmailVerification(user);
+    // Lets EmailVerificationBanner say "check your inbox" (and hold off the
+    // resend button) instead of asking them to send a link they already have.
+    try { localStorage.setItem(VERIFICATION_SENT_KEY, String(Date.now())); } catch {}
     return user;
 };
 
@@ -392,6 +459,7 @@ export {
     db,
     googleProvider,
     githubProvider,
+    facebookProvider,
     onAuthStateChanged, 
     isSignInWithEmailLink, 
     signInWithEmailLink,

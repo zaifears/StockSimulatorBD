@@ -16,6 +16,7 @@ function ProfileEditForm({ formData, onInputChange }: ProfileEditFormProps) {
           type: "object",
           properties: {
             name: { type: "string", description: "Full name" },
+            phone: { type: "string", description: "Phone or WhatsApp number (optional)" },
             age: { type: "integer", description: "Age" },
             status: { type: "string", description: "Current occupational status" }
           }
@@ -38,10 +39,24 @@ function ProfileEditForm({ formData, onInputChange }: ProfileEditFormProps) {
       name="name" 
       value={formData.name || ''} 
       onChange={onInputChange} 
-      placeholder="Your Full Name" 
+      placeholder="Your Full Name"
+      autoComplete="name"
       className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder-gray-500 dark:placeholder-gray-400"
     />
-    
+
+    {/* Phone moved here from sign-up (kept sign-up to name/email/password) */}
+    <input
+      type="tel"
+      name="phone"
+      value={formData.phone || ''}
+      onChange={onInputChange}
+      placeholder="Phone / WhatsApp (optional)"
+      autoComplete="tel"
+      inputMode="tel"
+      maxLength={20}
+      className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder-gray-500 dark:placeholder-gray-400"
+    />
+
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <input 
         type="number" 

@@ -10,6 +10,13 @@ declare global {
   }
 }
 
+// google.accounts.id is page-global: initialize() must run once per page
+// load, not once per mount (navigating back to /auth remounts this component,
+// and GSI warns "initialize() is called multiple times"). Each mount instead
+// points the shared callback at its own handler.
+let gsiInitializedForClientId: string | null = null
+let activeCredentialHandler: ((response: { credential?: string }) => void) | null = null
+
 interface GoogleOneTapProps {
   clientId: string
   // When true, One Tap will not initialize/prompt at all (e.g. user already
@@ -50,6 +57,14 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
     }
   }, [onError, onSigningIn])
 
+  // Keep the shared GSI callback pointed at this mount's latest handler.
+  useEffect(() => {
+    activeCredentialHandler = handleCredentialResponse
+    return () => {
+      if (activeCredentialHandler === handleCredentialResponse) activeCredentialHandler = null
+    }
+  }, [handleCredentialResponse])
+
   const initializeOneTap = useCallback(() => {
     if (initializedRef.current || disabled) return
     if (typeof window === 'undefined') return
@@ -72,10 +87,13 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
       return
     }
 
+    activeCredentialHandler = handleCredentialResponse
+
     try {
+      if (gsiInitializedForClientId !== clientId) {
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: handleCredentialResponse,
+        callback: (response: { credential?: string }) => activeCredentialHandler?.(response),
         // Require an explicit tap even for a recognized returning user —
         // avoids silently signing someone into a shared/public device.
         auto_select: false,
@@ -84,29 +102,15 @@ export default function GoogleOneTap({ clientId, disabled, onError, onSigningIn 
         use_fedcm_for_prompt: true,
         itp_support: true,
       })
+        gsiInitializedForClientId = clientId
+      }
       initializedRef.current = true
 
-      // Best-effort floating "Sign in with Google" card.
-      // Under FedCM, browsers manage the prompt lifecycle natively.
-      window.google.accounts.id.prompt((notification: any) => {
-        try {
-          if (notification?.isNotDisplayed?.()) {
-            const reason = notification.getNotDisplayedReason?.()
-            if (reason) {
-              console.info(`[GoogleOneTap] Not displayed (${reason}).`)
-            }
-          } else if (notification?.isDismissedMoment?.()) {
-            const reason = notification.getDismissedReason?.()
-            if (reason) {
-              console.info(`[GoogleOneTap] Dismissed (${reason}).`)
-            }
-          } else if (notification?.isDisplayMoment?.()) {
-            console.info('[GoogleOneTap] Prompt displayed.')
-          }
-        } catch (notifyErr) {
-          // Non-blocking notification read failure
-        }
-      })
+      // Best-effort floating "Sign in with Google" card. Under FedCM the
+      // browser owns the prompt lifecycle; the old isNotDisplayed() /
+      // isDismissedMoment() status callbacks are deprecated (GSI logs a
+      // warning for them), so prompt() is called without a listener.
+      window.google.accounts.id.prompt()
     } catch (err) {
       console.warn('[GoogleOneTap] Initialization failed:', err)
     }

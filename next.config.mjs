@@ -85,7 +85,7 @@ const nextConfig = {
       "frame-ancestors 'self'",
       "object-src 'none'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://open-remark.zeon.studio https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://snap.licdn.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://va.vercel-scripts.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' ws: wss: https://open-remark.zeon.studio https://*.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.google.com https://www.gstatic.com https://www.google-analytics.com https://www.googletagmanager.com https://www.clarity.ms https://region1.google-analytics.com https://accounts.google.com https://va.vercel-scripts.com https://dse.shahoriar.bd",
@@ -216,7 +216,22 @@ const nextConfig = {
 
   // Rewrites for manifest file compatibility
   async rewrites() {
+    // Firebase Auth handler served from our own domain ("Option 3: proxy" in
+    // Firebase's signInWithRedirect best-practices). Lets redirect sign-in
+    // work in Safari and Facebook/Instagram/Messenger browsers, which block
+    // the third-party storage the default <project>.firebaseapp.com handler
+    // needs. Inert until NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is set to the site
+    // host — see docs/login-facebook-and-in-app-browsers.md.
+    const firebaseProject = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const firebaseAuthProxy = firebaseProject
+      ? [
+          { source: '/__/auth/:path*', destination: `https://${firebaseProject}.firebaseapp.com/__/auth/:path*` },
+          { source: '/__/firebase/:path*', destination: `https://${firebaseProject}.firebaseapp.com/__/firebase/:path*` },
+        ]
+      : [];
+
     return [
+      ...firebaseAuthProxy,
       {
         source: '/manifest.webmanifest',
         destination: '/site.webmanifest',

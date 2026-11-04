@@ -11,7 +11,7 @@ export default function PolicyPage() {
       <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
 
       <p className="mb-4">
-        <strong>Last updated:</strong> August 15, 2026
+        <strong>Last updated:</strong> November 4, 2026
       </p>
 
       <p className="mb-4">
@@ -21,6 +21,7 @@ export default function PolicyPage() {
       <h2 className="text-xl font-semibold mt-8 mb-2">Information We Collect</h2>
       <ul className="list-disc list-inside mb-4">
         <li>Account information (such as name, email, profile details)</li>
+        <li>If you sign in with Google, GitHub or Facebook: the basic profile that provider shares with us (see &quot;Signing in with Google, GitHub or Facebook&quot; below)</li>
         <li>Usage data (pages, actions, interactions)</li>
         <li>Content and submissions you make (comments, simulation activity, community participation)</li>
         <li>Technical data (device, browser, IP address, session details)</li>
@@ -60,11 +61,59 @@ export default function PolicyPage() {
         <li>Access to personal data is restricted to authorized staff only.</li>
       </ul>
 
+      <h2 id="social-sign-in" className="text-xl font-semibold mt-8 mb-2">Signing in with Google, GitHub or Facebook</h2>
+      <p className="mb-2">
+        You can create an account or sign in using Google, GitHub or Facebook instead of a password. When you do, that provider
+        shares only your basic profile with us, and only with your permission:
+      </p>
+      <ul className="list-disc list-inside mb-4">
+        <li>Your name and profile picture</li>
+        <li>Your email address (if your account has one)</li>
+        <li>A provider account ID, used only so you can sign in again</li>
+      </ul>
+      <p className="mb-4">
+        We use this solely to create and run your StockSimulatorBD account: showing your name and picture, sending account emails
+        (verification, payment and rejection notices), and keeping your simulator portfolio linked to you. We do not post to your
+        Facebook, GitHub or Google account, we do not read your friends list or other data, and we do not sell or share this data
+        with anyone. You can remove our access at any time from your provider&apos;s settings (for Facebook: Settings &amp; privacy →
+        Settings → Apps and websites).
+      </p>
+
       <h2 className="text-xl font-semibold mt-8 mb-2">Your Choices & Rights</h2>
       <ul className="list-disc list-inside mb-4">
-        <li>You can update, correct, or delete your profile at any time.</li>
-        <li>Contact us to request data deletion or for additional privacy queries.</li>
+        <li>You can update or correct your profile details at any time from your Profile page.</li>
+        <li>You can ask us to delete your account and data, as described below.</li>
+        <li>Contact us for any other privacy questions.</li>
       </ul>
+
+      <h2 id="data-deletion" className="text-xl font-semibold mt-8 mb-2">Deleting Your Account and Data</h2>
+      <p className="mb-2">To delete your StockSimulatorBD account and the data linked to it:</p>
+      <ol className="list-decimal list-inside mb-4 space-y-1">
+        <li>
+          Email{" "}
+          <a href="mailto:hello@shahoriar.bd?subject=Delete%20my%20StockSimulatorBD%20account" className="underline text-indigo-600">
+            hello@shahoriar.bd
+          </a>{" "}
+          from the email address on your account, with the subject &quot;Delete my StockSimulatorBD account&quot;, or message us on{" "}
+          <a href="https://wa.me/zaifears" target="_blank" rel="noopener noreferrer" className="underline text-indigo-600">
+            WhatsApp
+          </a>{" "}
+          with that email address.
+        </li>
+        <li>We may ask you to confirm the request from that email address, so no one else can delete your account.</li>
+        <li>We delete your account within 30 days and email you when it is done.</li>
+      </ol>
+      <p className="mb-2">What we delete:</p>
+      <ul className="list-disc list-inside mb-2">
+        <li>Your sign-in account (including any Google, GitHub or Facebook connection)</li>
+        <li>Your profile (name, email, phone, age, picture) and your simulator balance, portfolio and order history</li>
+        <li>Your Boss Tier and coin recharge request history</li>
+      </ul>
+      <p className="mb-4">
+        We keep only what the law requires us to (for example, payment references for real-money bKash recharges), and only for as
+        long as required. Removing StockSimulatorBD from your Facebook &quot;Apps and websites&quot; settings stops Facebook sharing
+        data with us. Send us the request above if you also want the data we already hold deleted.
+      </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-2">Trading Simulator Disclaimer</h2>
       <p className="mb-2">

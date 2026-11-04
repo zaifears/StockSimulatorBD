@@ -1,91 +1,157 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GoogleIcon, GitHubIcon } from './AuthIcons';
 
 interface SocialAuthProps {
   handleGoogleSignIn: () => void;
   handleGitHubSignIn: () => void;
+  handleFacebookSignIn?: () => void;
   isLoading: boolean;
   isInAppBrowser?: boolean;
+  /** Facebook / Messenger / Instagram browser specifically */
+  isMetaInAppBrowser?: boolean;
+  /** Facebook login configured (NEXT_PUBLIC_ENABLE_FACEBOOK_LOGIN) */
+  showFacebook?: boolean;
+  /**
+   * Firebase's auth handler is on this site's own domain, so redirect
+   * sign-in survives in-app browsers' third-party storage blocking.
+   */
+  redirectSignInWorks?: boolean;
 }
+
+const FacebookIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="currentColor"
+      d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.413c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.971H15.83c-1.491 0-1.956.93-1.956 1.886v2.264h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"
+    />
+  </svg>
+);
+
+const btnBase =
+  'w-full min-h-[44px] py-2.5 px-3 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-3 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#1A1F26]';
 
 const SocialAuth: React.FC<SocialAuthProps> = ({
   handleGoogleSignIn,
   handleGitHubSignIn,
+  handleFacebookSignIn,
   isLoading,
-  isInAppBrowser = false
+  isInAppBrowser = false,
+  isMetaInAppBrowser = false,
+  showFacebook = false,
+  redirectSignInWorks = false,
 }) => {
   const [linkCopied, setLinkCopied] = useState(false);
+  const [platform, setPlatform] = useState<'android' | 'ios' | 'other'>('other');
+
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    setPlatform(/android/.test(ua) ? 'android' : /iphone|ipad|ipod/.test(ua) ? 'ios' : 'other');
+  }, []);
+
+  const facebookButton = showFacebook && handleFacebookSignIn && (
+    <button
+      type="button"
+      onClick={handleFacebookSignIn}
+      disabled={isLoading}
+      className={`${btnBase} bg-[#1877F2] hover:bg-[#166FE5] text-white focus:ring-[#1877F2]`}
+    >
+      <FacebookIcon />
+      Continue with Facebook
+    </button>
+  );
+
+  const githubButton = (
+    <button
+      type="button"
+      onClick={handleGitHubSignIn}
+      disabled={isLoading}
+      className={`${btnBase} bg-gray-900 dark:bg-gray-800 hover:bg-gray-800 dark:hover:bg-gray-700 text-white focus:ring-gray-500`}
+    >
+      <GitHubIcon />
+      Continue with GitHub
+    </button>
+  );
 
   const handleOpenInBrowser = () => {
-    const url = window.location.href;
-    
-    // Try to open in system browser
-    // Android: intent URL to open in Chrome
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes('android')) {
-      window.location.href = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;end`;
+    const { host, pathname, search, href } = window.location;
+    if (platform === 'android') {
+      // No package= so Android uses the person's default browser; the
+      // fallback URL keeps them on the page if no handler answers.
+      window.location.href =
+        `intent://${host}${pathname}${search}#Intent;scheme=https;` +
+        `S.browser_fallback_url=${encodeURIComponent(href)};end`;
       return;
     }
-    
-    // iOS: try window.open (sometimes works)
-    window.open(url, '_system');
+    if (platform === 'ios') {
+      // Asks iOS to hand the page to Safari. Honoured by recent iOS versions
+      // inside most in-app browsers; if it isn't, nothing happens and the
+      // menu steps / copy-link below remain.
+      window.location.href = `x-safari-${href}`;
+      return;
+    }
+    window.open(href, '_blank', 'noopener');
   };
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const input = document.createElement('input');
       input.value = window.location.href;
       document.body.appendChild(input);
       input.select();
       document.execCommand('copy');
       document.body.removeChild(input);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2000);
     }
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   if (isInAppBrowser) {
+    const appName = isMetaInAppBrowser ? 'Facebook / Messenger / Instagram' : 'this app';
+    const menuHint =
+      platform === 'ios'
+        ? 'tap ••• (top right) → “Open in external browser”'
+        : 'tap ⋮ (top right) → “Open in Chrome” or “Open in browser”';
+
     return (
-      <div className="space-y-3">
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-          <p className="text-amber-300 text-xs text-center mb-2 font-medium">
-            Google/GitHub sign-in requires a full browser
+      <div className="space-y-3 font-spaceGrotesk">
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 p-3">
+          <p className="text-amber-900 dark:text-amber-200 text-xs font-semibold text-center mb-1">
+            Google sign-in doesn&apos;t work inside {appName}&apos;s browser
           </p>
-          <p className="text-slate-400 text-xs text-center">
-            You&apos;re in an in-app browser. Open this page in Chrome or Safari to use social sign-in.
+          <p className="text-amber-800/90 dark:text-amber-200/80 text-xs text-center leading-relaxed">
+            Google blocks it in in-app browsers. Open this page in your phone&apos;s browser ({menuHint}), or use
+            {facebookButton && redirectSignInWorks ? ' Facebook,' : ''} your email and password, or an email sign-in link (above).
           </p>
         </div>
-        
+
+        {redirectSignInWorks && facebookButton}
+
         <button
           type="button"
           onClick={handleOpenInBrowser}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-medium py-3 px-4 rounded-md hover:bg-blue-700 transition-colors"
+          className={`${btnBase} bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
-          Open in Browser
+          {platform === 'ios' ? 'Open in Safari' : platform === 'android' ? 'Open in Chrome / browser' : 'Open in browser'}
         </button>
-        
+
         <button
           type="button"
           onClick={handleCopyLink}
-          className="w-full flex items-center justify-center gap-2 bg-slate-700 text-slate-300 font-medium py-2.5 px-4 rounded-md hover:bg-slate-600 transition-colors text-sm"
+          className={`${btnBase} bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 focus:ring-gray-400`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-          </svg>
-          {linkCopied ? '✓ Link Copied!' : 'Copy Link & Paste in Browser'}
+          {linkCopied ? '✓ Link copied, paste it in your browser' : 'Copy link'}
         </button>
-        
-        <p className="text-slate-500 text-xs text-center">
-          Email/password sign-in works here
+
+        {redirectSignInWorks && githubButton}
+
+        <p className="text-gray-500 dark:text-slate-400 text-xs text-center">
+          Email sign-in (password or a sign-in link) works right here.
         </p>
       </div>
     );
@@ -97,21 +163,13 @@ const SocialAuth: React.FC<SocialAuthProps> = ({
         type="button"
         onClick={handleGoogleSignIn}
         disabled={isLoading}
-        className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-medium py-3 px-4 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+        className={`${btnBase} bg-white dark:bg-[#111418] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1A1F26] focus:ring-blue-500`}
       >
         <GoogleIcon />
         Continue with Google
       </button>
-      
-      <button
-        type="button"
-        onClick={handleGitHubSignIn}
-        disabled={isLoading}
-        className="w-full flex items-center justify-center gap-3 bg-gray-900 dark:bg-gray-800 border border-gray-700 text-white font-medium py-3 px-4 rounded-md hover:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-      >
-        <GitHubIcon />
-        Continue with GitHub
-      </button>
+      {facebookButton}
+      {githubButton}
     </div>
   );
 };

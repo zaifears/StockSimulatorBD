@@ -13,11 +13,14 @@ export function humanizeAuthError(error: any): string {
   }
   
   if (code.includes('auth/wrong-password')) {
-    return 'Incorrect password. Try again or use "Forgot Password" to reset it.';
+    return 'Incorrect password. Try again, use "Forgot password?", or — if you signed up with Google or GitHub — use that button instead.';
   }
   
   if (code.includes('auth/invalid-credential')) {
-    return 'Invalid email or password. Please check and try again.';
+    // Modern Firebase returns this for a wrong password too. If the person
+    // ever used "Continue with Google" on this email, Firebase replaced their
+    // unverified password with the Google login, so point them there.
+    return 'Email or password is incorrect. Check and try again, use "Forgot password?", or — if you signed up with Google or GitHub — use that button instead.';
   }
   
   if (code.includes('auth/email-already-in-use')) {
@@ -25,7 +28,7 @@ export function humanizeAuthError(error: any): string {
   }
   
   if (code.includes('auth/weak-password')) {
-    return 'Password is too weak. Use at least 6 characters with a mix of letters and numbers.';
+    return 'Password is too weak. Use at least 6 characters with an uppercase and a lowercase letter.';
   }
   
   if (code.includes('auth/invalid-email')) {
@@ -44,6 +47,15 @@ export function humanizeAuthError(error: any): string {
     return 'This sign-in method is not currently enabled. Try another method.';
   }
   
+  // Email-link (magic link) errors
+  if (code.includes('auth/invalid-action-code') || code.includes('auth/expired-action-code')) {
+    return 'This sign-in link has expired or was already used. Request a new one below.';
+  }
+
+  if (code.includes('auth/missing-continue-uri') || code.includes('auth/unauthorized-continue-uri')) {
+    return 'Email sign-in links are not set up yet. Please use your password or Google for now.';
+  }
+
   // Social auth errors
   if (code.includes('auth/popup-blocked')) {
     return '⚠️ Popup blocked! Please allow popups for this site in your browser settings. If using an in-app browser, try Safari or Firefox.';
@@ -58,7 +70,7 @@ export function humanizeAuthError(error: any): string {
   }
   
   if (code.includes('auth/account-exists-with-different-credential')) {
-    return 'An account already exists with this email using a different sign-in method. Try signing in with email/password instead.';
+    return 'This email is already registered with a different sign-in method. Sign in the way you did the first time (Google, GitHub, or email and password).';
   }
   
   if (code.includes('auth/credential-already-in-use')) {

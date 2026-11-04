@@ -11,8 +11,8 @@ import {
 import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, handleSocialSignInResult } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { updateUserCount } from '@/lib/utils/updateStats';
 import { isBossActive, isBossExpired } from '@/lib/tier';
+import { isWelcomeBonusEligible } from '@/lib/welcomeBonusEligibility';
 
 // ✅ localStorage cache interface
 interface CachedUserData {
@@ -53,8 +53,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [accountTier, setAccountTier] = useState<'Bro' | 'Boss'>('Bro');
   const [isBoss, setIsBoss] = useState<boolean>(false);
-  const [userCountUpdated, setUserCountUpdated] = useState(false);
-  const userCountUpdatedRef = useRef(false);
   const welcomeBonusAttemptedRef = useRef(false);
   // Track whether we're still resolving a redirect OAuth callback.
   // Keeps `loading: true` so the UI never flashes the login page.
@@ -144,8 +142,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // 🔒 LAYER 2: Must be verified (social users are auto-verified)
-    if (!currentUser.emailVerified) {
+    // 🔒 LAYER 2: Verified email, or a trusted social provider (Google,
+    // GitHub, Facebook). Same rule the server enforces.
+    if (!isWelcomeBonusEligible(currentUser)) {
       return;
     }
 
@@ -180,6 +179,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
       if (data.success) {
         console.log('✅ Welcome bonus granted! New balance:', data.newBalance);
+      } else if (data.code === 'email_not_verified') {
+        // Not an error: let a later refreshVerificationStatus() try again.
+        welcomeBonusAttemptedRef.current = false;
       } else {
         console.log('ℹ️ Welcome bonus status:', data.error || 'Already granted');
       }
@@ -236,8 +238,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await signOut(auth);
           setUser(null);
           setIsEmailVerified(false);
-          setUserCountUpdated(false);
-          userCountUpdatedRef.current = false;
           return;
         }
         
@@ -314,14 +314,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setIsBoss(false);
               console.log('✅ User document created with Bro tier');
               
-              // ✅ FIXED: Pass user.uid to updateUserCount
-              if (!userCountUpdatedRef.current) {
-                userCountUpdatedRef.current = true;
-                setUserCountUpdated(true);
-                updateUserCount(user.uid).catch(err => 
-                  console.error('Failed to update user count:', err)
-                );
-              }
             } else {
               // Existing user: check tier and backfill accountTier if missing
               const now = Date.now();
@@ -354,15 +346,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // 🪙 GRANT WELCOME BONUS for verified users
           // grantWelcomeBonus has multi-layer dedup (session ref → Firestore flag → server checks)
-          if (nowVerified) {
+          if (isWelcomeBonusEligible({ emailVerified: nowVerified, providerData: user.providerData })) {
             await grantWelcomeBonus(user);
           }
           
           console.log('🔍 User email verified:', nowVerified);
         } else {
           setIsEmailVerified(false);
-          setUserCountUpdated(false);
-          userCountUpdatedRef.current = false;
           setAccountTier('Bro');
           setIsBoss(false);
         }
@@ -507,8 +497,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await signOut(auth);
       setUser(null);
       setIsEmailVerified(false);
-      setUserCountUpdated(false);
-      userCountUpdatedRef.current = false;
       router.push('/auth');
     } catch (error) {
       console.error('Logout error:', error);

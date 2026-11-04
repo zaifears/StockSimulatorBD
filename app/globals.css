@@ -103,55 +103,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
-   RECAPTCHA BADGE - COLLAPSE & EXPAND ON HOVER
+   RECAPTCHA BADGE - HIDDEN, ATTRIBUTION SHOWN INSTEAD
    ============================================ */
 
-/* 
-   reCAPTCHA v3 badge structure:
-   .grecaptcha-badge (256px wide, 60px tall)
-     └── iframe (contains the logo + "protected by reCAPTCHA" text)
-   
-   Collapsed: only the recycle icon (~28px) is visible
-   Expanded on hover: full badge (256px) slides out
-*/
-
-/* Base badge: collapsed by default, only showing the icon */
+/* The floating badge used to be squeezed to a 32px strip that clipped its
+   logo, and on mobile it covered the "Continue with Google" button. Google
+   allows hiding it when the page shows "Protected by reCAPTCHA… Privacy
+   Policy and Terms apply" — app/auth/page.tsx, the only page that loads
+   reCAPTCHA, renders that line under the sign-in card. visibility (not
+   display:none) keeps the widget working. */
 .grecaptcha-badge {
-  width: 32px !important;
-  overflow: hidden !important;
-  transition: width 0.3s ease-in-out !important;
-  border-radius: 4px !important;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3) !important;
-  opacity: 0.7 !important;
-  position: fixed !important;
-  right: 4px !important;
-  z-index: 51 !important;
-}
-
-/* Expand on hover - show full badge */
-.grecaptcha-badge:hover {
-  width: 256px !important;
-  opacity: 1 !important;
-}
-
-/* Mobile: Position above bottom navbar */
-@media (max-width: 1023px) {
-  .grecaptcha-badge {
-    bottom: 72px !important;
-  }
-}
-
-/* Desktop: Standard bottom position */
-@media (min-width: 1024px) {
-  .grecaptcha-badge {
-    z-index: 9999 !important;
-    bottom: 16px !important;
-  }
-}
-
-/* Ensure iframe inside badge is not clipped */
-.grecaptcha-badge iframe {
-  z-index: inherit !important;
+  visibility: hidden !important;
 }
 
 /* Ensure nothing clips the badge */

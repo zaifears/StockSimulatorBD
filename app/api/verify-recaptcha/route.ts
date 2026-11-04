@@ -30,6 +30,8 @@ function getScoreThreshold(action?: string): number {
     signup: 0.3,
     signin: 0.2,
     forgot_password: 0.2,
+    // Sends an email, like forgot_password; same bar.
+    email_link: 0.2,
   };
 
   const key = (action || '').toLowerCase();

@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usesTrustedSocialProvider } from '@/lib/welcomeBonusEligibility';
+import { VERIFICATION_SENT_KEY } from '@/lib/firebase';
+
+const RESEND_COOLDOWN_S = 600;
 
 export default function EmailVerificationBanner() {
   const { user, sendVerificationEmail, refreshVerificationStatus } = useAuth();
@@ -11,6 +15,24 @@ export default function EmailVerificationBanner() {
   const [refreshing, setRefreshing] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [countdown, setCountdown] = useState(0);
+  // True right after sign-up (or a resend): the link is already in their
+  // inbox, so lead with that instead of a "Send" button they'd re-click.
+  const [justSent, setJustSent] = useState(false);
+
+  // Pick up the email sent during sign-up (lib/firebase.ts stamps this).
+  useEffect(() => {
+    try {
+      const sentAt = Number(localStorage.getItem(VERIFICATION_SENT_KEY) || 0);
+      const remaining = Math.ceil((sentAt + RESEND_COOLDOWN_S * 1000 - Date.now()) / 1000);
+      if (sentAt && remaining > 0) {
+        setJustSent(true);
+        setCanResend(false);
+        setCountdown(remaining);
+      }
+    } catch {
+      // storage unavailable: fall back to the plain banner
+    }
+  }, [user?.uid]);
 
   // ⏰ 10-MINUTE COUNTDOWN TIMER
   useEffect(() => {
@@ -34,8 +56,7 @@ export default function EmailVerificationBanner() {
   }, [countdown]);
 
   // 🔧 Check if component should render AFTER all hooks are called
-  if (!user || user.emailVerified || user.isAnonymous || 
-      user.providerData.some(p => p.providerId === 'google.com' || p.providerId === 'github.com')) {
+  if (!user || user.emailVerified || user.isAnonymous || usesTrustedSocialProvider(user)) {
     return null;
   }
 
@@ -51,7 +72,9 @@ export default function EmailVerificationBanner() {
       
       // Start 10-minute cooldown (600 seconds)
       setCanResend(false);
-      setCountdown(600);
+      setCountdown(RESEND_COOLDOWN_S);
+      setJustSent(true);
+      try { localStorage.setItem(VERIFICATION_SENT_KEY, String(Date.now())); } catch {}
       
     } catch (error: any) {
       console.error('❌ Failed to send verification email:', error);
@@ -112,14 +135,18 @@ export default function EmailVerificationBanner() {
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xl animate-bounce flex-shrink-0">📧</span>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-base leading-tight">Email Verification Required</p>
+              <p className="font-bold text-base leading-tight">{justSent ? 'Check your inbox' : 'Verify your email'}</p>
             </div>
           </div>
           
           {/* Email and message */}
           <div className="mb-4">
             <p className="text-sm opacity-90 leading-relaxed">
-              Verify <strong className="text-yellow-200">{user.email}</strong> to get your <strong>10,000 welcome coins</strong> 🪙 and unlock all features.
+              {justSent ? (
+                <>We sent a link to <strong className="text-yellow-200 break-all">{user.email}</strong>. Open it to get your <strong>10,000 welcome coins</strong> 🪙, then tap &ldquo;I already verified&rdquo;. Not there? Check Spam or Promotions.</>
+              ) : (
+                <>Verify <strong className="text-yellow-200 break-all">{user.email}</strong> to get your <strong>10,000 welcome coins</strong> 🪙 and unlock all features.</>
+              )}
             </p>
             {countdown > 0 && (
               <p className="text-xs opacity-75 mt-2 bg-red-800/50 px-2 py-1 rounded">
@@ -182,9 +209,13 @@ export default function EmailVerificationBanner() {
           <div className="flex items-center gap-4">
             <span className="text-2xl animate-bounce">📧</span>
             <div>
-              <p className="font-bold text-lg">Email Verification Required</p>
+              <p className="font-bold text-lg">{justSent ? 'Check your inbox' : 'Verify your email'}</p>
               <p className="text-sm opacity-90">
-                Please verify your email <strong>{user.email}</strong> to get your 10,000 welcome coins and access StockSimulatorBD features.
+                {justSent ? (
+                  <>We sent a verification link to <strong>{user.email}</strong>. Open it to get your 10,000 welcome coins, then click &ldquo;I already verified&rdquo;. Not there? Check Spam or Promotions.</>
+                ) : (
+                  <>Please verify your email <strong>{user.email}</strong> to get your 10,000 welcome coins and access StockSimulatorBD features.</>
+                )}
               </p>
               {countdown > 0 && (
                 <p className="text-xs opacity-75 mt-1">
