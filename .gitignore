@@ -170,3 +170,7 @@ brag-output*/
 
 # Hallmark design tool working files (screenshots, logs)
 .hallmark/
+
+# Marketing promotional videos and HyperFrames cache
+marketing-videos/
+.hyperframes/
