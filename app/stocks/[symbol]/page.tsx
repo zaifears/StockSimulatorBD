@@ -45,8 +45,17 @@ type StockPageProps = {
   params: Promise<RouteParams>;
 };
 
+// '&' is a legitimate DSE symbol character (KAY&QUE). The old pattern rejected
+// it, so /stocks/kay%26que returned 404 even though the sitemap listed it.
+const SYMBOL_PATTERN = /^[A-Z0-9().&\-]{1,20}$/;
+
 function formatSymbol(rawSymbol: string): string {
-  return decodeURIComponent(rawSymbol).trim().toUpperCase();
+  try {
+    return decodeURIComponent(rawSymbol).trim().toUpperCase();
+  } catch {
+    // Malformed percent-encoding (e.g. "%E0%A4%A") must 404, not throw a 500.
+    return '';
+  }
 }
 
 function stockHref(symbol: string): string {
@@ -84,7 +93,7 @@ export async function generateStaticParams(): Promise<RouteParams[]> {
 export async function generateMetadata({ params }: StockPageProps): Promise<Metadata> {
   const { symbol } = await params;
   const formattedSymbol = formatSymbol(symbol);
-  if (!/^[A-Z0-9().\-]{1,20}$/.test(formattedSymbol)) {
+  if (!SYMBOL_PATTERN.test(formattedSymbol)) {
     return {
       title: 'Stock not found | StockSimulatorBD',
       description: 'This DSE stock page is not available right now.',
@@ -182,7 +191,7 @@ export async function generateMetadata({ params }: StockPageProps): Promise<Meta
 export default async function StockDetailsPage({ params }: StockPageProps) {
   const { symbol } = await params;
   const formattedSymbol = formatSymbol(symbol);
-  if (!/^[A-Z0-9().\-]{1,20}$/.test(formattedSymbol)) {
+  if (!SYMBOL_PATTERN.test(formattedSymbol)) {
     notFound();
   }
   const stocks = await getAllDseStocks();

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   if (!symbol) return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
 
   // 🔒 SEC-004: Strictly validate ticker format and verify presence in authoritative DSE roster
-  if (!/^[A-Z0-9-]{1,20}$/.test(symbol) || !(symbol in DSE_COMPANY_NAMES)) {
+  if (!/^[A-Z0-9&-]{1,20}$/.test(symbol) || !(symbol in DSE_COMPANY_NAMES)) {
     return NextResponse.json({ error: 'Invalid or unrecognized DSE stock symbol' }, { status: 400 });
   }
 

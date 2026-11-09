@@ -12,6 +12,11 @@ export default function robots(): MetadataRoute.Robots {
   // dynamic page, and repeated crawler hits on it churn ISR writes/revalidations
   // for zero SEO benefit. /api/, /admin/, /profile/, /auth/ etc. stay
   // disallowed too since they're non-content or login-gated.
+  //
+  // /auth is deliberately NOT disallowed. It is linked from the navbar, so
+  // Google finds it; if robots.txt blocks the fetch, Google can't read the
+  // page's noindex tag and reports "Indexed, though blocked by robots.txt".
+  // It must stay crawlable and carry noindex (see app/auth/layout.tsx).
   const allow = [
     '/',
     '/about-us',
@@ -35,8 +40,6 @@ export default function robots(): MetadataRoute.Robots {
     '/portfolio',
     '/portfolio/',
     '/_next/',
-    '/auth',
-    '/auth/',
     '/trade',
     '/trade/',
   ];

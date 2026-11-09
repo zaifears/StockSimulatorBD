@@ -79,7 +79,7 @@ async function fetchMarketLatestSnapshot(): Promise<MarketLatestSnapshot> {
     for (const s of stocks) {
       if (typeof s.symbol === 'string') {
         const sym = s.symbol.trim().toUpperCase();
-        if (sym.length > 0 && /^[A-Z0-9().\-]+$/.test(sym)) {
+        if (sym.length > 0 && /^[A-Z0-9().&\-]+$/.test(sym)) {
           symbols.push(sym);
           prices.set(sym, {
             ltp: typeof s.ltp === 'number' && s.ltp > 0 ? s.ltp : 0,

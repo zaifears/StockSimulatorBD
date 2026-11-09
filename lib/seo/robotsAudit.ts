@@ -13,7 +13,7 @@ export interface CrawlerAuditResult {
 
 export function auditRobotsConfig(): CrawlerAuditResult[] {
   const commonAllowed = ['/', '/about-us', '/blog/', '/stocks/', '/boss', '/policy', '/llms.txt', '/llms-full.txt'];
-  const commonDisallowed = ['/api/', '/admin/', '/profile/', '/coins/', '/_next/', '/auth/', '/trade'];
+  const commonDisallowed = ['/api/', '/admin/', '/profile/', '/coins/', '/_next/', '/trade'];
 
   return [
     {

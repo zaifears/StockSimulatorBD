@@ -52,7 +52,8 @@ export function identifyCrawlerBot(userAgent: string | null | undefined): BotCra
 
 /**
  * Checks whether a requested path is allowed by robots.ts policy.
- * /trade, /api/, /admin/, /profile/, /coins/, /_next/, /auth/ are disallowed.
+ * /trade, /api/, /admin/, /profile/, /coins/, /_next/ are disallowed.
+ * /auth is crawlable on purpose: it serves noindex, which Google can only read if it may fetch it.
  */
 export function isPathRobotsAllowed(path: string): boolean {
   if (!path) return true;
@@ -63,7 +64,6 @@ export function isPathRobotsAllowed(path: string): boolean {
     '/profile/',
     '/coins/',
     '/_next/',
-    '/auth/',
   ];
   return !disallowedPrefixes.some((prefix) => path.startsWith(prefix));
 }
