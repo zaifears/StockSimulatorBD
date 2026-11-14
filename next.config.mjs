@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
+// Self-hosted build (Oracle VPS behind Cloudflare): SELF_HOST=1 pnpm build.
+// Vercel builds are untouched because the flag is never set there.
+const selfHost = process.env.SELF_HOST === '1';
+
 const nextConfig = {
+  ...(selfHost ? { output: 'standalone' } : {}),
   // Dev only: lets a phone on the same Wi-Fi load dev assets from this machine
   // (http://192.168.10.68:3000). Update the address if the router assigns a new one.
   allowedDevOrigins: ['192.168.10.68'],
@@ -21,6 +26,8 @@ const nextConfig = {
     
   // Optimize images
   images: {
+    // No sharp on the 1/8-core VPS: serve originals, Cloudflare caches them.
+    ...(selfHost ? { unoptimized: true } : {}),
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 31536000, // 1 year
     remotePatterns: [

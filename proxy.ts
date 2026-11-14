@@ -83,15 +83,19 @@ export function proxy(request: NextRequest, event: NextFetchEvent) {
   return NextResponse.next();
 }
 
+// Every proxy invocation costs Fluid Active CPU on Vercel, so humans must never trigger it on pages:
+// - /api/*: always runs (CORS handling).
+// - everything else: runs ONLY when the user-agent looks like a tracked crawler (telemetry).
+// The regex is case-sensitive (no inline flags in matcher values), so it lists the canonical casings;
+// identifyCrawlerBot() above re-checks case-insensitively. Keep in step with BOT_PATTERNS.
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public asset extensions (svg, png, jpg, etc.)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/api/:path*',
+    {
+      source:
+        '/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+      has: [{ type: 'header', key: 'user-agent', value:
+            '.*(?:[Gg]ooglebot|Google-Extended|OAI-SearchBot|ChatGPT-User|GPTBot|[Bb]ingbot|PerplexityBot|Perplexity-User|ClaudeBot|Claude-SearchBot|Claude-Web|Claude-User|anthropic-ai|Bytespider).*' }],
+    },
   ],
 };
