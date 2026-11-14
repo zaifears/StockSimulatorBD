@@ -102,6 +102,7 @@ export default function StockRow({
           <div className="flex justify-end items-center gap-1.5 sm:gap-2">
             <Link
               href={`/stocks/${stock.symbol.toLowerCase()}`}
+              prefetch={false}
               onClick={() => {
                 if (typeof window !== 'undefined') {
                   sessionStorage.setItem('ssbd_last_stock_source', '/trade');
@@ -210,6 +211,7 @@ export default function StockRow({
         <div className="flex justify-end items-center gap-1.5 sm:gap-2">
           <Link
             href={`/stocks/${stock.symbol.toLowerCase()}`}
+            prefetch={false}
             onClick={() => {
               if (typeof window !== 'undefined') {
                 sessionStorage.setItem('ssbd_last_stock_source', '/trade');

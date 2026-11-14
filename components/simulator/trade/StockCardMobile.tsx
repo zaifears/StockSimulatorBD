@@ -115,6 +115,7 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
         <div className="flex gap-2">
           <Link
             href={symbolHref}
+            prefetch={false}
             onClick={handleStockClick}
             className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 shrink-0"
           >
@@ -215,6 +216,7 @@ export default function StockCardMobile({ stock, portfolioItem, marketOpen, vari
       <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/80">
         <Link
           href={symbolHref}
+          prefetch={false}
           onClick={handleStockClick}
           className="flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 shrink-0"
         >

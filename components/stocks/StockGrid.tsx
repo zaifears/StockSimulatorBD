@@ -142,6 +142,7 @@ export default function StockGrid({ initialStocks }: { initialStocks: DseStock[]
                   id={`stock-card-${stock.symbol.toLowerCase()}`}
                   key={stock.symbol}
                   href={`/stocks/${stock.symbol.toLowerCase()}`}
+                  prefetch={false}
                   onClick={() => handleStockClick(stock.symbol)}
                   className={`group p-4 bg-white dark:bg-[#1A1F26] rounded-2xl border transition-all hover:shadow-lg hover:-translate-y-1 ${
                     isHighlighted

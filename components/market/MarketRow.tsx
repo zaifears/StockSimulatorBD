@@ -186,6 +186,7 @@ export default function MarketRow({
       <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
         <Link
           href={symbolHref}
+          prefetch={false}
           onClick={(e) => {
             e.stopPropagation();
             saveScrollState();

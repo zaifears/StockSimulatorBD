@@ -237,7 +237,7 @@ const faqSchema = {
 
 export default async function HomePage() {
   // First reading for the hero index board; the board refreshes itself client-side.
-  const marketOverview = await fetchMarketOverview();
+  const marketOverview = await fetchMarketOverview(86400);
 
   return (
     <>
