@@ -30,10 +30,10 @@ export const dynamic = 'force-dynamic';
 
 const VALID_ACTIONS = new Set(['start', 'heartbeat', 'end']);
 const VALID_DEVICE_TYPES = new Set(['mobile', 'tablet', 'desktop', 'unknown']);
-// Clamp per-beacon active-time delta at 2x the heartbeat interval (5 min in
+// Clamp per-beacon active-time delta at 2x the heartbeat interval (15 min in
 // components/VisitTracker.tsx). Keep these in step: a cap below the interval
 // silently truncates real active time.
-const MAX_DELTA_SECONDS = 600;
+const MAX_DELTA_SECONDS = 1800;
 const MAX_PAGE_COUNT = 2000;
 
 // ── Tiered Retention Policy (Dividing the Data) ──────────────────────────

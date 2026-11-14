@@ -38,10 +38,10 @@ const TRADE_FETCH_CAP = 3000;
 // without starving blog posts with fewer views than the 60th stock page.
 const PAGES_SCAN_LIMIT = 1000;
 // "Currently online" window — a session pinging within this window (and not
-// yet ended) counts as live. The heartbeat is every 5 min
-// (components/VisitTracker.tsx), so 11 min tolerates one missed beat plus
+// yet ended) counts as live. The heartbeat is every 15 min
+// (components/VisitTracker.tsx), so 31 min tolerates one missed beat plus
 // network slack without visitors flickering out of the count.
-const ACTIVE_NOW_WINDOW_MS = 11 * 60 * 1000;
+const ACTIVE_NOW_WINDOW_MS = 31 * 60 * 1000;
 const RECHARGE_FETCH_CAP = 20_000;
 // A single account this far above what normal recharge + trading activity
 // could plausibly produce gets flagged for manual review. Well under

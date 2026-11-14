@@ -18,6 +18,10 @@ function buildChartScrapeUrl(request: Request, symbol: string): string {
   return `https://dse.shahoriar.bd/api/dse_chart?symbol=${encoded}`;
 }
 
+// Browsers/CDNs may reuse a good chart response for 3 min (matches the Firestore staleness window below),
+// then serve it stale for up to 10 min while one request refreshes it.
+const CHART_CACHE_HEADERS = { 'Cache-Control': 'public, max-age=60, s-maxage=180, stale-while-revalidate=600' };
+
 const THREE_MIN_MS = 3 * 60 * 1000;
 const DEADLOCK_MS  = 15 * 1000;
 
@@ -51,8 +55,8 @@ export async function GET(request: Request) {
       const isDeadlocked = data.isScraping && (now - (data.lockTime || 0)) > DEADLOCK_MS;
 
       if (hasData) cachedChartData = data.chartData;
-      if (!isStale) return NextResponse.json(data.chartData);
-      if (data.isScraping && !isDeadlocked && hasData) return NextResponse.json(data.chartData);
+      if (!isStale) return NextResponse.json(data.chartData, { headers: CHART_CACHE_HEADERS });
+      if (data.isScraping && !isDeadlocked && hasData) return NextResponse.json(data.chartData, { headers: CHART_CACHE_HEADERS });
     }
 
     await docRef.set({ isScraping: true, lockTime: now }, { merge: true });
@@ -86,13 +90,13 @@ export async function GET(request: Request) {
         lockTime:    0,
       });
 
-      return NextResponse.json(freshChartData);
+      return NextResponse.json(freshChartData, { headers: CHART_CACHE_HEADERS });
 
     } catch (scrapeError: any) {
       await docRef.set({ isScraping: false, lockTime: 0 }, { merge: true }).catch(() => {});
       if (cachedChartData) {
         console.warn(`[Gatekeeper] Fresh scrape failed for ${symbol} (${scrapeError.message}); returning cached chart data.`);
-        return NextResponse.json(cachedChartData);
+        return NextResponse.json(cachedChartData, { headers: CHART_CACHE_HEADERS });
       }
       throw scrapeError;
     }
