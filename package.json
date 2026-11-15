@@ -51,7 +51,8 @@
     "react-icons": "^5.5.0",
     "react-markdown": "^9.1.0",
     "resend": "^6.14.0",
-    "vercel": "^50.44.0"
+    "vercel": "^50.44.0",
+    "web-vitals": "^6.2.3"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",

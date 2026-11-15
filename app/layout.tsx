@@ -10,6 +10,7 @@ import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import IOSInstallGuide from '@/components/iOSInstallGuide'
 import ServiceWorkerCleanup from '@/components/ServiceWorkerCleanup'
 import VisitTracker from '@/components/VisitTracker'
+import WebVitalsReporter from '@/components/WebVitalsReporter'
 import { SITE_URL, absoluteUrl } from '@/lib/siteUrl'
 
 
@@ -217,6 +218,7 @@ export default function RootLayout({
         <IOSInstallGuide />
         <AuthProvider>
           <VisitTracker />
+          <WebVitalsReporter />
           <EmailVerificationBanner />
           <SentryInitializer />
           <ServiceWorkerCleanup />
