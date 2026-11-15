@@ -53,7 +53,14 @@ interface MarketLatestSnapshot {
   prices: Map<string, LatestPriceInfo>;
 }
 
+// On the self-hosted VM the server process lives for days, so a snapshot held
+// for the life of the process would freeze stock-page prices and hide new
+// listings until the next restart. Ten minutes still collapses a build's 400+
+// page renders (and any burst of regenerations) into one Firestore read.
+const SNAPSHOT_TTL_MS = 10 * 60 * 1000;
+
 let marketSnapshotPromise: Promise<MarketLatestSnapshot> | null = null;
+let marketSnapshotAt = 0;
 
 async function fetchMarketLatestSnapshot(): Promise<MarketLatestSnapshot> {
   const prices = new Map<string, LatestPriceInfo>();
@@ -102,7 +109,9 @@ async function fetchMarketLatestSnapshot(): Promise<MarketLatestSnapshot> {
 }
 
 function getMarketSnapshot(): Promise<MarketLatestSnapshot> {
-  if (!marketSnapshotPromise) {
+  const now = Date.now();
+  if (!marketSnapshotPromise || now - marketSnapshotAt > SNAPSHOT_TTL_MS) {
+    marketSnapshotAt = now;
     marketSnapshotPromise = fetchMarketLatestSnapshot().catch(() => ({
       symbols: null,
       prices: new Map(),
@@ -112,10 +121,11 @@ function getMarketSnapshot(): Promise<MarketLatestSnapshot> {
 }
 
 /**
- * Memoised for the life of the process. `generateStaticParams` plus 400+ page
+ * Memoised for SNAPSHOT_TTL_MS. `generateStaticParams` plus 400+ page
  * renders would otherwise hit Firestore once per page during a build.
  */
 let rosterPromise: Promise<DseStock[]> | null = null;
+let rosterAt = 0;
 
 async function buildRoster(): Promise<DseStock[]> {
   const { symbols: live } = await getMarketSnapshot();
@@ -134,7 +144,9 @@ async function buildRoster(): Promise<DseStock[]> {
 }
 
 export async function getAllDseStocks(): Promise<DseStock[]> {
-  if (!rosterPromise) {
+  const now = Date.now();
+  if (!rosterPromise || now - rosterAt > SNAPSHOT_TTL_MS) {
+    rosterAt = now;
     rosterPromise = buildRoster().catch(() => LOCAL_STOCKS);
   }
   return rosterPromise;

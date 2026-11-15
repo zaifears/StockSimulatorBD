@@ -5,6 +5,9 @@ const selfHost = process.env.SELF_HOST === '1';
 
 const nextConfig = {
   ...(selfHost ? { output: 'standalone' } : {}),
+  // 1 GB VM: skip Next's 50 MB in-memory page cache. Prerendered pages are read
+  // from disk in a few ms and Cloudflare caches them in front anyway.
+  ...(selfHost ? { cacheMaxMemorySize: 0 } : {}),
   // Dev only: lets a phone on the same Wi-Fi load dev assets from this machine
   // (http://192.168.10.68:3000). Update the address if the router assigns a new one.
   allowedDevOrigins: ['192.168.10.68'],

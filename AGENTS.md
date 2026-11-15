@@ -187,7 +187,11 @@ All client SDK writes are strictly validated:
 
 Production is a single Oracle VM `shaho-shoily` (`ubuntu@129.225.126.188`, key `E:\.ssh\ssh-shaho-shoily-2026-11-14.key`) running `stocksimulator-web.service` behind Caddy and Cloudflare. It is no longer on Vercel (Vercel is paused; sections below about Vercel limits are legacy). Release layout: `~/stocksimulator-web/releases/{current,prev}` plus a shared `.env`. The VM has 1 GB RAM: **never build there**.
 
-Procedure:
+**Preferred: `bash scripts/deploy-vm.sh`** (Git Bash, repo root). It does the steps below, but extracts to `releases/next` and boots it on port 3011 first, so a broken bundle never reaches users; it refuses to swap during DSE hours without `--force`, rolls back automatically if the new release fails after the swap, and purges Cloudflare. `--stage-only` stops after the smoke test, `--skip-build` reuses `.next`. It reuses `current/node_modules`, so a release that adds or upgrades a server dependency still needs `node_modules` refreshed by hand.
+
+Cloudflare (Free plan) cache rules, in order: bypass `/api/`; `/_next/static/` 31 days; public pages and static shells (`/`, `/stocks`, `/stocks/*`, `/blog*`, `/trade`, `/portfolio`, `/auth`, `/coins`, `/boss`, `/profile`, `/policy`) 1 day at the edge; public read-only APIs (`chart-data`, `market-overview`, `market-news`, `fundamentals/*`, `holidays`, `companies/search`) respect origin headers; `sitemap.xml`, `robots.txt`, `llms*.txt` 1 hour. A new page is not edge-cached until it is added to the rule, and only prerendered pages with no per-user HTML may be added. Smart Tiered Cache and Always Online are on.
+
+Manual procedure:
 1. Build locally: `SELF_HOST=1 pnpm build` (the flag is read in `next.config.mjs`).
 2. Stage `.next/standalone/{.next,server.js,package.json}` + `.next/static` into `.next/static`, plus `public` (without `node_modules`). Tar it and `scp` it to the VM.
 3. On the VM **stop the service first** (a running Next process recreates `current/.next/cache` and breaks the directory swap), move `current` to `prev`, extract to `current`, `cp -al prev/node_modules current/node_modules`, `cp -an prev/.next/static/. current/.next/static/ || true` (keeps old chunks for open tabs; GNU `cp -n` can exit non-zero), start the service.
