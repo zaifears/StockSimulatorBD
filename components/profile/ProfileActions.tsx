@@ -9,7 +9,10 @@ interface ProfileActionsProps {
   onCancel: () => void;
   onSave: () => void;
   onChangePassword: () => void;
-  hasPassword?: boolean;  // ✅ NEW: Show password button only if user has password
+  /** True when the account has a password: the button reads "Change Password". */
+  hasPassword?: boolean;
+  /** Social-only account with an email: the button reads "Set Password". */
+  canSetPassword?: boolean;
 }
 
 // Shared sizing so the three actions always match: equal grid columns, one
@@ -28,11 +31,13 @@ function ProfileActions({
   onCancel,
   onSave,
   onChangePassword,
-  hasPassword = false
+  hasPassword = false,
+  canSetPassword = false
 }: ProfileActionsProps) {
+  const showPasswordButton = hasPassword || canSetPassword;
   if (!isEditing) {
     return (
-      <div className={`grid grid-cols-1 gap-3 mx-auto ${hasPassword ? 'sm:grid-cols-3 max-w-2xl' : 'sm:grid-cols-2 max-w-md'}`}>
+      <div className={`grid grid-cols-1 gap-3 mx-auto ${showPasswordButton ?'sm:grid-cols-3 max-w-2xl' : 'sm:grid-cols-2 max-w-md'}`}>
         <button 
           onClick={onEdit} 
           className={`${actionBtn} bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 focus-visible:ring-blue-500`}
@@ -41,14 +46,14 @@ function ProfileActions({
           <span>Edit Profile</span>
         </button>
         
-        {/* ✅ Only show Change Password button if user has password */}
-        {hasPassword && (
+        {/* Change it, or (Google/GitHub/Facebook-only accounts) set the first one */}
+        {showPasswordButton && (
           <button 
             onClick={onChangePassword} 
-            className={`${actionBtn} bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 focus-visible:ring-purple-500`}
+            className={`${actionBtn} bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700 focus-visible:ring-blue-500`}
           >
             <LockIcon />
-            <span>Change Password</span>
+            <span>{hasPassword ? 'Change Password' : 'Set Password'}</span>
           </button>
         )}
         

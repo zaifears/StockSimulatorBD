@@ -1,294 +1,274 @@
-import React, { useState } from 'react';
+'use client';
+
+// Change password (account has one) or set a first password (account only
+// signs in with Google/GitHub/Facebook). Either way the account is signed
+// out afterwards and sent to /auth: Firebase revokes every other session on
+// a password change, and this one is ended on purpose so the next step is a
+// fresh sign-in with the new password.
+//
+// A bottom sheet on phones, a centred dialog from `sm` up (DESIGN.md).
+
+import React, { useEffect, useRef, useState } from 'react';
+import { Mail, X } from 'lucide-react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { LockIcon, EyeIcon, EyeOffIcon, CheckIcon, XIcon } from './ProfileIcons';
+import { useAuth } from '@/contexts/AuthContext';
+import { changePassword, setInitialPassword, getFreshToken } from '@/lib/firebase';
+import { requestPasswordReset } from '@/lib/passwordReset';
+import { validatePassword } from '@/lib/authUtils';
+import {
+  PasswordInput, PasswordRules, Notice, Spinner, isNewPasswordReady,
+  primaryButtonClass, ghostButtonClass, textLinkClass,
+} from '@/components/auth/PasswordFields';
+import { LockIcon } from './ProfileIcons';
 
 interface ChangePasswordFormProps {
+  /** 'change': has a password. 'set': social sign-in only, adding the first one. */
+  mode: 'change' | 'set';
+  /** The account's email, shown so it is clear which account this is for. */
+  email: string;
+  /** e.g. "Google"; named in 'set' mode. */
+  providerName?: string;
   onClose: () => void;
-  onSubmit: (currentPassword: string, newPassword: string) => Promise<void>;
-  isLoading?: boolean;
 }
 
-function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePasswordFormProps) {
-  useEscapeKey(onClose, !isLoading);
+type Step = 'form' | 'linkSent' | 'done';
+
+function ChangePasswordForm({ mode, email, providerName, onClose }: ChangePasswordFormProps) {
+  const { logout } = useAuth();
+  const [step, setStep] = useState<Step>('form');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // 'set' mode only: Firebase wants a fresh sign-in, so offer the email link.
+  const [needsEmailLink, setNeedsEmailLink] = useState(false);
+  const signOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Password strength validation
-  const getPasswordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
-    if (password.match(/[0-9]/)) strength++;
-    if (password.match(/[^a-zA-Z0-9]/)) strength++;
-    return strength;
+  const isChange = mode === 'change';
+  const title = isChange ? 'Change password' : 'Set a password';
+  // Once the password is saved the dialog must not be dismissed: the sign-out
+  // is already on its way.
+  const canClose = !busy && step !== 'done';
+  useEscapeKey(onClose, canClose);
+
+  useEffect(() => () => { if (signOutTimer.current) clearTimeout(signOutTimer.current); }, []);
+
+  const finish = () => {
+    setStep('done');
+    try {
+      sessionStorage.setItem(
+        'redirectMessage',
+        isChange
+          ? 'Password changed. Sign in with your new password.'
+          : 'Password set. Sign in with your email and new password, or with ' + (providerName || 'your social account') + ' as before.'
+      );
+    } catch { /* ignore */ }
+    // Leave the confirmation on screen long enough to read, then sign out.
+    // logout() clears the session and goes to /auth.
+    signOutTimer.current = setTimeout(() => {
+      logout().catch(() => { window.location.assign('/auth'); });
+    }, 1800);
   };
-
-  const passwordStrength = getPasswordStrength(newPassword);
-  const isPasswordValid = newPassword.length >= 8 && newPassword === confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setError('');
-    setSuccess(false);
+    setNeedsEmailLink(false);
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setError('All fields are required');
+    if (isChange && !currentPassword) { setError('Enter your current password.'); return; }
+    const check = validatePassword(newPassword);
+    if (!check.isValid) { setError(check.message); return; }
+    if (newPassword !== confirmPassword) { setError('The two new passwords do not match.'); return; }
+    if (isChange && currentPassword === newPassword) {
+      setError('The new password must be different from the current one.');
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (currentPassword === newPassword) {
-      setError('New password must be different from current password');
-      return;
-    }
-
+    setBusy(true);
     try {
-      await onSubmit(currentPassword, newPassword);
-      setSuccess(true);
+      if (isChange) await changePassword(currentPassword, newPassword);
+      else await setInitialPassword(newPassword);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      finish();
     } catch (err: any) {
-      setError(err.message || 'Failed to change password. Please check your current password.');
+      if (!isChange && err?.code === 'auth/requires-recent-login') setNeedsEmailLink(true);
+      setError(err?.message || 'Could not save the password. Please try again.');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const getStrengthColor = () => {
-    if (passwordStrength <= 1) return 'bg-red-500';
-    if (passwordStrength === 2) return 'bg-yellow-500';
-    if (passwordStrength === 3) return 'bg-blue-500';
-    return 'bg-green-500';
-  };
-
-  const getStrengthText = () => {
-    if (!newPassword) return '';
-    if (passwordStrength <= 1) return 'Weak';
-    if (passwordStrength === 2) return 'Fair';
-    if (passwordStrength === 3) return 'Good';
-    return 'Strong';
+  // Forgot the current password, or Firebase wants a fresh sign-in: email a
+  // link to /auth/reset for this account's own address.
+  const handleEmailLink = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const idToken = await getFreshToken();
+      await requestPasswordReset({ email, idToken });
+      setStep('linkSent');
+    } catch (err: any) {
+      setError(err?.message || 'Could not send the email. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-[4px] p-0 sm:p-4"
+      onClick={() => { if (canClose) onClose(); }}
+    >
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Change password"
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-800 overflow-hidden"
+        aria-labelledby="password-dialog-title"
+        className="w-full sm:max-w-md max-h-[92dvh] overflow-y-auto bg-white dark:bg-[#1A1F26] rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] font-spaceGrotesk"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <LockIcon />
-            <h2 className="text-lg font-bold text-white">Change Password</h2>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="shrink-0 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <LockIcon />
+            </span>
+            <h2 id="password-dialog-title" className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 p-1 rounded transition-colors active:scale-95"
-            disabled={isLoading}
-          >
-            <XIcon />
-          </button>
+          {canClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 active:scale-95 motion-reduce:transform-none transition-[transform,background-color] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <X className="w-5 h-5" aria-hidden="true" />
+            </button>
+          )}
         </div>
 
-        {/* Success Message */}
-        {success && (
-          <div className="bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 px-6 py-4 flex items-center gap-3">
-            <CheckIcon />
-            <span className="text-green-700 dark:text-green-300 font-semibold">
-              Password changed successfully!
-            </span>
+        {step === 'done' && (
+          <Notice tone="info">
+            <p className="font-semibold">{isChange ? 'Password changed' : 'Password set'}</p>
+            <p className="mt-1 text-xs flex items-center gap-2">
+              <Spinner /> Signing you out. Sign in again with your new password.
+            </p>
+          </Notice>
+        )}
+
+        {step === 'linkSent' && (
+          <div className="space-y-4">
+            <Notice tone="info">
+              <p className="flex items-center gap-2 font-semibold">
+                <Mail className="w-4 h-4 shrink-0" aria-hidden="true" /> Check your inbox
+              </p>
+              <p className="mt-1 text-xs leading-relaxed">
+                We sent a link to <strong className="break-all">{email}</strong>. Open it to choose your password. It works once and expires in 1 hour, and may land in Spam or Promotions.
+              </p>
+            </Notice>
+            <button type="button" onClick={onClose} className={ghostButtonClass}>Done</button>
           </div>
         )}
 
-        {/* Form */}
-        {!success && (
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            {/* WebMCP Schema Injection */}
-            <script 
-              type="application/webmcp+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify({
-                tools: [
-                  {
-                    name: "change_password",
-                    description: "Change the user's account password.",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        current_password: { type: "string", description: "The user's current password" },
-                        new_password: { type: "string", description: "The new password (min 8 characters)" },
-                        confirm_password: { type: "string", description: "Confirmation of the new password" }
-                      },
-                      required: ["current_password", "new_password", "confirm_password"]
+        {step === 'form' && (
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {isChange && (
+              /* WebMCP Schema Injection */
+              <script
+                type="application/webmcp+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify({
+                  tools: [
+                    {
+                      name: "change_password",
+                      description: "Change the user's account password. The user is signed out afterwards.",
+                      parameters: {
+                        type: "object",
+                        properties: {
+                          current_password: { type: "string", description: "The user's current password" },
+                          new_password: { type: "string", description: "The new password (min 6 characters, one uppercase and one lowercase letter)" },
+                          confirm_password: { type: "string", description: "Confirmation of the new password" }
+                        },
+                        required: ["current_password", "new_password", "confirm_password"]
+                      }
                     }
-                  }
-                ]
-              }) }}
-            />
-            {/* Current Password */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Current Password
-              </label>
-              <div className="relative">
-                <input
+                  ]
+                }) }}
+              />
+            )}
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              {isChange ? (
+                <>For <strong className="font-semibold text-gray-900 dark:text-white break-all">{email}</strong>. You will be signed out on every device afterwards.</>
+              ) : (
+                <>You sign in with {providerName || 'a social account'}. Add a password to also sign in with <strong className="font-semibold text-gray-900 dark:text-white break-all">{email}</strong>. You will be signed out afterwards.</>
+              )}
+            </p>
+
+            {/* Lets password managers file the password under the right account. */}
+            <input type="email" name="email" autoComplete="username" value={email} readOnly hidden />
+
+            {isChange && (
+              <div>
+                <PasswordInput
+                  label="Current password"
                   name="current_password"
-                  type={showCurrentPassword ? 'text' : 'password'}
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter your current password"
-                  disabled={isLoading}
+                  onChange={(v) => { setCurrentPassword(v); setError(''); }}
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                  placeholder="Enter your current password"
+                  disabled={busy}
+                  autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-3.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  disabled={isLoading}
-                >
-                  {showCurrentPassword ? <EyeOffIcon /> : <EyeIcon />}
+                <button type="button" onClick={handleEmailLink} disabled={busy} className={`${textLinkClass} mt-2`}>
+                  Forgot it? Email me a reset link
                 </button>
-              </div>
-            </div>
-
-            {/* New Password */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  name="new_password"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter a new password (min 8 chars)"
-                  disabled={isLoading}
-                  autoComplete="new-password"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-3.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  disabled={isLoading}
-                >
-                  {showNewPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
-
-              {/* Password Strength Indicator */}
-              {newPassword && (
-                <div className="mt-3 space-y-2">
-                  <div className="flex gap-1">
-                    {[...Array(4)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          i < passwordStrength ? getStrengthColor() : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className={`text-xs font-semibold ${
-                    passwordStrength <= 1 ? 'text-red-600 dark:text-red-400' :
-                    passwordStrength === 2 ? 'text-yellow-600 dark:text-yellow-400' :
-                    passwordStrength === 3 ? 'text-blue-600 dark:text-blue-400' :
-                    'text-green-600 dark:text-green-400'
-                  }`}>
-                    Strength: {getStrengthText()}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  name="confirm_password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your new password"
-                  disabled={isLoading}
-                  autoComplete="new-password"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-3.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
-              {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                  Passwords do not match
-                </p>
-              )}
-              {confirmPassword && newPassword === confirmPassword && (
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Passwords match ✓
-                </p>
-              )}
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
               </div>
             )}
 
-            {/* Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isLoading}
-                className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg transition-all active:scale-95 disabled:opacity-50"
-              >
-                Cancel
-              </button>
+            <PasswordInput
+              label="New password"
+              name="new_password"
+              value={newPassword}
+              onChange={(v) => { setNewPassword(v); setError(''); }}
+              autoComplete="new-password"
+              placeholder="Create a password"
+              disabled={busy}
+              autoFocus={!isChange}
+              describedBy="profile-password-rules"
+            />
+            <PasswordInput
+              label="Confirm new password"
+              name="confirm_password"
+              value={confirmPassword}
+              onChange={(v) => { setConfirmPassword(v); setError(''); }}
+              autoComplete="new-password"
+              placeholder="Re-enter password"
+              disabled={busy}
+            />
+            <PasswordRules id="profile-password-rules" password={newPassword} confirm={confirmPassword} />
+
+            {error && (
+              <Notice tone={needsEmailLink ? 'caution' : 'error'}>
+                <p>{error}</p>
+                {needsEmailLink && (
+                  <button type="button" onClick={handleEmailLink} disabled={busy} className={`${textLinkClass} mt-2`}>
+                    Email me the link
+                  </button>
+                )}
+              </Notice>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1">
+              <button type="button" onClick={onClose} disabled={busy} className={ghostButtonClass}>Cancel</button>
               <button
                 type="submit"
-                disabled={!isPasswordValid || isLoading}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={busy || (isChange && !currentPassword) || !isNewPasswordReady(newPassword, confirmPassword)}
+                className={primaryButtonClass}
               >
-                {isLoading ? (
-                  <>
-                    <span className="animate-spin">⏳</span> Updating...
-                  </>
-                ) : (
-                  <>
-                    <LockIcon /> Change Password
-                  </>
-                )}
+                {busy ? (<><Spinner /> Saving…</>) : title}
               </button>
             </div>
           </form>

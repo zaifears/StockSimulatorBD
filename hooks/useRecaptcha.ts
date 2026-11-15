@@ -68,5 +68,16 @@ export function useRecaptcha() {
     }
   }, [executeRecaptcha, isConfigured]);
 
-  return { verifyRecaptcha, isReady: !!executeRecaptcha, isConfigured };
+  // A raw token for routes that verify reCAPTCHA themselves (a token can be
+  // verified only once, so it must not also go through verifyRecaptcha).
+  const getRecaptchaToken = useCallback(async (action: string): Promise<string | null> => {
+    if (!isConfigured || !executeRecaptcha) return null;
+    try {
+      return (await executeRecaptcha(action)) || null;
+    } catch {
+      return null;
+    }
+  }, [executeRecaptcha, isConfigured]);
+
+  return { verifyRecaptcha, getRecaptchaToken, isReady: !!executeRecaptcha, isConfigured };
 }

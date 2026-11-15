@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef, Component } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, facebookProvider, isFacebookLoginEnabled, isFacebookLoginLive, isSameSiteAuthDomain, isMetaInAppBrowser, signInWithSocialProviderAndCreateProfile, isInAppBrowser, sendMagicSignInLink, isMagicSignInLink, getPendingMagicLinkEmail, completeMagicSignIn, ensureFirebase } from '../../lib/firebase'
 import { useRouter } from 'next/navigation'
 import { validateEmail, validatePassword, sanitizeError, rateLimit, PASSWORD_RULES } from '../../lib/authUtils'
@@ -12,6 +12,8 @@ import GoogleOneTap from '../../components/GoogleOneTap'
 import { Eye, EyeOff, Check, Circle, Mail } from 'lucide-react'
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3'
 import { useRecaptcha } from '@/hooks/useRecaptcha'
+import { requestPasswordReset } from '@/lib/passwordReset'
+import { Notice, fieldInputClass, fieldLabelClass, primaryButtonClass, textLinkClass, Spinner } from '@/components/auth/PasswordFields'
 import { trackAuthClick, markPendingAuthMethod } from '@/lib/authMethodTracking'
 
 // Inner component that uses reCAPTCHA
@@ -41,6 +43,11 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
   const [magicLinkSentTo, setMagicLinkSentTo] = useState<string | null>(null)
   const [finishingMagicLink, setFinishingMagicLink] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  // Forgot password: its own view inside the sign-in card. resetSentTo is the
+  // address the link was requested for; resetCooldown counts down to "Resend".
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [resetSentTo, setResetSentTo] = useState<string | null>(null)
+  const [resetCooldown, setResetCooldown] = useState(0)
   // Guards for Google One Tap: don't initialize/prompt once we already know
   // a session exists (about to redirect away) or a redirect-based OAuth
   // flow is already in flight — avoids a race between two sign-in attempts.
@@ -55,7 +62,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
   // closing that window.
   const submitInFlightRef = useRef(false)
   const router = useRouter()
-  const { verifyRecaptcha: verifyRecaptchaToken, isReady: isRecaptchaReady, isConfigured } = useRecaptcha()
+  const { verifyRecaptcha: verifyRecaptchaToken, getRecaptchaToken, isReady: isRecaptchaReady, isConfigured } = useRecaptcha()
   const enforceRecaptcha = recaptchaEnabled && process.env.NODE_ENV === 'production'
   const googleOneTapClientId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '').trim()
 
@@ -66,6 +73,19 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     const isSecure = protocol === 'https:'
     return isSecure || isLocalhost
   }
+
+  // /auth?forgot=1 opens the forgot-password view (the expired-link page
+  // links here).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('forgot') === '1') setForgotOpen(true)
+  }, [])
+
+  // One-second tick for the "Resend" cooldown.
+  useEffect(() => {
+    if (resetCooldown <= 0) return
+    const timer = setTimeout(() => setResetCooldown((n) => n - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [resetCooldown])
 
   // Detect in-app browser on mount
   useEffect(() => {
@@ -435,35 +455,53 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
     }
   }
 
-  const handleForgotPassword = async () => {
-    if (!formData.email?.trim()) {
-      setError('Please enter your email address first.')
+  const openForgotPassword = () => {
+    setError('')
+    setMessage('')
+    setResetSentTo(null)
+    setForgotOpen(true)
+  }
+
+  const closeForgotPassword = () => {
+    setError('')
+    setResetSentTo(null)
+    setForgotOpen(false)
+  }
+
+  // Emails a link to /auth/reset. The answer shown is the same whether or not
+  // the address has an account, so this form cannot be used to find out who
+  // is registered.
+  const handleSendReset = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (isLoading || resetCooldown > 0) return
+    const email = formData.email.trim().toLowerCase()
+    if (!email) {
+      setError('Enter the email address you signed up with.')
       return
     }
-    if (!validateEmail(formData.email)) {
+    if (!validateEmail(email)) {
       setError('Please enter a valid email address.')
       return
     }
-
-    if (!rateLimit(`forgot:${formData.email}`)) {
-      setError('Too many password reset attempts. Please try again later.')
+    if (enforceRecaptcha && (!isConfigured || !isRecaptchaReady)) {
+      setError('Security verification is still loading. Please wait a moment and try again.')
       return
     }
-
-    // Enforce reCAPTCHA only in production for credential flows.
-    if (enforceRecaptcha) {
-      const isHuman = await verifyRecaptcha('forgot_password')
-      if (!isHuman) return
+    // Only after local validation, so a typo never uses up an attempt.
+    if (!rateLimit(`forgot:${email}`)) {
+      setError('Too many reset requests from this browser. Please wait 15 minutes, or use the link we already sent.')
+      return
     }
 
     setIsLoading(true)
     setError('')
-    setMessage('')
     try {
-      await sendPasswordResetEmail(auth, formData.email.trim().toLowerCase())
-      setMessage('Password reset email sent! Check your inbox.')
+      const recaptchaToken = enforceRecaptcha ? await getRecaptchaToken('forgot_password') : null
+      await requestPasswordReset({ email, recaptchaToken })
+      setResetSentTo(email)
+      setResetCooldown(60)
     } catch (err: any) {
-      setError(humanizeAuthError(err))
+      setError(err?.message || 'Could not send the reset email. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -530,11 +568,79 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                 </div>
               )}
 
-              {/* Sign In View */}
-              {!isSignUp && (
+              {/* Forgot password view */}
+              {!isSignUp && forgotOpen && (
                 <>
                   <h1 className="font-coolvetica text-2xl sm:text-4xl font-normal tracking-normal text-gray-900 dark:text-white mb-2">
-                    Welcome <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">back!</span>
+                    Reset your <span className="text-blue-600 dark:text-blue-400">password</span>
+                  </h1>
+
+                  {resetSentTo ? (
+                    <div className="space-y-4 mt-4">
+                      <Notice tone="info">
+                        <p className="flex items-center gap-2 font-semibold">
+                          <Mail className="w-4 h-4 shrink-0" aria-hidden="true" /> Check your inbox
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed">
+                          If <strong className="break-all">{resetSentTo}</strong> has an account, a reset link is on its way. It works once and expires in 1 hour. It can take a minute, and may land in Spam or Promotions.
+                        </p>
+                      </Notice>
+                      {error && <Notice tone="error">{error}</Notice>}
+                      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                        Signed up with Google or GitHub? The link lets you add a password, or just use that button to sign in.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <button type="button" onClick={() => handleSendReset()} disabled={isLoading || resetCooldown > 0} className={textLinkClass}>
+                          {resetCooldown > 0 ? `Resend in ${resetCooldown}s` : 'Resend link'}
+                        </button>
+                        <button type="button" onClick={() => { setResetSentTo(null); setError('') }} className={textLinkClass}>
+                          Use a different email
+                        </button>
+                        <button type="button" onClick={closeForgotPassword} className={textLinkClass}>
+                          Back to sign in
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+                        Enter your email and we will send you a link to choose a new one.
+                      </p>
+                      <form onSubmit={handleSendReset} className="space-y-4" noValidate>
+                        <div>
+                          <label htmlFor="reset-email" className={fieldLabelClass}>Email address</label>
+                          <input
+                            id="reset-email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            inputMode="email"
+                            autoFocus
+                            required
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="Enter your email"
+                            className={fieldInputClass}
+                          />
+                        </div>
+                        {error && <Notice tone="error">{error}</Notice>}
+                        <button type="submit" disabled={isLoading} className={primaryButtonClass}>
+                          {isLoading ? (<><Spinner /> Sending…</>) : 'Send reset link'}
+                        </button>
+                      </form>
+                      <button type="button" onClick={closeForgotPassword} className={`${textLinkClass} mt-4`}>
+                        Back to sign in
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Sign In View */}
+              {!isSignUp && !forgotOpen && (
+                <>
+                  <h1 className="font-coolvetica text-2xl sm:text-4xl font-normal tracking-normal text-gray-900 dark:text-white mb-2">
+                    Welcome <span className="text-blue-600 dark:text-blue-400">back!</span>
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Sign in to your account</p>
 
@@ -609,9 +715,9 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={handleForgotPassword}
-                        disabled={isLoading || (enforceRecaptcha && !isRecaptchaReady)}
-                        className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition disabled:opacity-50"
+                        onClick={openForgotPassword}
+                        disabled={isLoading}
+                        className={textLinkClass}
                       >
                         Forgot password?
                       </button>
@@ -678,7 +784,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
               {isSignUp && (
                 <>
                   <h1 className="font-coolvetica text-2xl sm:text-4xl font-normal tracking-normal text-gray-900 dark:text-white mb-2">
-                    Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">account</span>
+                    Create <span className="text-blue-600 dark:text-blue-400">account</span>
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Join StockSimulatorBD today</p>
 
@@ -891,7 +997,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                   <button
                     type="button"
                     onClick={() => {
-                      setIsSignUp(true);
+                      setIsSignUp(true); setForgotOpen(false);
                       setError('');
                       setMessage('');
                       setShowSignupSuccess(false);
@@ -976,7 +1082,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsSignUp(true);
+                    setIsSignUp(true); setForgotOpen(false);
                     setError('');
                     setMessage('');
                     setShowSignupSuccess(false);

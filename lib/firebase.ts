@@ -142,8 +142,7 @@ export function ensureFirebase(options?: { forSignIn?: boolean }): void {
     // migrated.
     if (typeof window !== 'undefined') {
       const onSignInPage = options?.forSignIn
-        || window.location.pathname === '/auth'
-        || window.location.pathname.startsWith('/auth/');
+        || window.location.pathname === '/auth';
       try {
         auth = initializeAuth(app, {
           persistence: [browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence],
@@ -542,39 +541,78 @@ export {
 
 // Re-exported so lazy consumers (see lib/firebaseLoader.ts) can reach the SDK
 // functions they need through the single loadFirebase() entry point.
-export { signOut, sendEmailVerification } from 'firebase/auth';
+export { signOut, sendEmailVerification, sendPasswordResetEmail, verifyPasswordResetCode, confirmPasswordReset } from 'firebase/auth';
 export { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
-// ✅ Password Change Function
+// Password change (account already has a password).
+// Re-authenticates with the current password, then updates it. Firebase
+// revokes every other session's refresh token on a password change; the
+// caller signs this session out too (see ChangePasswordForm).
+// Throws an Error whose message is fit to show the user.
 export const changePassword = async (
   currentPassword: string,
   newPassword: string
 ): Promise<void> => {
     ensureFirebase();
   const user = auth.currentUser;
-  
+
   if (!user || !user.email) {
-    throw new Error('No user is currently logged in');
+    throw new Error('You are signed out. Please sign in and try again.');
   }
 
   try {
-    // Re-authenticate user with their current password
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
     await reauthenticateWithCredential(user, credential);
-
-    // Update to new password
     await updatePassword(user, newPassword);
   } catch (error: any) {
-    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-      throw new Error('Current password is incorrect');
-    } else if (error.code === 'auth/weak-password') {
-      throw new Error('New password is too weak. Use at least 8 characters');
-    } else if (error.code === 'auth/requires-recent-login') {
-      throw new Error('Please log out and log back in, then try again');
-    }
-    throw new Error(error.message || 'Failed to change password');
+    throw new Error(passwordErrorMessage(error, 'change'));
   }
 };
+
+// First password for an account that only signs in with Google/GitHub/
+// Facebook. No current password exists to re-authenticate with, so Firebase
+// accepts this only shortly after a sign-in; otherwise it answers
+// auth/requires-recent-login and the caller offers the emailed link instead.
+// Throws an Error with `code` set to the Firebase code.
+export const setInitialPassword = async (newPassword: string): Promise<void> => {
+    ensureFirebase();
+  const user = auth.currentUser;
+  if (!user || !user.email) {
+    throw new Error('You are signed out. Please sign in and try again.');
+  }
+  try {
+    await updatePassword(user, newPassword);
+  } catch (error: any) {
+    const wrapped = new Error(passwordErrorMessage(error, 'set')) as Error & { code?: string };
+    wrapped.code = getAuthErrorCode(error);
+    throw wrapped;
+  }
+};
+
+function passwordErrorMessage(error: any, mode: 'change' | 'set'): string {
+  switch (getAuthErrorCode(error)) {
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+      return 'Current password is incorrect.';
+    case 'auth/weak-password':
+    case 'auth/password-does-not-meet-requirements':
+      return 'That password is too weak. Use at least 6 characters with an uppercase and a lowercase letter.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Wait a few minutes, or reset your password by email.';
+    case 'auth/requires-recent-login':
+      return mode === 'set'
+        ? 'For your security this needs a fresh sign-in. We can email you a link to set the password instead.'
+        : 'Please sign out, sign in again, and retry.';
+    case 'auth/network-request-failed':
+      return 'Network problem. Check your connection and try again.';
+    case 'auth/user-token-expired':
+    case 'auth/user-disabled':
+      return 'Your session has ended. Please sign in again.';
+    default:
+      return mode === 'set' ? 'Could not set the password. Please try again.' : 'Could not change the password. Please try again.';
+  }
+}
 
 /**
  * Get fresh Firebase ID token with automatic refresh

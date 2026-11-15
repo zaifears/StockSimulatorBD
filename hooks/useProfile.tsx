@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, onAuthStateChanged, signOut, updateProfile as updateAuthProfile } from 'firebase/auth';
-import { auth, getUserProfile, updateUserProfile, changePassword, UserProfile, ensureFirebase } from '../lib/firebase';
+import { auth, getUserProfile, updateUserProfile, UserProfile, ensureFirebase } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -84,10 +84,6 @@ export const useProfile = () => {
     setFormData(profile || {});
   }, [profile]);
 
-  const handleChangePassword = useCallback(async (currentPassword: string, newPassword: string) => {
-    await changePassword(currentPassword, newPassword);
-  }, []);
-
   const handleUpdateAvatar = useCallback(async (photoURL: string | null) => {
     if (!user) return;
     // 1. Update Firestore user document
@@ -122,7 +118,6 @@ export const useProfile = () => {
     handleInputChange,
     handleEdit,
     handleCancel,
-    handleChangePassword,
     hasPassword,  // ✅ NEW: Indicates if user can change password
     handleUpdateAvatar,
     handleRemoveAvatar,

@@ -29,18 +29,24 @@ export default function ProfilePage() {
   );
 }
 
+const socialProviderName = (providerIds: string[]): string | undefined => {
+  if (providerIds.includes('google.com')) return 'Google';
+  if (providerIds.includes('github.com')) return 'GitHub';
+  if (providerIds.includes('facebook.com')) return 'Facebook';
+  return undefined;
+};
+
 function ProfileScreen() {
   const {
     user, profile, loading, isEditing, formData,
     handleLogout, handleSave, handleInputChange, handleEdit, handleCancel,
-    handleChangePassword, hasPassword,
+    hasPassword,
     handleUpdateAvatar,
   } = useProfile();
   const { simulatorState } = useSharedSimulator();
   const { isBoss } = useAuth();
 
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
 
   if (loading) return <LoadingSpinner />;
@@ -195,22 +201,17 @@ function ProfileScreen() {
             onSave={handleSave}
             onChangePassword={() => setShowChangePasswordModal(true)}
             hasPassword={hasPassword}
+            canSetPassword={Boolean(user.email)}
           />
         </div>
       </div>
 
-      {showChangePasswordModal && (
+      {showChangePasswordModal && user.email && (
         <ChangePasswordForm
+          mode={hasPassword ? 'change' : 'set'}
+          email={user.email}
+          providerName={socialProviderName(user.providerData.map((p) => p.providerId))}
           onClose={() => setShowChangePasswordModal(false)}
-          onSubmit={async (currentPassword, newPassword) => {
-            setIsChangingPassword(true);
-            try {
-              await handleChangePassword(currentPassword, newPassword);
-            } finally {
-              setIsChangingPassword(false);
-            }
-          }}
-          isLoading={isChangingPassword}
         />
       )}
 
