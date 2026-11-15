@@ -27,8 +27,8 @@ export function humanizeAuthError(error: any): string {
     return 'An account with this email already exists. Try signing in instead.';
   }
   
-  if (code.includes('auth/weak-password')) {
-    return 'Password is too weak. Use at least 6 characters with an uppercase and a lowercase letter.';
+  if (code.includes('auth/weak-password') || code.includes('auth/password-does-not-meet-requirements')) {
+    return 'Password is too weak. Use 8 to 64 characters with an uppercase and a lowercase letter.';
   }
   
   if (code.includes('auth/invalid-email')) {

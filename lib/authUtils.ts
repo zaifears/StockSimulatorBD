@@ -5,19 +5,20 @@ export const validateEmail = (email: string): boolean => {
 };
 
 // Shown live under the sign-up password field. Must stay in step with
-// validatePassword below.
+// validatePassword below, and with the Firebase Auth password policy
+// (min 8, max 64, uppercase + lowercase, force upgrade on sign-in).
 export const PASSWORD_RULES: { label: string; test: (pw: string) => boolean }[] = [
-  { label: 'At least 6 characters', test: (pw) => pw.length >= 6 && pw.length <= 128 },
+  { label: '8 to 64 characters', test: (pw) => pw.length >= 8 && pw.length <= 64 },
   { label: 'One uppercase letter (A–Z)', test: (pw) => /[A-Z]/.test(pw) },
   { label: 'One lowercase letter (a–z)', test: (pw) => /[a-z]/.test(pw) },
 ];
 
 export const validatePassword = (password: string): { isValid: boolean; message: string } => {
-  if (password.length < 6) {
-    return { isValid: false, message: 'Password must be at least 6 characters long' };
+  if (password.length < 8) {
+    return { isValid: false, message: 'Password must be at least 8 characters long' };
   }
-  if (password.length > 128) {
-    return { isValid: false, message: 'Password must be less than 128 characters' };
+  if (password.length > 64) {
+    return { isValid: false, message: 'Password must be at most 64 characters long' };
   }
   if (!/(?=.*[a-z])/.test(password)) {
     return { isValid: false, message: 'Password must contain at least one lowercase letter' };

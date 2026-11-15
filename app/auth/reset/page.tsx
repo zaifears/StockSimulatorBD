@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
       const code = String(err?.code || '')
       if (isDeadLink(code)) setStep('invalid')
       else if (code.includes('weak-password') || code.includes('password-does-not-meet-requirements')) {
-        setError('That password is too weak. Use at least 6 characters with an uppercase and a lowercase letter.')
+        setError('That password is too weak. Use 8 to 64 characters with an uppercase and a lowercase letter.')
       } else if (code.includes('network-request-failed')) {
         setError('Network problem. Check your connection and try again.')
       } else {
@@ -114,7 +114,7 @@ export default function ResetPasswordPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                 {/* Lets password managers file the new password under the right account. */}
-                <input type="email" name="email" autoComplete="username" value={email} readOnly hidden />
+                <input type="email" name="email" autoComplete="username" value={email} readOnly tabIndex={-1} aria-hidden="true" className="sr-only" />
                 <PasswordInput
                   label="New password"
                   name="new-password"

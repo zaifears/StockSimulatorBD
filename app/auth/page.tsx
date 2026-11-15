@@ -266,7 +266,16 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
       setMessage('Account created! Please check your email for verification.')
       setShowSignupSuccess(true)
     } catch (err: any) {
-      setError(humanizeAuthError(err))
+      // Password policy "force upgrade on sign-in": the password was right but
+      // no longer meets the rules, so Firebase refuses the sign-in. Send them
+      // straight to the reset view with their email filled in.
+      if (String(err?.code || '').includes('auth/password-does-not-meet-requirements')) {
+        setResetSentTo(null)
+        setForgotOpen(true)
+        setError('We have strengthened our password rules (8 to 64 characters, with an uppercase and a lowercase letter) and your current password no longer qualifies. Request a reset link below to choose a new one.')
+      } else {
+        setError(humanizeAuthError(err))
+      }
     } finally {
       setIsLoading(false)
     }
@@ -310,7 +319,16 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
       trackAuthClick('email_password')
       await signInWithEmailAndPassword(auth, formData.email.trim().toLowerCase(), formData.password)
     } catch (err: any) {
-      setError(humanizeAuthError(err))
+      // Password policy "force upgrade on sign-in": the password was right but
+      // no longer meets the rules, so Firebase refuses the sign-in. Send them
+      // straight to the reset view with their email filled in.
+      if (String(err?.code || '').includes('auth/password-does-not-meet-requirements')) {
+        setResetSentTo(null)
+        setForgotOpen(true)
+        setError('We have strengthened our password rules (8 to 64 characters, with an uppercase and a lowercase letter) and your current password no longer qualifies. Request a reset link below to choose a new one.')
+      } else {
+        setError(humanizeAuthError(err))
+      }
     } finally {
       setIsLoading(false)
     }
@@ -613,7 +631,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                             id="reset-email"
                             name="email"
                             type="email"
-                            autoComplete="email"
+                            autoComplete="username"
                             inputMode="email"
                             autoFocus
                             required
@@ -671,7 +689,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                       <input
                         name="email"
                         type="email"
-                        autoComplete="email"
+                        autoComplete="username"
                         inputMode="email"
                         required
                         value={formData.email}
@@ -840,7 +858,7 @@ function AuthPageContent({ recaptchaEnabled }: { recaptchaEnabled: boolean }) {
                         <input
                           name="email"
                           type="email"
-                          autoComplete="email"
+                          autoComplete="username"
                           inputMode="email"
                           required
                           value={formData.email}

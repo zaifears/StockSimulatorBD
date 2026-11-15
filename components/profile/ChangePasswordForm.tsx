@@ -128,7 +128,7 @@ function ChangePasswordForm({ mode, email, providerName, onClose }: ChangePasswo
         role="dialog"
         aria-modal="true"
         aria-labelledby="password-dialog-title"
-        className="w-full sm:max-w-md max-h-[92dvh] overflow-y-auto bg-white dark:bg-[#1A1F26] rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] font-spaceGrotesk"
+        className="w-full sm:max-w-3xl max-h-[92dvh] overflow-y-auto bg-white dark:bg-[#1A1F26] rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] font-spaceGrotesk"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -188,7 +188,7 @@ function ChangePasswordForm({ mode, email, providerName, onClose }: ChangePasswo
                         type: "object",
                         properties: {
                           current_password: { type: "string", description: "The user's current password" },
-                          new_password: { type: "string", description: "The new password (min 6 characters, one uppercase and one lowercase letter)" },
+                          new_password: { type: "string", description: "The new password (8-64 characters, one uppercase and one lowercase letter)" },
                           confirm_password: { type: "string", description: "Confirmation of the new password" }
                         },
                         required: ["current_password", "new_password", "confirm_password"]
@@ -208,8 +208,10 @@ function ChangePasswordForm({ mode, email, providerName, onClose }: ChangePasswo
             </p>
 
             {/* Lets password managers file the password under the right account. */}
-            <input type="email" name="email" autoComplete="username" value={email} readOnly hidden />
+            <input type="email" name="email" autoComplete="username" value={email} readOnly tabIndex={-1} aria-hidden="true" className="sr-only" />
 
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-x-6">
+            <div className="space-y-4">
             {isChange && (
               <div>
                 <PasswordInput
@@ -248,6 +250,8 @@ function ChangePasswordForm({ mode, email, providerName, onClose }: ChangePasswo
               placeholder="Re-enter password"
               disabled={busy}
             />
+            </div>
+            <div className="space-y-4">
             <PasswordRules id="profile-password-rules" password={newPassword} confirm={confirmPassword} />
 
             {error && (
@@ -260,6 +264,8 @@ function ChangePasswordForm({ mode, email, providerName, onClose }: ChangePasswo
                 )}
               </Notice>
             )}
+            </div>
+            </div>
 
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1">
               <button type="button" onClick={onClose} disabled={busy} className={ghostButtonClass}>Cancel</button>

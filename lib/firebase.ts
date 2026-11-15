@@ -597,7 +597,7 @@ function passwordErrorMessage(error: any, mode: 'change' | 'set'): string {
       return 'Current password is incorrect.';
     case 'auth/weak-password':
     case 'auth/password-does-not-meet-requirements':
-      return 'That password is too weak. Use at least 6 characters with an uppercase and a lowercase letter.';
+      return 'That password is too weak. Use 8 to 64 characters with an uppercase and a lowercase letter.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Wait a few minutes, or reset your password by email.';
     case 'auth/requires-recent-login':
