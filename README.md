@@ -127,12 +127,12 @@ StockSimulatorBD is a **risk-free paper-trading simulator** for the Dhaka Stock 
 │  UI               React 19 + Lucide Icons                   │
 ├─────────────────────────────────────────────────────────────┤
 │  Backend / DB     Firebase Firestore + Firebase Auth        │
-│  Market Data      Python serverless scrapers (Vercel)       │
+│  Market Data      Python scrapers (Oracle VM)               │
 │  Content          Contentful (headless CMS, blog)           │
 ├─────────────────────────────────────────────────────────────┤
-│  Monitoring       Sentry + Vercel Analytics/Speed Insights  │
+│  Monitoring       Sentry + sampled web-vitals RUM           │
 │  Performance      Service Workers (PWA) + bundle analysis   │
-│  Deployment       Vercel                                    │
+│  Deployment       Oracle VM + Caddy + Cloudflare            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -170,7 +170,7 @@ pnpm install
 pnpm dev
 ```
 
-> Note: `api/dse_chart.py` and `api/market_sync.py` are Python serverless functions deployed by Vercel — they don't run under `next dev`, so live chart/market data only works against a real Vercel deployment (or `vercel dev`).
+> Note: `api/dse_chart.py` and `api/market_sync.py` are Python scrapers that run on the Oracle VM (copies kept for local dev via `dev.ps1`) — they don't run under `next dev`. See `AGENTS.md` (Deployment) for how production is released.
 
 ### Available Scripts
 

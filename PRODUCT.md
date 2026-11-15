@@ -55,7 +55,7 @@ Success is nerve, not engagement: a user who practices here should approach thei
 
 **Market facts go stale.** Trading hours, settlement arrangements, circuit breakers, lot sizes, broker charges, and holidays change. Content must not present them as timeless, and official sources (DSE, CDBL, BSEC) remain the authority.
 
-**Engineering constraints:** Next.js 16 / React 19 / TypeScript on Vercel, Firebase Auth + Firestore, Contentful for the blog, Python serverless scrapers for market data. Built and maintained solo. **No automated test suite exists** — verification is `tsc --noEmit` plus manual and browser checks, which makes wide, sweeping refactors expensive and risky. Firestore rules deploy manually, separately from Vercel.
+**Engineering constraints:** Next.js 16 / React 19 / TypeScript self-hosted on an Oracle VM behind Caddy + Cloudflare, Firebase Auth + Firestore, Contentful for the blog, Python scrapers for market data. Built and maintained solo. **No automated test suite exists** — verification is `tsc --noEmit` plus manual and browser checks, which makes wide, sweeping refactors expensive and risky. Firestore rules deploy manually with the Firebase CLI, separately from the app release.
 
 **Language:** English is the shipping language today; Bangla UI or bilingual content is a real roadmap item. Future typography, string-length allowances, and font choices should stay compatible with Bangla script rather than assuming Latin-only. Bangla proper nouns already appear in English copy (Sanchayapatra, bKash, Dhaka).
 

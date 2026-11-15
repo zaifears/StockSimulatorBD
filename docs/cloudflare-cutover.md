@@ -1,5 +1,7 @@
 # Cloudflare + Oracle VPS cutover for stocksimulator.tech
 
+> **Update (Nov 2026):** production now runs on the Oracle VM `shaho-shoily` (`129.225.126.188`) behind Caddy and Cloudflare, not `zaifears-oracle` (`130.210.33.96`) as written below. Release steps are in `AGENTS.md` (Deployment). Treat the rest of this file as the original cutover plan; check IPs and records against the live setup before reusing it.
+
 Goal: move stocksimulator.tech off Vercel (paused until Dec 14, 2026) onto the Oracle VM `zaifears-oracle`
 (130.210.33.96) with Cloudflare (free) in front. Until the site is ready, visitors are redirected to
 https://shahoriar.bd/under-construction.

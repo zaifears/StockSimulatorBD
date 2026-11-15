@@ -4,7 +4,7 @@ Project context for AI coding agents (Antigravity, Gemini, or any LLM agent) wor
 
 ## What this is
 
-**StockSimulatorBD** ([stocksimulator.tech](https://www.stocksimulator.tech)) — a free, risk-free paper-trading simulator for the Dhaka Stock Exchange (DSE). Next.js 16 / React 19 / TypeScript, Firebase (Auth + Firestore + Admin SDK) backend, deployed on Vercel, `pnpm` package manager, Tailwind CSS 3.
+**StockSimulatorBD** ([stocksimulator.tech](https://www.stocksimulator.tech)) — a free, risk-free paper-trading simulator for the Dhaka Stock Exchange (DSE). Next.js 16 / React 19 / TypeScript, Firebase (Auth + Firestore + Admin SDK) backend, self-hosted on an Oracle VM behind Caddy + Cloudflare (see Deployment), `pnpm` package manager, Tailwind CSS 3.
 
 Audience: students learning the market, and increasingly new investors moving from safer instruments (Sanchayapatra, fixed deposits) into stocks and feeling nervous about it. Keep both framings in mind when touching user-facing copy — don't drop one for the other.
 
@@ -183,10 +183,25 @@ All client SDK writes are strictly validated:
 
 ---
 
+## Deployment (production, when the user asks)
+
+Production is a single Oracle VM `shaho-shoily` (`ubuntu@129.225.126.188`, key `E:\.ssh\ssh-shaho-shoily-2026-11-14.key`) running `stocksimulator-web.service` behind Caddy and Cloudflare. It is no longer on Vercel (Vercel is paused; sections below about Vercel limits are legacy). Release layout: `~/stocksimulator-web/releases/{current,prev}` plus a shared `.env`. The VM has 1 GB RAM: **never build there**.
+
+Procedure:
+1. Build locally: `SELF_HOST=1 pnpm build` (the flag is read in `next.config.mjs`).
+2. Stage `.next/standalone/{.next,server.js,package.json}` + `.next/static` into `.next/static`, plus `public` (without `node_modules`). Tar it and `scp` it to the VM.
+3. On the VM **stop the service first** (a running Next process recreates `current/.next/cache` and breaks the directory swap), move `current` to `prev`, extract to `current`, `cp -al prev/node_modules current/node_modules`, `cp -an prev/.next/static/. current/.next/static/ || true` (keeps old chunks for open tabs; GNU `cp -n` can exit non-zero), start the service.
+4. Check `curl http://127.0.0.1:3010/`, then purge the Cloudflare cache. The API token is in `E:\.ssh\cloudflare-token.txt` (never print it or commit it).
+5. If it fails, copy `prev` back to `current` and start again.
+
+GitHub (`git push origin main`) is the source of truth for code; it no longer triggers a deploy by itself. Firestore rules are still deployed separately with the Firebase CLI.
+
+---
+
 ## Market Feeds, Scrapers & DSE Modern Architecture
 
 - **Hosts**: `dsebd.org`, `www.dsebd.org` and `new.dsebd.org` are one CloudFront distribution serving identical data. Use `www.dsebd.org` (apex `dsebd.org` as the second attempt); `new.dsebd.org` is not needed. Every legacy `.php` page (`latest_share_price_scroll_l.php`, `latest_share_price_scroll_group.php`, `company_listing.php`, `day_end_archive.php`) returns **HTTP 410 Gone** — there is no HTML fallback anymore.
-- **Where scrapers run**: the Python scrapers run on the Oracle VPS (`scripts/vps/`, served at `https://dse.shahoriar.bd`); root `api/*.py` are copies kept in step for local dev (`dev.ps1`) and are excluded from Vercel by `.vercelignore`. The Vercel sync routes (`app/api/stock-sync`, `category-sync`, `lanka-sector-sync`, `price-failsafe-sync`) call the VPS first; stock-sync and category-sync fall back to fetching DSE directly (`lib/dseDirect.ts`) when it is down.
+- **Where scrapers run**: the Python scrapers run on the Oracle VPS (`scripts/vps/`, served at `https://dse.shahoriar.bd`); root `api/*.py` are copies kept in step for local dev (`dev.ps1`) and are excluded from Vercel by `.vercelignore`. The sync routes (`app/api/stock-sync`, `category-sync`, `lanka-sector-sync`, `price-failsafe-sync`) call the VPS first; stock-sync and category-sync fall back to fetching DSE directly (`lib/dseDirect.ts`) when it is down.
 - **Primary Live Price Sync (`api/market_sync.py`)**:
   - Reads `https://www.dsebd.org/api/live/prices`. The second attempt adds a cache-busting query string, because CloudFront (~15s TTL) occasionally caches a transient empty response and the query string is part of its cache key.
   - **Pre-open gap**: between DSE's pre-open reset (~9:00 BST) and the session start, the feed omits ~24 corporate bonds/debentures (`*PBOND`, `DEB*`, `BEXGSUKUK`). stock-sync carries such symbols forward as "not traded today" rows (`missingSince`, dropped after 7 days) and category-sync keeps their last category, so holdings never vanish or get valued at ৳0.
@@ -258,7 +273,9 @@ A self-hosted Search Intelligence and Generative Engine Optimization (GEO) contr
 
 ---
 
-## Vercel Deployment & Functions Storage Architecture (10 GB Hobby Limit)
+## Legacy: Vercel Deployment & Functions Storage Architecture (10 GB Hobby Limit)
+
+> Historical. Production now runs on the Oracle VM (see Deployment above); this applies only if the site returns to Vercel.
 
 Under Vercel Hobby, total Deployment Storage is capped at 10 GB and Vercel unconditionally protects and retains the **3 most recent production deployments**.
 A single unoptimized deployment consumes ~2.89 GB across 539 functions (5 Python scrapers at 13.3 MB each + 422 stock ISR lambda wrappers at 5.01 MB each + ~112 app/API routes). Multiplied by 3 retained production builds, this consumes 8.67 GB (~97.4% full). Simply deleting preview deployments or adjusting preview retention does not solve this because the 3 production builds alone consume almost the entire 10 GB ceiling.
