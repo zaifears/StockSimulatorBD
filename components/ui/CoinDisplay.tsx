@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import { doc, onSnapshot, getFirestore } from 'firebase/firestore';
+import { loadFirebase, subscribeWhenReady } from '@/lib/firebaseLoader';
 
 interface CoinDisplayProps {
   className?: string;
@@ -63,10 +63,12 @@ const CoinDisplay: React.FC<CoinDisplayProps> = ({ className = '', showLabel = t
     setLoading(true);
     
     // Read balance from simulator state (BDT is now Coin)
-    const db = getFirestore();
+    const uid = user.uid;
+    return subscribeWhenReady(async () => {
+    const { db, doc, onSnapshot } = await loadFirebase();
     const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
-    const stateRef = doc(db, 'artifacts', appId, 'users', user.uid, 'simulator', 'state');
-    const unsubscribe = onSnapshot(
+    const stateRef = doc(db, 'artifacts', appId, 'users', uid, 'simulator', 'state');
+    return onSnapshot(
       stateRef,
       (docSnap) => {
         if (docSnap.exists()) {
@@ -83,9 +85,7 @@ const CoinDisplay: React.FC<CoinDisplayProps> = ({ className = '', showLabel = t
         setLoading(false);
       }
     );
-
-    // Cleanup listener on unmount
-    return () => unsubscribe();
+    });
   }, [user?.uid]);
 
   // If not logged in, show only the coin icon with updated tooltip

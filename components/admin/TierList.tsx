@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
+import { db, ensureFirebase } from '@/lib/firebase';
 import {
   collection, query, orderBy, onSnapshot, where,
   doc, getDoc,
@@ -77,6 +77,9 @@ export interface ExpiredBossUser {
 }
 
 export default function TierList() {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   const { user } = useAuth();
   const { askReason, rejectDialog } = useRejectReasonDialog();
   const [activeTab, setActiveTab] = useState<TierTab>('pending');

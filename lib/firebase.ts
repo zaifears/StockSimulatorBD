@@ -3,6 +3,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
     getAuth, 
+    initializeAuth,
+    browserPopupRedirectResolver,
+    indexedDBLocalPersistence,
+    browserSessionPersistence,
     GoogleAuthProvider, 
     GithubAuthProvider,
     FacebookAuthProvider,
@@ -21,10 +25,12 @@ import {
     reauthenticateWithCredential,
     EmailAuthProvider,
     updatePassword,
-    setPersistence,
     browserLocalPersistence
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { markFirebaseLoaded, hasFirebaseSessionHint, VERIFICATION_SENT_KEY, OAUTH_REDIRECT_KEY } from './firebaseLoader';
+
+export { VERIFICATION_SENT_KEY };
 
 export interface UserProfile {
     name?: string;
@@ -92,7 +98,29 @@ export const isSameSiteAuthDomain = (): boolean => {
     return !!domain && domain === window.location.hostname.toLowerCase();
 };
 
-if (firebaseConfig.apiKey) {
+let firebaseInitialized = false;
+
+/**
+ * Initialises the Firebase app, Auth, Firestore and the sign-in providers.
+ * Idempotent and cheap after the first call.
+ *
+ * Not run when this module is merely evaluated in a browser that has no
+ * Firebase session: Next.js evaluates this module while prefetching routes
+ * that import it (/auth, /trade, /coins), and initialising there would do the
+ * SDK's start-up work on pages that never use it. Every helper below calls
+ * it, and code that reads `auth` / `db` directly calls it first.
+ *
+ * `forSignIn`: the caller is the sign-in page (pass it there, because during a
+ * client-side navigation the URL still shows the previous page while the new
+ * one renders).
+ */
+export function ensureFirebase(options?: { forSignIn?: boolean }): void {
+  if (firebaseInitialized) return;
+  firebaseInitialized = true;
+  if (!firebaseConfig.apiKey) {
+    console.warn('Firebase not initialized - missing API key');
+    return;
+  }
   try {
     const apps = getApps();
     if (apps.length === 0) {
@@ -102,11 +130,30 @@ if (firebaseConfig.apiKey) {
       // Check if default app exists, if not create it
       app = apps.find(a => a.name === '[DEFAULT]') || initializeApp(firebaseConfig);
     }
-    auth = getAuth(app);
+    // initializeAuth instead of getAuth: getAuth always wires up the popup/
+    // redirect resolver, which on mobile and Safari loads Google's auth iframe
+    // (apis.google.com + /__/auth/iframe.js, ~130 KB) on every page. The
+    // resolver is passed to the calls that need it (popup, redirect,
+    // getRedirectResult), and here only when initialising on the sign-in
+    // page, so mobile/Safari still get it loaded before a sign-in click, as
+    // before. localStorage stays the primary persistence, as setPersistence
+    // made it before; lib/firebaseLoader.ts reads its key as the "may be
+    // signed in" hint. The other two are listed so sessions stored there are
+    // migrated.
     if (typeof window !== 'undefined') {
-      setPersistence(auth, browserLocalPersistence).catch((err) => {
-        console.warn('⚠️ Could not set Firebase Auth persistence to browserLocalPersistence:', err);
-      });
+      const onSignInPage = options?.forSignIn
+        || window.location.pathname === '/auth'
+        || window.location.pathname.startsWith('/auth/');
+      try {
+        auth = initializeAuth(app, {
+          persistence: [browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence],
+          ...(onSignInPage ? { popupRedirectResolver: browserPopupRedirectResolver } : {}),
+        });
+      } catch {
+        auth = getAuth(app); // already initialised (dev hot reload)
+      }
+    } else {
+      auth = getAuth(app);
     }
     db = getFirestore(app);
     
@@ -130,9 +177,14 @@ if (firebaseConfig.apiKey) {
   } catch (error) {
     console.error('Firebase initialization error:', error);
   }
-} else {
-  // Fallback - create dummy objects to prevent crashes
-  console.warn('Firebase not initialized - missing API key');
+  // Tell lazy consumers (AuthContext, lib/firebaseLoader.ts) Firebase is ready.
+  if (typeof window !== 'undefined') markFirebaseLoaded();
+}
+
+// Server: initialise as before. Browser: only when a session may exist here
+// (signed-in users get everything set up at once, exactly as before).
+if (typeof window === 'undefined' || hasFirebaseSessionHint()) {
+  ensureFirebase();
 }
 
 export const getActionCodeSettings = () => ({
@@ -143,6 +195,7 @@ export const getActionCodeSettings = () => ({
 // 🎯 Social login result: Create user doc if needed
 // Welcome bonus is handled centrally by AuthContext.grantWelcomeBonus() via onAuthStateChanged
 export const handleSocialSignInResult = async (user: any) => {
+    ensureFirebase();
     const userDocRef = doc(db, 'users', user.uid);
     const docSnap = await getDoc(userDocRef);
 
@@ -210,6 +263,7 @@ const hasAuthErrorCode = (error: any, code: string): boolean => {
 export const signInWithSocialProviderAndCreateProfile = async (
     provider: GoogleAuthProvider | GithubAuthProvider | FacebookAuthProvider
 ) => {
+    ensureFirebase();
   if (!auth) {
     const configError = new Error('Firebase Auth is not initialized.') as Error & { code?: string };
     configError.code = 'auth/configuration-not-found';
@@ -219,22 +273,22 @@ export const signInWithSocialProviderAndCreateProfile = async (
     // Redirect is only used for in-app browsers where popup is often unsupported.
     if (isInAppBrowser()) {
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('stocksimulatorbd_oauth_redirect', Date.now().toString());
+        sessionStorage.setItem(OAUTH_REDIRECT_KEY, Date.now().toString());
       }
-      await signInWithRedirect(auth, provider);
+      await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
       return null;
     }
 
     try {
       // Strict stable path: popup-only for normal browsers.
       console.log('🔐 Attempting popup OAuth...');
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       return await handleSocialSignInResult(result.user);
     } catch (error: any) {
       if (hasAuthErrorCode(error, 'auth/internal-error')) {
         try {
           console.warn('⚠️ Popup OAuth hit auth/internal-error, retrying once...');
-          const retryResult = await signInWithPopup(auth, provider);
+          const retryResult = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
           return await handleSocialSignInResult(retryResult.user);
         } catch (retryError: any) {
           if (
@@ -245,13 +299,13 @@ export const signInWithSocialProviderAndCreateProfile = async (
             try {
               console.warn(`⚠️ Popup OAuth still failing (${getAuthErrorCode(retryError) || 'unknown'}). Switching to redirect fallback...`);
               if (typeof window !== 'undefined') {
-                sessionStorage.setItem('stocksimulatorbd_oauth_redirect', Date.now().toString());
+                sessionStorage.setItem(OAUTH_REDIRECT_KEY, Date.now().toString());
               }
-              await signInWithRedirect(auth, provider);
+              await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
               return null;
             } catch (redirectError: any) {
               if (typeof window !== 'undefined') {
-                sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+                sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
               }
               const wrappedError = new Error('Sign-in could not be completed using popup or redirect.') as Error & { code?: string };
               wrappedError.code = 'auth/redirect-failed';
@@ -266,13 +320,13 @@ export const signInWithSocialProviderAndCreateProfile = async (
         try {
           console.warn('⚠️ Popup blocked in standard browser. Switching to redirect fallback...');
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('stocksimulatorbd_oauth_redirect', Date.now().toString());
+            sessionStorage.setItem(OAUTH_REDIRECT_KEY, Date.now().toString());
           }
-          await signInWithRedirect(auth, provider);
+          await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
           return null;
         } catch (redirectError: any) {
           if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+            sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
           }
           const wrappedError = new Error('Popup and redirect sign-in were both blocked.') as Error & { code?: string };
           wrappedError.code = 'auth/redirect-failed';
@@ -284,13 +338,13 @@ export const signInWithSocialProviderAndCreateProfile = async (
         try {
           console.warn('⚠️ Popup OAuth network handoff failed. Switching to redirect fallback...');
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('stocksimulatorbd_oauth_redirect', Date.now().toString());
+            sessionStorage.setItem(OAUTH_REDIRECT_KEY, Date.now().toString());
           }
-          await signInWithRedirect(auth, provider);
+          await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
           return null;
         } catch (redirectError: any) {
           if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+            sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
           }
           const wrappedError = new Error('Social sign-in failed due to network issues in popup and redirect flows.') as Error & { code?: string };
           wrappedError.code = 'auth/redirect-failed';
@@ -321,6 +375,7 @@ export const signInWithSocialProviderAndCreateProfile = async (
 // same way it does for popup/redirect sign-in — welcome bonus, redirect-
 // after-login, etc. all keep working unchanged.
 export const signInWithGoogleOneTapCredential = async (idToken: string) => {
+    ensureFirebase();
   if (!auth) {
     const configError = new Error('Firebase Auth is not initialized.') as Error & { code?: string };
     configError.code = 'auth/configuration-not-found';
@@ -338,9 +393,16 @@ export const signInWithGoogleOneTapCredential = async (idToken: string) => {
   return await handleSocialSignInResult(result.user);
 };
 
+/** getRedirectResult with the popup/redirect resolver (see initializeAuth above). */
+export const getOAuthRedirectResult = () => {
+    ensureFirebase();
+    return getRedirectResult(auth, browserPopupRedirectResolver);
+};
+
 export const handleRedirectResult = async () => {
+    ensureFirebase();
     try {
-        const result = await getRedirectResult(auth);
+        const result = await getOAuthRedirectResult();
         if (result && result.user) {
             return await handleSocialSignInResult(result.user);
         }
@@ -372,7 +434,6 @@ export const handleRedirectResult = async () => {
 // returned after their first (interrupted) session. Doing the doc write
 // immediately, with a retry, shrinks that window to as small as this
 // client can make it.
-export const VERIFICATION_SENT_KEY = 'stocksimulatorbd_verification_sent_at';
 
 // ── Passwordless email-link ("magic link") sign-in ───────────────────────
 // Signs in an existing account or creates a new one; either way the email is
@@ -382,6 +443,7 @@ export const VERIFICATION_SENT_KEY = 'stocksimulatorbd_verification_sent_at';
 export const EMAIL_LINK_STORAGE_KEY = 'stocksimulatorbd_email_for_signin';
 
 export const sendMagicSignInLink = async (email: string, redirectPath?: string | null) => {
+    ensureFirebase();
     const continueUrl = new URL('/auth', window.location.origin);
     continueUrl.searchParams.set('finishSignIn', '1');
     if (redirectPath && redirectPath.startsWith('/') && !redirectPath.startsWith('//')) {
@@ -392,6 +454,7 @@ export const sendMagicSignInLink = async (email: string, redirectPath?: string |
 };
 
 export const isMagicSignInLink = (href: string): boolean => {
+    ensureFirebase();
     return !!auth && isSignInWithEmailLink(auth, href);
 };
 
@@ -401,6 +464,7 @@ export const getPendingMagicLinkEmail = (): string | null => {
 };
 
 export const completeMagicSignIn = async (email: string, href: string) => {
+    ensureFirebase();
     const result = await signInWithEmailLink(auth, email, href);
     try { localStorage.removeItem(EMAIL_LINK_STORAGE_KEY); } catch {}
     // users/{uid} is created/backfilled by AuthContext's onAuthStateChanged.
@@ -408,6 +472,7 @@ export const completeMagicSignIn = async (email: string, href: string) => {
 };
 
 export const signUpWithEmailPasswordAndProfile = async (profileData: SignUpProfileData, password: string) => {
+    ensureFirebase();
     const userCredential = await createUserWithEmailAndPassword(auth, profileData.email, password);
     const user = userCredential.user;
 
@@ -449,11 +514,13 @@ export const signUpWithEmailPasswordAndProfile = async (profileData: SignUpProfi
 };
 
 export const updateUserProfile = async (userId: string, data: any) => {
+    ensureFirebase();
     const userDocRef = doc(db, 'users', userId);
     await setDoc(userDocRef, data, { merge: true });
 };
 
 export const getUserProfile = async (userId: string) => {
+    ensureFirebase();
     const userDocRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userDocRef);
     return docSnap.exists() ? docSnap.data() as UserProfile : null;
@@ -473,11 +540,17 @@ export {
     getRedirectResult
 };
 
+// Re-exported so lazy consumers (see lib/firebaseLoader.ts) can reach the SDK
+// functions they need through the single loadFirebase() entry point.
+export { signOut, sendEmailVerification } from 'firebase/auth';
+export { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+
 // ✅ Password Change Function
 export const changePassword = async (
   currentPassword: string,
   newPassword: string
 ): Promise<void> => {
+    ensureFirebase();
   const user = auth.currentUser;
   
   if (!user || !user.email) {
@@ -510,6 +583,7 @@ export const changePassword = async (
  * @returns Fresh ID token or null if not authenticated
  */
 export const getFreshToken = async (forceRefresh: boolean = false): Promise<string | null> => {
+    ensureFirebase();
   try {
     const user = auth.currentUser;
     if (!user) return null;

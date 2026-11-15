@@ -1,15 +1,16 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
-import { 
-  User, 
-  onAuthStateChanged, 
-  signOut,
-  sendEmailVerification,
-  getRedirectResult 
-} from 'firebase/auth';
-import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db, handleSocialSignInResult } from '@/lib/firebase';
+import type { User } from 'firebase/auth';
+import {
+  loadFirebase,
+  hasFirebaseSessionHint,
+  hasIndexedDbSession,
+  onFirebaseLoaded,
+  isFirebaseAuthStorageKey,
+  OAUTH_REDIRECT_KEY,
+  USER_CACHE_KEY,
+} from '@/lib/firebaseLoader';
 import { useRouter } from 'next/navigation';
 import { isBossActive, isBossExpired } from '@/lib/tier';
 import { isWelcomeBonusEligible } from '@/lib/welcomeBonusEligibility';
@@ -37,6 +38,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
+type FirebaseModule = Awaited<ReturnType<typeof loadFirebase>>;
+
 const AuthContext = createContext<AuthContextType>({ 
   user: null, 
   loading: true,
@@ -55,6 +58,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accountTier, setAccountTier] = useState<'Bro' | 'Boss'>('Bro');
   const [isBoss, setIsBoss] = useState<boolean>(false);
   const welcomeBonusAttemptedRef = useRef(false);
+  // lib/firebase, once loaded. The SDK is loaded lazily (lib/firebaseLoader.ts):
+  // straight away when this browser may hold a session, otherwise only when a
+  // page needs it, so signed-out visitors never download it.
+  const firebaseRef = useRef<FirebaseModule | null>(null);
   // Track whether we're still resolving a redirect OAuth callback.
   // Keeps `loading: true` so the UI never flashes the login page.
   const [redirectChecked, setRedirectChecked] = useState(false);
@@ -62,10 +69,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ Handle OAuth redirect callback (when user returns from Google/GitHub auth)
   // This MUST resolve before we allow `loading` to become `false`.
-  useEffect(() => {
-    const handleRedirectResult = async () => {
+  // Called by the Firebase init effect below once the SDK is loaded.
+    const handleRedirectResult = async (fb: FirebaseModule) => {
       const hadPendingRedirect = typeof window !== 'undefined'
-        && !!sessionStorage.getItem('stocksimulatorbd_oauth_redirect');
+        && !!sessionStorage.getItem(OAUTH_REDIRECT_KEY);
 
       // Strict popup-first: only attempt redirect result handling
       // if this session explicitly initiated redirect OAuth.
@@ -75,13 +82,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const result = await getRedirectResult(auth);
+        const result = await fb.getOAuthRedirectResult();
         if (result && result.user) {
           console.log('✅ User authenticated via redirect OAuth');
-          await handleSocialSignInResult(result.user);
+          await fb.handleSocialSignInResult(result.user);
           // Clear the redirect flag on success
           if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+            sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
           }
           // onAuthStateChanged will pick up the user from here
         } else if (hadPendingRedirect) {
@@ -90,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // or the redirect session was lost.
           console.warn('⚠️ OAuth redirect returned no result — redirect may have failed silently');
           if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+            sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
             sessionStorage.setItem('stocksimulatorbd_oauth_error',
               'Google sign-in didn\u2019t complete. Your browser may be blocking the redirect. Please try again \u2014 a popup will be used instead.'
             );
@@ -102,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const nonFatalRedirectCodes = new Set(['auth/no-auth-event', 'auth/internal-error']);
         if (nonFatalRedirectCodes.has(error?.code)) {
           if (hadPendingRedirect && typeof window !== 'undefined') {
-            sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+            sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
             sessionStorage.setItem('stocksimulatorbd_oauth_error',
               'Social sign-in redirect did not complete. Please try again. If it still fails, use popup sign-in or email/password.'
             );
@@ -115,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('❌ Failed to handle OAuth redirect:', error.message);
         // Surface the error so the auth page can display it
         if (hadPendingRedirect && typeof window !== 'undefined') {
-          sessionStorage.removeItem('stocksimulatorbd_oauth_redirect');
+          sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
           sessionStorage.setItem('stocksimulatorbd_oauth_error',
             'Sign-in failed after redirect. Please try again.'
           );
@@ -125,14 +132,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRedirectChecked(true);
       }
     };
-
-    if (typeof window !== 'undefined') {
-      handleRedirectResult();
-    } else {
-      // SSR – no redirect to handle
-      setRedirectChecked(true);
-    }
-  }, []);
 
   // 🪙 Grant 10,000 welcome bonus to verified users (email AND social)
   // Multi-layer dedup: session ref → Firestore flag → server-side checks
@@ -151,8 +150,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 🔒 LAYER 3: Check Firestore flag (cross-session dedup)
     try {
-      const userDocRef = doc(db, 'users', currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const fb = firebaseRef.current ?? await loadFirebase();
+      const userDocRef = fb.doc(fb.db, 'users', currentUser.uid);
+      const userDoc = await fb.getDoc(userDocRef);
       if (userDoc.exists() && userDoc.data()?.welcomeBonusGranted === true) {
         welcomeBonusAttemptedRef.current = true; // Don't re-check this session
         return;
@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('stocksimulatorbd_user_cache');
+        const cached = localStorage.getItem(USER_CACHE_KEY);
         if (cached) {
           const cachedData: CachedUserData = JSON.parse(cached);
           const now = Date.now();
@@ -207,10 +207,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (cacheAge < 30 * 24 * 60 * 60 * 1000) {
             setIsEmailVerified(cachedData.emailVerified);
             console.log('✅ Loaded user from localStorage cache');
-          } else {
-            // Cache truly expired after 30 days
-            localStorage.removeItem('stocksimulatorbd_user_cache');
           }
+          // Older than 30 days: ignore it here but leave it in place. It still
+          // tells the Firebase init effect below that this browser may hold a
+          // session; the auth handler rewrites it (signed in) or removes it
+          // (signed out) once Firebase answers.
         }
       } catch (error) {
         console.error('Failed to load cached user:', error);
@@ -219,8 +220,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // ✅ DON'T set loading to false here - let Firebase auth resolve it
   }, []);
 
+  // ✅ Load Firebase (now, or when first needed) and follow the auth state.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    let cancelLoadWait: (() => void) | undefined;
+
+    const handleAuthState = (fb: FirebaseModule) => async (user: User | null) => {
+      const { auth, db, doc, getDoc, setDoc, deleteDoc, signOut } = fb;
       try {
         // ✅ BLOCK ANONYMOUS USERS (Guest login disabled)
         if (user?.isAnonymous) {
@@ -265,7 +273,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
           
           try {
-            localStorage.setItem('stocksimulatorbd_user_cache', JSON.stringify(cachedData));
+            localStorage.setItem(USER_CACHE_KEY, JSON.stringify(cachedData));
           } catch (error) {
             console.warn('Failed to cache user to localStorage:', error);
           }
@@ -357,6 +365,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           console.log('🔍 User email verified:', nowVerified);
         } else {
+          // No session: drop the cached user so the next page load does not
+          // treat this browser as signed in and load Firebase straight away
+          // (lib/firebaseLoader.ts hasFirebaseSessionHint).
+          try { localStorage.removeItem(USER_CACHE_KEY); } catch { /* ignore */ }
           setIsEmailVerified(false);
           setAccountTier('Bro');
           setIsBoss(false);
@@ -370,9 +382,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Putting in finally guarantees loading is NEVER permanently stuck.
         setAuthStateResolved(true);
       }
-    });
+    };
 
-    return () => unsubscribe();
+    const attach = async () => {
+      if (cancelled || firebaseRef.current) return;
+      let fb: FirebaseModule;
+      try {
+        fb = await loadFirebase();
+      } catch (err) {
+        console.error('❌ Failed to load Firebase:', err);
+        setRedirectChecked(true);
+        setAuthStateResolved(true);
+        return;
+      }
+      if (cancelled || firebaseRef.current) return;
+      if (!fb.auth) {
+        // Missing config (logged by lib/firebase). Nothing to follow.
+        setRedirectChecked(true);
+        setAuthStateResolved(true);
+        return;
+      }
+      firebaseRef.current = fb;
+      window.removeEventListener('storage', onStorage);
+      handleRedirectResult(fb);
+      unsubscribe = fb.onAuthStateChanged(fb.auth, handleAuthState(fb));
+    };
+
+    // Another tab signed in: load the SDK here too so this tab follows it.
+    const onStorage = (e: StorageEvent) => {
+      if (isFirebaseAuthStorageKey(e.key) && e.newValue) attach();
+    };
+
+    if (hasFirebaseSessionHint()) {
+      attach();
+    } else {
+      // If a page or component initialises Firebase later (sign-in page,
+      // trade screen, another tab signing in), follow auth state from then.
+      cancelLoadWait = onFirebaseLoaded(attach);
+      window.addEventListener('storage', onStorage);
+      // Nothing in localStorage. Check Firebase's IndexedDB store too (no SDK
+      // needed, a few ms) and keep `loading` true until we know.
+      hasIndexedDbSession().then((found) => {
+        if (cancelled || firebaseRef.current) return;
+        if (found) {
+          attach();
+        } else {
+          // No Firebase session in this browser, so the visitor is signed
+          // out. Say so now instead of downloading the SDK to find out.
+          setRedirectChecked(true);
+          setAuthStateResolved(true);
+        }
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      cancelLoadWait?.();
+      window.removeEventListener('storage', onStorage);
+      if (unsubscribe) {
+        unsubscribe();
+        // Let a re-run of this effect (StrictMode, Fast Refresh) attach again.
+        firebaseRef.current = null;
+      }
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ Loading is only false when BOTH Firebase auth state AND redirect result are settled.
@@ -397,10 +469,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // whenever bossUntil or accountTier changes — server-authoritative and
   // real-time. When the user is null (signed out), the listener is torn down.
   useEffect(() => {
-    if (!user) return;
+    const fb = firebaseRef.current;
+    if (!user || !fb) return;
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsub = onSnapshot(
+    const userDocRef = fb.doc(fb.db, 'users', user.uid);
+    const unsub = fb.onSnapshot(
       userDocRef,
       (snap) => {
         if (!snap.exists()) return;
@@ -464,7 +537,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const sendVerificationEmail = async () => {
     if (user && !user.emailVerified) {
       try {
-        await sendEmailVerification(user);
+        const fb = firebaseRef.current ?? await loadFirebase();
+        await fb.sendEmailVerification(user);
         console.log('✅ Verification email sent');
       } catch (error) {
         console.error('❌ Failed to send verification email:', error);
@@ -496,10 +570,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // ✅ Clear localStorage cache on logout
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('stocksimulatorbd_user_cache');
+        localStorage.removeItem(USER_CACHE_KEY);
       }
       
-      await signOut(auth);
+      const fb = firebaseRef.current ?? await loadFirebase();
+      await fb.signOut(fb.auth);
       setUser(null);
       setIsEmailVerified(false);
       router.push('/auth');

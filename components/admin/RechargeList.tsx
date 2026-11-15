@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, ensureFirebase } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit, where, startAfter, getDocs, getCountFromServer, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import {
   Search, CheckCircle2, LayoutDashboard, Home, Clock, Inbox, Check, X, Loader2,
@@ -42,6 +42,9 @@ const NAV_ITEMS: { label: string; href: string; filter: StatusFilter; color: str
 ];
 
 export default function RechargeList({ statusFilter }: { statusFilter: StatusFilter }) {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   const { user } = useAuth();
 
   const PAGE_SIZE = 30;

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
+import { db, ensureFirebase } from '@/lib/firebase';
 import { collection, getCountFromServer, query, where, onSnapshot } from 'firebase/firestore';
 import { checkAdminMode } from '@/lib/admin';
 import { fetchWithToken, fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
@@ -25,6 +25,9 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { askReason, rejectDialog } = useRejectReasonDialog();

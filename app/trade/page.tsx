@@ -24,7 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import BossTradeBanner from '@/components/boss/BossTradeBanner';
 import MarketClosedModal from '@/components/market/MarketClosedModal';
 import MarketClosedBanner from '@/components/market/MarketClosedBanner';
-import { db } from '@/lib/firebase';
+import { db, ensureFirebase } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 const MarketCalendar = dynamic(() => import('@/components/simulator/MarketCalendar'), {
@@ -33,6 +33,9 @@ const MarketCalendar = dynamic(() => import('@/components/simulator/MarketCalend
 });
 
 export default function TradePage() {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   return (
     <AppShell redirectPath="/trade" redirectMessage="Please sign in to access the trading simulator">
       <MarketScreen />

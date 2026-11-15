@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile } from '../lib/firebase';
+import { loadFirebase } from '@/lib/firebaseLoader';
 import { useRouter } from 'next/navigation';
 
 export default function AuthStatus() {
@@ -16,6 +16,7 @@ export default function AuthStatus() {
         const fetchUserName = async () => {
             if (user) {
                 try {
+                    const { getUserProfile } = await loadFirebase();
                     const profile = await getUserProfile(user.uid);
                     setUserName(profile?.name || user.email?.split('@')[0] || 'User');
                     setUserPhoto(profile?.photoURL || user.photoURL || null);

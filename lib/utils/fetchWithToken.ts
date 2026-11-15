@@ -6,7 +6,16 @@
  * we get a fresh Firebase ID token with automatic retry on 401
  */
 
-import { auth } from '@/lib/firebase';
+import { loadFirebase, USER_CACHE_KEY } from '@/lib/firebaseLoader';
+
+// Firebase Auth, loaded on first use (see lib/firebaseLoader.ts). Waits for
+// the persisted session to be restored so a fresh load never sends a request
+// without the token.
+async function getAuthReady() {
+  const { auth } = await loadFirebase();
+  try { await auth.authStateReady(); } catch { /* fall through to currentUser */ }
+  return auth;
+}
 
 interface FetchOptions extends RequestInit {
   forceTokenRefresh?: boolean;
@@ -25,6 +34,7 @@ interface FetchOptions extends RequestInit {
 export async function fetchWithToken(url: string, options: FetchOptions = {}) {
   const { forceTokenRefresh = false, timeout = 30000, maxRetries = 1, ...fetchOptions } = options;
   
+  const auth = await getAuthReady();
   let retryCount = 0;
   const maxRetryAttempts = Math.max(1, maxRetries); // At least 1 attempt
 
@@ -32,7 +42,7 @@ export async function fetchWithToken(url: string, options: FetchOptions = {}) {
     try {
       // 🔒 Sleep / Wake-up Grace: If auth.currentUser is temporarily restoring after computer sleep or tab throttle,
       // wait briefly if we know an authenticated session exists in localStorage.
-      if (!auth.currentUser && typeof window !== 'undefined' && localStorage.getItem('stocksimulatorbd_user_cache')) {
+      if (!auth.currentUser && typeof window !== 'undefined' && localStorage.getItem(USER_CACHE_KEY)) {
         for (let i = 0; i < 4 && !auth.currentUser; i++) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
@@ -152,7 +162,8 @@ export async function fetchWithFreshToken(url: string, options: FetchOptions = {
  */
 export async function getSafeAuthToken(forceRefresh: boolean = true): Promise<string> {
   try {
-    if (!auth.currentUser && typeof window !== 'undefined' && localStorage.getItem('stocksimulatorbd_user_cache')) {
+    const auth = await getAuthReady();
+    if (!auth.currentUser && typeof window !== 'undefined' && localStorage.getItem(USER_CACHE_KEY)) {
       for (let i = 0; i < 4 && !auth.currentUser; i++) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }

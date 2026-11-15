@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
+import { db, ensureFirebase } from '@/lib/firebase';
 import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
 import {
   Loader2, Plus, Copy, Check, Ban, Search, Gift, Crown,
@@ -78,6 +78,9 @@ export function getCodeUsage(c: PromoCode) {
 }
 
 export default function PromoCodesList() {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   const [codes, setCodes] = useState<PromoCode[]>([]);
   const [tab, setTab] = useState<Tab>('all');
   const [search, setSearch] = useState('');

@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '@/components/app/AppShell';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
+import { db, ensureFirebase } from '@/lib/firebase';
 import { isBossActive } from '@/lib/tier';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
@@ -19,6 +19,9 @@ import BossBadge from '@/components/ui/BossBadge';
 import { formatDhakaClock } from '@/lib/utils/dhakaTime';
 
 export default function ProfileTierPage() {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   return (
     <AppShell redirectPath="/profile/tier" redirectMessage="Please sign in to view your tier status">
       <ProfileTierScreen />

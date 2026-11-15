@@ -1,13 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  getFirestore,
-  doc,
-  onSnapshot,
-  getDoc,
-  Unsubscribe
-} from 'firebase/firestore';
+import type { Unsubscribe } from 'firebase/firestore';
+import { loadFirebase } from '@/lib/firebaseLoader';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUpcomingHolidays, isSpecialWorkingDay } from '@/lib/bangladeshHolidays';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
@@ -91,7 +86,17 @@ export interface MarketInfo {
 
 export const useSimulator = () => {
   const { user } = useAuth();
-  const db = getFirestore();
+  // Firestore, loaded once there is a signed-in user (see lib/firebaseLoader.ts).
+  // Signed-out visitors (e.g. on /stocks/[symbol]) never download it.
+  const [fs, setFs] = useState<Awaited<ReturnType<typeof loadFirebase>> | null>(null);
+  useEffect(() => {
+    if (!user || fs) return;
+    let cancelled = false;
+    loadFirebase()
+      .then((m) => { if (!cancelled) setFs(m); })
+      .catch((err) => console.error('Failed to load Firebase:', err));
+    return () => { cancelled = true; };
+  }, [user, fs]);
   
   const [marketInfo, setMarketInfo] = useState<MarketInfo | null>(null);
   const [simulatorState, setSimulatorState] = useState<SimulatorState>({
@@ -171,6 +176,8 @@ export const useSimulator = () => {
   // ── 2. Polling Market Data (With Efficient Countdown) ──
   useEffect(() => {
     if (!user) { setLoading(false); return; }
+    if (!fs) return;
+    const { db, doc, getDoc } = fs;
     let isMounted = true;
     let timerId: NodeJS.Timeout;
 
@@ -250,11 +257,12 @@ export const useSimulator = () => {
       clearInterval(timerId); 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, db]);
+  }, [user, fs]);
 
   // ── 3. Categories Listener ──
   useEffect(() => {
-    if (!user) return;
+    if (!user || !fs) return;
+    const { db, doc, onSnapshot } = fs;
     try {
       const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
       const categoriesRef = doc(db, 'artifacts', appId, 'public', 'data', 'market_info', 'categories');
@@ -264,11 +272,12 @@ export const useSimulator = () => {
     } catch (err) { console.warn('Categories listener error:', err); }
 
     return () => { if (categoriesUnsubscribe.current) categoriesUnsubscribe.current(); };
-  }, [user, db]);
+  }, [user, fs]);
 
   // ── 3b. Sectors Listener ── (see api/lanka_sector_sync.py)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !fs) return;
+    const { db, doc, onSnapshot } = fs;
     try {
       const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
       const sectorsRef = doc(db, 'artifacts', appId, 'public', 'data', 'market_info', 'sectors');
@@ -278,11 +287,13 @@ export const useSimulator = () => {
     } catch (err) { console.warn('Sectors listener error:', err); }
 
     return () => { if (sectorsUnsubscribe.current) sectorsUnsubscribe.current(); };
-  }, [user, db]);
+  }, [user, fs]);
 
   // ── 4. Simulator State Listener ──
   useEffect(() => {
     if (!user) { setLoading(false); return; }
+    if (!fs) return;
+    const { db, doc, onSnapshot } = fs;
     ensureStateAttempted.current = false;
     try {
       const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
@@ -325,7 +336,7 @@ export const useSimulator = () => {
     }
 
     return () => { if (stateUnsubscribe.current) stateUnsubscribe.current(); };
-  }, [user, db]);
+  }, [user, fs]);
 
   // Recompute derived portfolio valuations when live market prices update
   // without tearing down the simulator/state Firestore listener.

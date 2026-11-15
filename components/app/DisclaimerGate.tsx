@@ -20,7 +20,7 @@
 // wall a devtools user could bypass.
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getFirestore, onSnapshot } from 'firebase/firestore';
+import { loadFirebase, subscribeWhenReady } from '@/lib/firebaseLoader';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 
@@ -38,7 +38,18 @@ export function useDisclaimerStatus(uid: string | undefined): Status {
     // until its own snapshot arrived.
     setStatus('loading');
 
-    const ref = doc(getFirestore(), 'users', uid);
+    return subscribeWhenReady(async () => {
+    let fb;
+    try {
+      fb = await loadFirebase();
+    } catch (err) {
+      // Fail closed, same as a listener error below.
+      console.warn('Disclaimer status: Firebase failed to load:', err);
+      setStatus('pending');
+      return;
+    }
+    const { db, doc, onSnapshot } = fb;
+    const ref = doc(db, 'users', uid);
     return onSnapshot(
       ref,
       (snap) => setStatus(snap.exists() && snap.data()?.disclaimerAgreedAt ? 'agreed' : 'pending'),
@@ -51,6 +62,7 @@ export function useDisclaimerStatus(uid: string | undefined): Status {
         setStatus('pending');
       }
     );
+    });
   }, [uid]);
 
   return status;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, Component } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
-import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, facebookProvider, isFacebookLoginEnabled, isFacebookLoginLive, isSameSiteAuthDomain, isMetaInAppBrowser, signInWithSocialProviderAndCreateProfile, isInAppBrowser, sendMagicSignInLink, isMagicSignInLink, getPendingMagicLinkEmail, completeMagicSignIn } from '../../lib/firebase'
+import { auth, signUpWithEmailPasswordAndProfile, googleProvider, githubProvider, facebookProvider, isFacebookLoginEnabled, isFacebookLoginLive, isSameSiteAuthDomain, isMetaInAppBrowser, signInWithSocialProviderAndCreateProfile, isInAppBrowser, sendMagicSignInLink, isMagicSignInLink, getPendingMagicLinkEmail, completeMagicSignIn, ensureFirebase } from '../../lib/firebase'
 import { useRouter } from 'next/navigation'
 import { validateEmail, validatePassword, sanitizeError, rateLimit, PASSWORD_RULES } from '../../lib/authUtils'
 import { humanizeAuthError } from '../../lib/authErrorHandler'
@@ -1051,6 +1051,10 @@ class AuthErrorBoundary extends Component<
 
 // Main component wrapped with reCAPTCHA provider
 export default function AuthPage() {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase), with the popup/redirect resolver
+  // ready for the sign-in buttons. Idempotent.
+  ensureFirebase({ forSignIn: true });
   const siteKey = (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '').trim()
   const hasValidSiteKey = siteKey.length > 0
 

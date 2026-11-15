@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, onAuthStateChanged, signOut, updateProfile as updateAuthProfile } from 'firebase/auth';
-import { auth, getUserProfile, updateUserProfile, changePassword, UserProfile } from '../lib/firebase';
+import { auth, getUserProfile, updateUserProfile, changePassword, UserProfile, ensureFirebase } from '../lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
 export const useProfile = () => {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   const { user: authUser, loading: authLoading, logout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);

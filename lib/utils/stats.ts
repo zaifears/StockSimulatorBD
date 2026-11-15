@@ -1,5 +1,5 @@
 import { collection, getCountFromServer } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, ensureFirebase } from '@/lib/firebase';
 
 // Cache user count for 5 minutes
 let cachedCount: number | null = null;
@@ -7,6 +7,9 @@ let cacheTimestamp: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export async function getUserCount(): Promise<number> {
+  // Initialises Firebase if this browser had no session when it loaded
+  // (see lib/firebase.ts ensureFirebase). Idempotent.
+  ensureFirebase();
   const now = Date.now();
   
   // Return cached value if still valid

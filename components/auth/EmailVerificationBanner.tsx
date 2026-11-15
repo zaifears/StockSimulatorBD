@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usesTrustedSocialProvider } from '@/lib/welcomeBonusEligibility';
-import { VERIFICATION_SENT_KEY } from '@/lib/firebase';
+import { VERIFICATION_SENT_KEY } from '@/lib/firebaseLoader';
 
 const RESEND_COOLDOWN_S = 600;
 
