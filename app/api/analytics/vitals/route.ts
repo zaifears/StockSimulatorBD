@@ -70,14 +70,15 @@ export async function POST(req: NextRequest) {
     })
 
   if (clean.length > 0) {
-    console.log(
-      '[web-vitals]',
-      JSON.stringify({
+    // process.stdout, not console.log: next.config removes console.log in production builds.
+    process.stdout.write(
+      `[web-vitals] ${JSON.stringify({
         path: str(data?.path, 200),
         device: data?.device === 'mobile' ? 'mobile' : 'desktop',
         conn: str(data?.conn, 10),
         metrics: clean,
-      })
+      })}
+`
     )
   }
   return new NextResponse(null, { status: 204 })
