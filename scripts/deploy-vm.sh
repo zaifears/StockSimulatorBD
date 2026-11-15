@@ -37,8 +37,10 @@ SSH=(ssh -i "$VM_KEY" -o ConnectTimeout=20 "$VM_HOST")
 
 # ── 1. Do not swap while people are trading (Sun-Thu 10:00-14:30 Dhaka) ──────
 if [ "$STAGE_ONLY" = 0 ] && [ "$FORCE" = 0 ]; then
-  dow=$(TZ=Asia/Dhaka date +%u)   # 1=Mon ... 7=Sun
-  hm=$((10#$(TZ=Asia/Dhaka date +%H%M)))
+  # Dhaka is UTC+6 with no DST. Computed from UTC because Git Bash on Windows
+  # has no tz database and silently treats TZ=Asia/Dhaka as UTC.
+  dow=$(date -u -d '+6 hours' +%u)   # 1=Mon ... 7=Sun
+  hm=$((10#$(date -u -d '+6 hours' +%H%M)))
   if [ "$dow" != 5 ] && [ "$dow" != 6 ] && [ "$hm" -ge 955 ] && [ "$hm" -le 1430 ]; then
     echo "DSE session is open in Dhaka. Deploy after 14:30, or pass --force." >&2
     exit 1
