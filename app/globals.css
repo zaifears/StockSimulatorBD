@@ -8,9 +8,9 @@
 
 /* Optimized CSS Variables */
 :root {
-  --font-inter: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-space-grotesk: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-coolvetica: 'Coolvetica', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* --font-inter / --font-space-grotesk / --font-coolvetica are defined by next/font on <html> (lib/fonts.ts),
+     including the size-adjusted fallback fonts. Do not redefine them here: that removes the fallback and
+     causes a layout shift when the web font loads. */
   --primary-blue: #2563eb;
   --primary-purple: #7c3aed;
   --primary-emerald: #059669;

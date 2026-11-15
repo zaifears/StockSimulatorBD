@@ -32,11 +32,6 @@ export const coolvetica = localFont({
       weight: '800',
       style: 'normal',
     },
-    {
-      path: '../public/fonts/Coolvetica Rg It.otf',
-      weight: '400',
-      style: 'italic',
-    },
   ],
   variable: '--font-coolvetica',
   display: 'swap',

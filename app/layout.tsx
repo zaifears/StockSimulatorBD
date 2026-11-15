@@ -5,21 +5,13 @@ import NavbarWrapper from '../components/NavbarWrapper'
 import SiteMain from '../components/SiteMain'
 import { AuthProvider } from '../contexts/AuthContext'
 import EmailVerificationBanner from '../components/auth/EmailVerificationBanner'
-import SparkEffectInitializer from '@/components/SparkEffectInitializer'
 import SentryInitializer from '@/components/SentryInitializer'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import IOSInstallGuide from '@/components/iOSInstallGuide'
-import { Analytics } from "@vercel/analytics/react"
 import ServiceWorkerCleanup from '@/components/ServiceWorkerCleanup'
-import Script from 'next/script'
-import { GoogleAnalytics } from '@next/third-parties/google'
 import VisitTracker from '@/components/VisitTracker'
 import { SITE_URL, absoluteUrl } from '@/lib/siteUrl'
 
-const GTM_ID = 'GTM-PS2HRL37'
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim()
-const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim()
-const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID?.trim()
 
 export const viewport: Viewport = {
   themeColor: [
@@ -158,22 +150,6 @@ export default function RootLayout({
         {/* Essential Meta Tags */}
         <meta name="format-detection" content="telephone=no" />
         
-        {/* Google Tag Manager Head Script */}
-        <Script id="gtm-script" strategy="afterInteractive">
-          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-          })(window,document,'script','dataLayer','${GTM_ID}');`}
-        </Script>
-
-        {/* Performance optimizations */}
-        <link rel="dns-prefetch" href="//www.googletagmanager.com" />
-        {RECAPTCHA_SITE_KEY && <link rel="dns-prefetch" href="//www.google.com" />}
-        {RECAPTCHA_SITE_KEY && <link rel="dns-prefetch" href="//www.gstatic.com" />}
-        <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
-        {RECAPTCHA_SITE_KEY && <link rel="preconnect" href="https://www.google.com" crossOrigin="anonymous" />}
-        {RECAPTCHA_SITE_KEY && <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="anonymous" />}
         
         {/* Sitemap Link for Search Engines */}
         <link rel="sitemap" type="application/xml" href={absoluteUrl("/sitemap.xml")} />
@@ -237,52 +213,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} antialiased bg-white dark:bg-gray-900 transition-colors duration-300`} suppressHydrationWarning={true}>
-        {/* Google Tag Manager (noscript) */}
-        <noscript>
-          <iframe
-            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
-            height="0"
-            width="0"
-            className="hidden invisible"
-          ></iframe>
-        </noscript>
-        {/* End Google Tag Manager (noscript) */}
-
-        {/* UI/UX Metrics Engine - Obfuscated ID to bypass basic ad blockers */}
-        <Script id="ui-metrics-engine" strategy="afterInteractive">
-          {`(function(c,l,a,r,i,t,y){
-              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-          })(window, document, "clarity", "script", "xkn64ae06m");`}
-        </Script>
-
         <ServiceWorkerRegistration />
         <IOSInstallGuide />
-        {GA_MEASUREMENT_ID && <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />}
-
-        {LINKEDIN_PARTNER_ID && (
-          <>
-            <Script id="linkedin-insight-init" strategy="lazyOnload">
-              {`
-                window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
-                window._linkedin_data_partner_ids.push('${LINKEDIN_PARTNER_ID}');
-                window.lintrk = window.lintrk || function(a,b){window.lintrk.q.push([a,b])};
-                window.lintrk.q = window.lintrk.q || [];
-              `}
-            </Script>
-            <Script
-              id="linkedin-insight-src"
-              src="https://snap.licdn.com/li.lms-analytics/insight.min.js"
-              strategy="lazyOnload"
-            />
-          </>
-        )}
-
         <AuthProvider>
           <VisitTracker />
           <EmailVerificationBanner />
-          <SparkEffectInitializer />
           <SentryInitializer />
           <ServiceWorkerCleanup />
           
@@ -291,8 +226,6 @@ export default function RootLayout({
             <SiteMain>{children}</SiteMain>
           </div>
         </AuthProvider>
-        
-        <Analytics />
       </body>
     </html>
   )

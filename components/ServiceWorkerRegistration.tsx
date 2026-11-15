@@ -11,7 +11,7 @@ export default function ServiceWorkerRegistration() {
     if (
       typeof window !== 'undefined' &&
       'serviceWorker' in navigator &&
-      window.workbox === undefined // Avoid conflict if using next-pwa
+      (window as unknown as { workbox?: unknown }).workbox === undefined // Avoid conflict if using next-pwa
     ) {
       // Register the service worker from public/sw.js
       navigator.serviceWorker

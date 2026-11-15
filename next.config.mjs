@@ -91,11 +91,11 @@ const nextConfig = {
       "base-uri 'self'",
       "frame-ancestors 'self'",
       "object-src 'none'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://open-remark.zeon.studio https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://snap.licdn.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://va.vercel-scripts.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://open-remark.zeon.studio https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' ws: wss: https://open-remark.zeon.studio https://*.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.google.com https://www.gstatic.com https://www.google-analytics.com https://www.googletagmanager.com https://www.clarity.ms https://region1.google-analytics.com https://accounts.google.com https://va.vercel-scripts.com https://dse.shahoriar.bd",
+      "connect-src 'self' ws: wss: https://open-remark.zeon.studio https://*.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.google.com https://www.gstatic.com https://accounts.google.com https://dse.shahoriar.bd",
       "frame-src 'self' https://open-remark.zeon.studio https://www.google.com https://www.gstatic.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app",
       "worker-src 'self' blob:",
     ];

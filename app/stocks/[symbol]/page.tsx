@@ -318,7 +318,7 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
           '@id': `${BASE_URL}/#organization`,
           name: 'StockSimulatorBD',
           url: BASE_URL,
-          logo: `${BASE_URL}/favicon.svg`,
+          logo: `${BASE_URL}/logo/mark-dark-192.png`,
         },
       },
       ...(named

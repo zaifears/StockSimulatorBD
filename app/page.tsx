@@ -379,7 +379,7 @@ export default async function HomePage() {
                 <h3>{steps[2].title}</h3>
                 <p>{steps[2].body}</p>
               </div>
-              <figure className="hm-t1" role="group" aria-label="How T+2 settlement works across a weekend">
+              <figure className="hm-t1" aria-label="How T+2 settlement works across a weekend">
                 <ul className="hm-t1__rail" role="list">
                   <li className="hm-t1__day hm-t1__day--buy">
                     <b>Thursday</b>
