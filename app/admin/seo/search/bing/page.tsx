@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { fetchWithToken } from '@/lib/utils/fetchWithToken';
 import {
   Globe,
@@ -24,6 +25,7 @@ export default function BingWebmasterPage() {
   const [syncing, setSyncing] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [showConfigModal, setShowConfigModal] = useState(false);
+  useEscapeKey(() => setShowConfigModal(false), showConfigModal);
   const [configSuccess, setConfigSuccess] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
 
@@ -362,7 +364,12 @@ export default function BingWebmasterPage() {
       {/* Config Modal */}
       {showConfigModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111622] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Configure Bing Webmaster API"
+            className="bg-white dark:bg-[#111622] rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4"
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
                 <Key className="w-4 h-4 text-amber-500" />

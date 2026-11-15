@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { X, ExternalLink, CheckCircle2, AlertCircle, Loader2, Trash2, Camera } from 'lucide-react';
 
 interface AvatarUploadModalProps {
@@ -33,6 +34,8 @@ export default function AvatarUploadModal({
       setPreviewSrc(currentPhotoURL || '/favicon.svg');
     }
   }, [isOpen, currentPhotoURL]);
+
+  useEscapeKey(onClose, isOpen && !isSaving);
 
   if (!isOpen) return null;
 
@@ -148,7 +151,7 @@ export default function AvatarUploadModal({
       }}
     >
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-lg bg-white dark:bg-[#16202D] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

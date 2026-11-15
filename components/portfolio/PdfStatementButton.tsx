@@ -5,6 +5,7 @@
 // 100% client-side zero-resource generation, and strict Boss tier gating.
 
 import React, { useState, useEffect } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import Link from 'next/link';
 import { FileDown, FileText, Loader2, Crown, ShieldAlert, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import { fetchWithToken } from '@/lib/utils/fetchWithToken';
@@ -35,6 +36,7 @@ export default function PdfStatementButton({
   const [isGenerating, setIsGenerating] = useState(false);
   const [cooldownActive, setCooldownActive] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  useEscapeKey(() => setShowUpgradeModal(false), showUpgradeModal);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Check persistent 120-second cooldown in localStorage on mount and interval
@@ -195,7 +197,12 @@ export default function PdfStatementButton({
       {/* 👑 BRO TIER UPGRADE MODAL */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-white dark:bg-[#1A1F26] border border-amber-400/40 rounded-2xl shadow-2xl p-6 text-gray-900 dark:text-white">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Boss tier required for PDF statements"
+            className="relative w-full max-w-md bg-white dark:bg-[#1A1F26] border border-amber-400/40 rounded-2xl shadow-2xl p-6 text-gray-900 dark:text-white"
+          >
             <button
               type="button"
               onClick={() => setShowUpgradeModal(false)}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { LockIcon, EyeIcon, EyeOffIcon, CheckIcon, XIcon } from './ProfileIcons';
 
 interface ChangePasswordFormProps {
@@ -8,6 +9,7 @@ interface ChangePasswordFormProps {
 }
 
 function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePasswordFormProps) {
+  useEscapeKey(onClose, !isLoading);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -86,7 +88,12 @@ function ChangePasswordForm({ onClose, onSubmit, isLoading = false }: ChangePass
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Change password"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-800 overflow-hidden"
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

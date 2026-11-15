@@ -71,6 +71,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
           <input
             type="text"
             name="name"
+            autoComplete="name"
             placeholder="Full Name *"
             value={formData.name}
             onChange={handleInputChange}
@@ -83,6 +84,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
             <input
               type="tel"
               name="phone"
+              autoComplete="tel"
               placeholder="Phone Number"
               value={formData.phone}
               onChange={handleInputChange}
@@ -121,6 +123,8 @@ const AuthForm: React.FC<AuthFormProps> = ({
       <input
         type="email"
         name="email"
+        autoComplete="username"
+        spellCheck={false}
         placeholder="Email Address *"
         value={formData.email}
         onChange={handleInputChange}
@@ -132,6 +136,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
       <input
         type="password"
         name="password"
+        autoComplete={isSignUp ? 'new-password' : 'current-password'}
         placeholder="Password *"
         value={formData.password}
         onChange={handleInputChange}
@@ -145,6 +150,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
         <input
           type="password"
           name="confirmPassword"
+          autoComplete="new-password"
           placeholder="Confirm Password *"
           value={formData.confirmPassword}
           onChange={handleInputChange}

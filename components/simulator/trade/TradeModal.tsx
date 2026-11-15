@@ -1,4 +1,5 @@
 import React, { useMemo, useDeferredValue, useEffect, useState } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import {
   X,
   Minus,
@@ -178,6 +179,10 @@ export default function TradeModal({
     onClose();
   };
 
+  // Escape closes the sheet under the same rules as the backdrop tap, and never while the
+  // nested calendar dialog is open (it is on top and handles its own dismissal).
+  useEscapeKey(onClose, transactionStatus === 'idle' && !showCalendarModal);
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!marketOpen) {
@@ -267,8 +272,11 @@ export default function TradeModal({
       <script type="application/webmcp+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(tradeWebMcpSchema) }} />
 
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Trade order"
         onClick={stopPropagation}
-        className="w-full max-w-full sm:max-w-lg bg-white dark:bg-[#16202D] rounded-t-[28px] sm:rounded-3xl shadow-2xl shadow-black/60 border-t sm:border border-gray-200/80 dark:border-gray-800/80 overflow-hidden flex flex-col mt-auto sm:mt-0 max-h-[92vh] sm:max-h-none transition-all"
+        className="w-full max-w-full sm:max-w-lg bg-white dark:bg-[#16202D] rounded-t-[28px] sm:rounded-3xl shadow-2xl shadow-black/60 border-t sm:border border-gray-200/80 dark:border-gray-800/80 overflow-hidden flex flex-col mt-auto sm:mt-0 max-h-[92dvh] sm:max-h-none transition-all"
       >
         {/* Sleek Top Indicator Strip */}
         <div

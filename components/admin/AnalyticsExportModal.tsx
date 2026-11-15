@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import {
   X,
   Copy,
@@ -39,6 +40,7 @@ export default function AnalyticsExportModal({
   const [activeTab, setActiveTab] = useState<'markdown' | 'json'>('markdown');
   const [copied, setCopied] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  useEscapeKey(onClose);
 
   const markdownContent = useMemo(() => {
     if (!data) return '';
@@ -98,7 +100,7 @@ export default function AnalyticsExportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+        className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"

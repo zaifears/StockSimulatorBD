@@ -518,7 +518,7 @@ export default function UserNoticeModal({
       }}
     >
       <div
-        className="relative w-full max-w-sm sm:max-w-xl md:max-w-2xl bg-white dark:bg-[#11161F] border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh] sm:max-h-[86vh] animate-in fade-in zoom-in-95 duration-200 select-text"
+        className="relative w-full max-w-sm sm:max-w-xl md:max-w-2xl bg-white dark:bg-[#11161F] border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92dvh] sm:max-h-[86dvh] animate-in fade-in zoom-in-95 duration-200 select-text"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Top Header Bar */}

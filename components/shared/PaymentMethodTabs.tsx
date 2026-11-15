@@ -7,6 +7,7 @@
 // Used across /boss#payment and /coins.
 
 import React, { useState } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import Image from 'next/image';
 import {
   Copy,
@@ -156,6 +157,7 @@ export default function PaymentMethodTabs({
   const [mfsSubTab, setMfsSubTab] = useState<OtherSubTabId>('mfs');
   const [imageErrorMap, setImageErrorMap] = useState<{ [src: string]: boolean }>({});
   const [activeZoomModal, setActiveZoomModal] = useState<ZoomModalState | null>(null);
+  useEscapeKey(() => setActiveZoomModal(null), activeZoomModal !== null);
 
   const formattedAmount = `${amount.toFixed(2)} BDT`;
 

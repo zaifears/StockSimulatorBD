@@ -7,6 +7,7 @@
 // of every trader redemption (email, name, timestamp, reward).
 
 import { useEffect, useMemo, useState } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
@@ -419,6 +420,7 @@ function RedemptionsModal({ code, onClose }: { code: PromoCode; onClose: () => v
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [copiedEmails, setCopiedEmails] = useState(false);
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
+  useEscapeKey(onClose);
 
   const { max, used } = getCodeUsage(code);
 
@@ -468,7 +470,10 @@ function RedemptionsModal({ code, onClose }: { code: PromoCode; onClose: () => v
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-2xl bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[88vh] flex flex-col shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Redemptions for ${code.code}`}
+        className="w-full sm:max-w-2xl bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[88dvh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -598,6 +603,7 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
   const [allowMultiplePerUser, setAllowMultiplePerUser] = useState(false);
   const [expiresInDays, setExpiresInDays] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+  useEscapeKey(onClose, !submitting);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<string[] | null>(null);
 
@@ -646,7 +652,10 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-lg bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[90vh] overflow-y-auto pb-safe shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Generate promo codes"
+        className="w-full sm:max-w-lg bg-white dark:bg-[#1A1F26] rounded-t-3xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 max-h-[90dvh] overflow-y-auto pb-safe shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {created ? (

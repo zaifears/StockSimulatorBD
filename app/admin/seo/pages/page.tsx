@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { fetchWithToken } from '@/lib/utils/fetchWithToken';
 import {
   FileCode2,
@@ -26,6 +27,7 @@ export default function PagesAuditPage() {
   const [filter, setFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedPage, setSelectedPage] = useState<SeoPageProfile | null>(null);
+  useEscapeKey(() => setSelectedPage(null), selectedPage !== null);
 
   // Inspector states
   const [psiLoading, setPsiLoading] = useState(false);
@@ -397,7 +399,12 @@ export default function PagesAuditPage() {
       {/* Deep Page Inspector Modal */}
       {selectedPage && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-3xl max-w-3xl w-full p-6 space-y-5 my-8 shadow-2xl">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Page inspector"
+            className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-3xl max-w-3xl w-full p-6 space-y-5 my-8 shadow-2xl"
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
               <div>
