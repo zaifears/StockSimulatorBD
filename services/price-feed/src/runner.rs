@@ -124,9 +124,17 @@ impl Shared {
 
 pub struct RunnerConfig {
     pub dry_run: bool,
+    /// See `Config::rehearsal`. Only ever true together with `dry_run`.
+    pub rehearsal: bool,
     pub max_writes_per_day: u32,
     pub compare_url: Option<String>,
+    pub compare_every_ms: i64,
+    pub capture_dir: Option<std::path::PathBuf>,
+    pub capture_every_ms: i64,
 }
+
+/// Stop capturing once the directory holds this many files (~60 KB each).
+pub const MAX_CAPTURES: usize = 300;
 
 pub struct Runner<S: DocStore> {
     cfg: RunnerConfig,
@@ -147,6 +155,9 @@ pub struct Runner<S: DocStore> {
     fetch_failures: u32,
     write_failures: u32,
     refusals: u32,
+    last_compare_ms: Option<i64>,
+    last_capture_ms: Option<i64>,
+    last_capture_status: Option<&'static str>,
 }
 
 fn content_hash(stocks: &[Row], status: Option<&str>) -> u64 {
@@ -208,6 +219,9 @@ impl<S: DocStore> Runner<S> {
             fetch_failures: 0,
             write_failures: 0,
             refusals: 0,
+            last_compare_ms: None,
+            last_capture_ms: None,
+            last_capture_status: None,
         }
     }
 
@@ -248,7 +262,8 @@ impl<S: DocStore> Runner<S> {
         let now_iso = iso_millis(now_ms);
         let mut fresh_rows: Option<Vec<Row>> = None;
         let backoff = match result {
-            Ok(Fetched::Fresh { feed, etag }) => {
+            Ok(Fetched::Fresh { feed, etag, raw }) => {
+                self.maybe_capture(&raw, feed.market_status, now_ms);
                 self.etag = etag;
                 let SessionInfo { is_open, trading_day, closing_minute, .. } = feed.session.clone();
                 self.day.observe(is_open, trading_day, closing_minute);
@@ -257,8 +272,11 @@ impl<S: DocStore> Runner<S> {
                     .as_ref()
                     .map(|(rows, _)| rows.iter().cloned().map(Value::Object).collect())
                     .unwrap_or_default();
-                if self.cfg.compare_url.is_some() {
+                let compare_due = self.cfg.compare_url.is_some()
+                    && self.last_compare_ms.is_none_or(|t| now_ms - t >= self.cfg.compare_every_ms);
+                if compare_due {
                     fresh_rows = Some(feed.stocks.clone());
+                    self.last_compare_ms = Some(now_ms);
                 }
                 let merged = merge_with_previous(feed.stocks, &previous, now_ms);
                 self.current = Some((merged, feed.market_status));
@@ -303,6 +321,36 @@ impl<S: DocStore> Runner<S> {
         }
         self.maybe_write(now_ms).await;
         backoff
+    }
+
+    /// Saves the raw payload for later golden tests: on the first fetch, on
+    /// every Open/Closed change, and otherwise at most every `capture_every_ms`.
+    fn maybe_capture(&mut self, raw: &Value, status: Option<&'static str>, now_ms: i64) {
+        let Some(dir) = self.cfg.capture_dir.as_ref() else { return };
+        let due = status != self.last_capture_status
+            || self.last_capture_ms.is_none_or(|t| now_ms - t >= self.cfg.capture_every_ms);
+        if !due {
+            return;
+        }
+        let count = std::fs::read_dir(dir).map(|d| d.count()).unwrap_or(0);
+        if count >= MAX_CAPTURES {
+            return;
+        }
+        let stamp = chrono::DateTime::from_timestamp_millis(now_ms)
+            .unwrap_or_default()
+            .with_timezone(&schedule::dhaka())
+            .format("%Y%m%d-%H%M%S");
+        let name = format!("dse-{stamp}-{}.json", status.unwrap_or("unknown").to_lowercase());
+        match serde_json::to_vec(raw).map_err(|e| e.to_string()).and_then(|b| {
+            std::fs::write(dir.join(&name), b).map_err(|e| e.to_string())
+        }) {
+            Ok(()) => {
+                tracing::info!(file = %name, "captured DSE payload");
+                self.last_capture_ms = Some(now_ms);
+                self.last_capture_status = status;
+            }
+            Err(e) => tracing::warn!("capture failed: {e}"),
+        }
     }
 
     fn on_fetch_ok(&mut self, now_ms: i64, now_iso: &str, what: &str) {
@@ -478,7 +526,7 @@ impl<S: DocStore> Runner<S> {
     pub async fn run(mut self, mut shutdown: watch::Receiver<bool>) {
         let now = schedule::dhaka_now();
         let (mut mode, mut next) = schedule::next_poll(now, &self.day, 20);
-        if schedule::in_active_window(now) {
+        if schedule::in_active_window(now) || (self.cfg.rehearsal && self.cfg.dry_run) {
             // Started mid-session (deploy, crash): look straight away rather
             // than waiting for the next probe slot.
             next = now;
@@ -510,7 +558,11 @@ impl<S: DocStore> Runner<S> {
 
             let now = schedule::dhaka_now();
             let jitter = rand::random_range(schedule::LIVE_MIN_SECS..=schedule::LIVE_MAX_SECS);
-            (mode, next) = schedule::next_poll(now, &self.day, jitter);
+            (mode, next) = if self.cfg.rehearsal && self.cfg.dry_run {
+                (Mode::Live, now + Duration::seconds(jitter as i64))
+            } else {
+                schedule::next_poll(now, &self.day, jitter)
+            };
             if let Some(b) = backoff {
                 next = next.max(now + b);
             }
@@ -562,7 +614,11 @@ mod tests {
             project_id: None,
             bind: "127.0.0.1:0".parse().unwrap(),
             dry_run: false,
+            rehearsal: false,
             compare_url: None,
+            compare_every_secs: 300,
+            capture_dir: None,
+            capture_every_secs: 900,
             max_writes_per_day: 3,
             telegram_bot_token: None,
             telegram_chat_id: None,
@@ -580,7 +636,15 @@ mod tests {
         let shared = Shared::new(dry_run, max);
         let http = reqwest::Client::new();
         let alerts = Arc::new(Alerts::new(http.clone(), &cfg()));
-        let rc = RunnerConfig { dry_run, max_writes_per_day: max, compare_url: None };
+        let rc = RunnerConfig {
+            dry_run,
+            rehearsal: false,
+            max_writes_per_day: max,
+            compare_url: None,
+            compare_every_ms: 300_000,
+            capture_dir: None,
+            capture_every_ms: 900_000,
+        };
         (Runner::new(rc, store.clone(), http, alerts, shared.clone(), T0), store, shared)
     }
 
@@ -595,6 +659,7 @@ mod tests {
                 session: SessionInfo { is_open: Some(open), ..Default::default() },
             },
             etag: Some("W/\"x\"".into()),
+            raw: json!({"rows": [], "ltp": ltp}),
         })
     }
 
@@ -729,6 +794,7 @@ mod tests {
                     session: SessionInfo { is_open: Some(false), trading_day: Some(true), ..Default::default() },
                 },
                 etag: None,
+                raw: Value::Null,
             }),
             T0,
         )
@@ -737,6 +803,41 @@ mod tests {
         r.handle_fetch(Ok(Fetched::NotModified), T0).await;
         assert_eq!(r.day.trading_day, None);
         assert_eq!(r.day.dse_open, Some(false));
+    }
+
+    #[tokio::test]
+    async fn captures_first_fetch_status_changes_and_every_interval() {
+        let dir = std::env::temp_dir().join(format!("price-feed-capture-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (mut r, _, _) = runner(true, 100);
+        r.cfg.capture_dir = Some(dir.clone());
+        r.handle_fetch(fresh(300.0, false), T0).await; // first: captured
+        r.handle_fetch(fresh(301.0, false), T0 + 20_000).await; // too soon
+        r.handle_fetch(fresh(302.0, true), T0 + 40_000).await; // Closed -> Open: captured
+        r.handle_fetch(fresh(303.0, true), T0 + 60_000).await; // too soon
+        r.handle_fetch(fresh(304.0, true), T0 + 40_000 + 900_000).await; // interval: captured
+        let mut names: Vec<String> =
+            std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
+        names.sort();
+        assert_eq!(names.len(), 3, "{names:?}");
+        assert!(names[0].ends_with("-closed.json"), "{names:?}");
+        let saved: Value = serde_json::from_slice(&std::fs::read(dir.join(&names[0])).unwrap()).unwrap();
+        assert_eq!(saved["ltp"], json!(300.0), "raw payload is saved as received");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn compare_is_throttled() {
+        let (mut r, _, _) = runner(true, 100);
+        // An unroutable URL: the compare fails fast and only logs.
+        r.cfg.compare_url = Some("http://127.0.0.1:9/never".into());
+        r.handle_fetch(fresh(300.0, true), T0).await;
+        assert_eq!(r.last_compare_ms, Some(T0));
+        r.handle_fetch(fresh(301.0, true), T0 + 20_000).await;
+        assert_eq!(r.last_compare_ms, Some(T0), "no second compare within 5 minutes");
+        r.handle_fetch(fresh(302.0, true), T0 + 300_000).await;
+        assert_eq!(r.last_compare_ms, Some(T0 + 300_000));
     }
 
     #[test]

@@ -32,6 +32,21 @@ of the web app (VM ↔ Vercel) changes nothing here.
 | `GET /v1/snapshot.json` | Last document written to Firestore. `Cache-Control: public, max-age=5, s-maxage=10`, strong `ETag` (= `seq`), `Access-Control-Allow-Origin: *`. `503` until a document exists, and always in dry-run. |
 | `GET /health` | `status` = `healthy` / `degraded` / `starting` / `dry-run`, plus counters. `/api/stock-sync` skips its run only on `healthy`. No secrets in it. |
 
+## Dry-run tools
+
+- **Parity log:** in dry-run, at most once every `COMPARE_EVERY_SECS` (300), the fresh parse is compared
+  with the Python daemon's `/api/market_sync`. Read it with `journalctl -u price-feed | grep parity`. A few
+  price differences during the session are timing, because the daemon caches for 15 s. Differences in the
+  symbol set or field shape are bugs.
+- **Captures:** with `CAPTURE_DIR` set, raw DSE payloads are saved on the first fetch, on every Open/Closed
+  change, and every `CAPTURE_EVERY_SECS` (900), up to 300 files. Turn the interesting ones (pre-open with
+  bonds missing, open, post-close) into golden fixtures with `tests/tools/gen_expected.py`.
+- **Rehearsal** (`REHEARSAL=1`, accepted only with `DRY_RUN=1`): polls on the live 15–25 s schedule
+  whatever the clock says, to exercise the loop outside market hours. Run it as a separate transient unit
+  with its own env file, because `EnvironmentFile` values beat `-E` overrides:
+  `systemd-run --unit=price-feed-rehearsal ... -p EnvironmentFile=<copy with BIND=127.0.0.1:8011, REHEARSAL=1> -p RuntimeMaxSec=130`.
+  The first run (2026-11-18 night) gave intervals of 15–25 s, all `304`, and parity of 419/419 with no field differences.
+
 ## Develop
 
 ```bash

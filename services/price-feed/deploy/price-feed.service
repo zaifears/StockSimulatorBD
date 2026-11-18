@@ -24,6 +24,8 @@ CPUQuota=25%
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
+# The only writable path: raw DSE payloads captured for golden tests (CAPTURE_DIR).
+ReadWritePaths=/home/ubuntu/price-feed/captures
 PrivateTmp=yes
 PrivateDevices=yes
 ProtectKernelTunables=yes

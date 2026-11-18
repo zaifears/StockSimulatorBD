@@ -10,8 +10,18 @@ pub struct Config {
     pub bind: SocketAddr,
     /// Fetch and compare, never write Firestore and never serve a snapshot.
     pub dry_run: bool,
+    /// Dry-run only: poll on the live 15–25 s schedule whatever the clock says,
+    /// to rehearse the loop outside market hours. Refused without DRY_RUN.
+    pub rehearsal: bool,
     /// Python daemon's `/api/market_sync`, compared against in dry-run mode.
     pub compare_url: Option<String>,
+    /// At most one comparison per this many seconds. The Python daemon caches
+    /// for only 15 s, so comparing on every poll would make it fetch DSE too.
+    pub compare_every_secs: u64,
+    /// Save raw DSE payloads here (at most one per `capture_every_secs`, plus
+    /// every Open/Closed change), to turn real sessions into golden fixtures.
+    pub capture_dir: Option<String>,
+    pub capture_every_secs: u64,
     pub max_writes_per_day: u32,
     pub telegram_bot_token: Option<String>,
     pub telegram_chat_id: Option<String>,
@@ -27,6 +37,13 @@ fn flag(name: &str) -> bool {
     var(name).is_some_and(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
 }
 
+fn secs(name: &str, default: u64) -> Result<u64, String> {
+    match var(name) {
+        Some(v) => v.parse().map_err(|e| format!("{name}={v:?}: {e}")),
+        None => Ok(default),
+    }
+}
+
 impl Config {
     pub fn from_env() -> Result<Self, String> {
         let bind = var("BIND").unwrap_or_else(|| "127.0.0.1:8010".into());
@@ -38,12 +55,21 @@ impl Config {
         if var("GOOGLE_APPLICATION_CREDENTIALS").is_none() {
             return Err("GOOGLE_APPLICATION_CREDENTIALS must point at the service-account JSON".into());
         }
+        let dry_run = flag("DRY_RUN");
+        let rehearsal = flag("REHEARSAL");
+        if rehearsal && !dry_run {
+            return Err("REHEARSAL=1 is only allowed together with DRY_RUN=1".into());
+        }
         Ok(Self {
             app_id: var("APP_ID").unwrap_or_else(|| "stocksimulatorbd-dse-v1".into()),
             project_id: var("FIREBASE_PROJECT_ID"),
             bind,
-            dry_run: flag("DRY_RUN"),
+            dry_run,
+            rehearsal,
             compare_url: var("COMPARE_URL"),
+            compare_every_secs: secs("COMPARE_EVERY_SECS", 300)?,
+            capture_dir: var("CAPTURE_DIR"),
+            capture_every_secs: secs("CAPTURE_EVERY_SECS", 900)?,
             max_writes_per_day,
             telegram_bot_token: var("TELEGRAM_BOT_TOKEN"),
             telegram_chat_id: var("TELEGRAM_CHAT_ID"),

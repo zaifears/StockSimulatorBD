@@ -21,8 +21,9 @@ const TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
 pub enum Fetched {
-    /// New data. `etag` is DSE's validator for the next conditional request.
-    Fresh { feed: ParsedFeed, etag: Option<String> },
+    /// New data. `etag` is DSE's validator for the next conditional request;
+    /// `raw` is the payload as received (kept for fixture capture).
+    Fresh { feed: ParsedFeed, etag: Option<String>, raw: Value },
     /// `304 Not Modified`: nothing changed since the last fresh response.
     NotModified,
 }
@@ -83,7 +84,7 @@ async fn attempt(client: &reqwest::Client, url: &str, etag: Option<&str>) -> Att
     if feed.stocks.len() < MIN_STOCKS {
         return Attempt::Retry(format!("{url}: unusually low count ({})", feed.stocks.len()));
     }
-    Attempt::Done(Fetched::Fresh { feed, etag: new_etag })
+    Attempt::Done(Fetched::Fresh { feed, etag: new_etag, raw: body })
 }
 
 /// Fetches DSE live prices. `etag` is the validator from the last fresh response.

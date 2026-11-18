@@ -14,6 +14,8 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .with_target(false)
+        // journald stores raw bytes: colour codes only belong on a terminal.
+        .with_ansi(std::io::IsTerminal::is_terminal(&std::io::stdout()))
         .init();
 
     if let Err(e) = run().await {
@@ -47,8 +49,12 @@ async fn run() -> Result<(), String> {
     let now_ms = chrono::Utc::now().timestamp_millis();
     let rc = RunnerConfig {
         dry_run: cfg.dry_run,
+        rehearsal: cfg.rehearsal,
         max_writes_per_day: cfg.max_writes_per_day,
         compare_url: cfg.compare_url.clone(),
+        compare_every_ms: cfg.compare_every_secs as i64 * 1000,
+        capture_dir: cfg.capture_dir.clone().map(std::path::PathBuf::from),
+        capture_every_ms: cfg.capture_every_secs as i64 * 1000,
     };
     let mut runner = Runner::new(rc, store, http.clone(), alerts.clone(), shared.clone(), now_ms);
 
@@ -92,7 +98,7 @@ async fn run() -> Result<(), String> {
     let runner_task = tokio::spawn(runner.run(stop_rx.clone()));
 
     let listener = tokio::net::TcpListener::bind(cfg.bind).await.map_err(|e| format!("bind {}: {e}", cfg.bind))?;
-    tracing::info!(bind = %cfg.bind, dry_run = cfg.dry_run, max_writes = cfg.max_writes_per_day, "price-feed started");
+    tracing::info!(bind = %cfg.bind, dry_run = cfg.dry_run, rehearsal = cfg.rehearsal, max_writes = cfg.max_writes_per_day, "price-feed started");
 
     let mut server_stop = stop_rx.clone();
     let serve = axum::serve(listener, server::router(shared)).with_graceful_shutdown(async move {
@@ -116,7 +122,7 @@ async fn run() -> Result<(), String> {
 async fn check_dse(http: &reqwest::Client) -> Result<(), String> {
     use price_feed::dse::{fetch, Fetched};
     let etag = match fetch(http, None).await.map_err(|e| e.to_string())? {
-        Fetched::Fresh { feed, etag } => {
+        Fetched::Fresh { feed, etag, .. } => {
             println!(
                 "fresh: {} stocks, marketStatus={:?}, tradingDay={:?}, closing={:?}, etag={:?}",
                 feed.stocks.len(),
