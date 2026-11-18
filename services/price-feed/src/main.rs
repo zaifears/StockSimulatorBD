@@ -41,6 +41,10 @@ async fn run() -> Result<(), String> {
 
     let cfg = Config::from_env()?;
 
+    if std::env::args().any(|a| a == "--self-test-write") {
+        return self_test_write(&http, &cfg).await;
+    }
+
     let doc_path = format!("artifacts/{}/public/data/market_info/latest", cfg.app_id);
     let store = Firestore::new(http.clone(), cfg.project_id.clone(), &doc_path).await?;
     let shared = Shared::new(cfg.dry_run, cfg.max_writes_per_day);
@@ -114,6 +118,52 @@ async fn run() -> Result<(), String> {
         let _ = server_task.await;
     })
     .await;
+    Ok(())
+}
+
+/// `price-feed --self-test-write`: proves the Firestore write path without
+/// touching `market_info/latest`. 2 reads, 1 write, 1 delete.
+///
+/// 1. Reads the production document raw and checks that decode → encode gives
+///    back exactly the same typed values, so documents we write are
+///    indistinguishable from the ones `/api/stock-sync` writes.
+/// 2. Writes a full copy to `price_feed_selftest/latest`, reads it back,
+///    compares, and deletes it.
+async fn self_test_write(http: &reqwest::Client, cfg: &Config) -> Result<(), String> {
+    use price_feed::firestore::{decode_fields, encode_fields};
+    use serde_json::Value;
+
+    let prod_path = format!("artifacts/{}/public/data/market_info/latest", cfg.app_id);
+    let prod = Firestore::new(http.clone(), cfg.project_id.clone(), &prod_path).await?;
+    let raw = prod.get_raw().await.map_err(|e| format!("read production doc: {e}"))?;
+    let decoded = decode_fields(Some(&raw));
+    let reencoded = Value::Object(encode_fields(&decoded));
+    let stocks = decoded.get("stocks").and_then(Value::as_array).map_or(0, Vec::len);
+    if reencoded != raw {
+        let diffs = raw
+            .as_object()
+            .map(|o| o.iter().filter(|(k, v)| reencoded.get(*k) != Some(*v)).map(|(k, _)| k.clone()).collect::<Vec<_>>())
+            .unwrap_or_default();
+        return Err(format!("encoding differs from production for fields {diffs:?}"));
+    }
+    println!("1/3 production doc ({stocks} stocks): decode -> encode is identical to what stock-sync wrote");
+
+    let test = Firestore::new(http.clone(), cfg.project_id.clone(), "price_feed_selftest/latest").await?;
+    let mut doc = decoded.clone();
+    doc.insert("source".into(), Value::from("price-feed-selftest"));
+    doc.insert("lastUpdated".into(), Value::from(price_feed::transform::iso_millis(chrono::Utc::now().timestamp_millis())));
+    let size = serde_json::to_vec(&encode_fields(&doc)).map_or(0, |b| b.len());
+    let started = std::time::Instant::now();
+    test.set(&doc).await.map_err(|e| format!("write: {e}"))?;
+    println!("2/3 wrote price_feed_selftest/latest ({size} bytes encoded) in {} ms", started.elapsed().as_millis());
+
+    let back = test.get().await.map_err(|e| format!("read back: {e}"))?;
+    let same = back == doc;
+    test.delete().await.map_err(|e| format!("delete: {e}"))?;
+    if !same {
+        return Err("read-back differs from what was written".into());
+    }
+    println!("3/3 read back identical, throwaway document deleted");
     Ok(())
 }
 

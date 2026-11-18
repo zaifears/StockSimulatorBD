@@ -133,6 +133,12 @@ impl Firestore {
 
     /// Reads the document as plain JSON. One Firestore read.
     pub async fn get(&self) -> Result<Map<String, Value>, FirestoreError> {
+        let raw = self.get_raw().await?;
+        Ok(decode_fields(Some(&raw)))
+    }
+
+    /// Reads the document's `fields` exactly as Firestore returns them (typed values).
+    pub async fn get_raw(&self) -> Result<Value, FirestoreError> {
         let res = self
             .http
             .get(&self.doc_url)
@@ -146,7 +152,24 @@ impl Firestore {
             return Err(Self::classify(status, &body));
         }
         let doc: Value = serde_json::from_str(&body).map_err(|e| FirestoreError::Other(e.to_string()))?;
-        Ok(decode_fields(doc.get("fields")))
+        Ok(doc.get("fields").cloned().unwrap_or(Value::Object(Map::new())))
+    }
+
+    /// Deletes the document. Used only by `--self-test-write` on its throwaway document.
+    pub async fn delete(&self) -> Result<(), FirestoreError> {
+        let res = self
+            .http
+            .delete(&self.doc_url)
+            .header("Authorization", self.bearer().await?)
+            .send()
+            .await
+            .map_err(|e| FirestoreError::Other(e.to_string()))?;
+        let status = res.status();
+        if status.is_success() {
+            return Ok(());
+        }
+        let text = res.text().await.unwrap_or_default();
+        Err(Self::classify(status, &text))
     }
 
     /// Replaces the whole document, like the Admin SDK's `set()`. One Firestore write.

@@ -4,8 +4,14 @@ Status: **Phase 1 built** (2026-11-18): `services/price-feed/` (Rust, 38 tests),
 `app/api/stock-sync/route.ts`, which does nothing until `PRICE_FEED_HEALTH_URL` is set.
 **Phase 2 started 2026-11-18:** the service runs in dry-run on the scraper VPS (x86_64, 1 GB, ~8–13 MB RSS) behind
 `live.shahoriar.bd` (Cloudflare proxied, Full (strict), origin certificate). Its first real session is 2026-11-19.
-It has read Firestore with the dedicated `price-feed@` service account; it has **not yet written** (dry-run by design).
-The Cloudflare cache rule for a `200` snapshot can't be tested until a snapshot is served (Phase 3).
+Verified the same night: the Firestore write path (a full copy written to a throwaway document, read back identical, deleted;
+encoding identical to stock-sync's), the Cloudflare cache rule (MISS → HIT → EXPIRED at 10 s), and Telegram.
+Tables are in `services/price-feed/README.md`.
+
+**What tomorrow's dry run decides:** whether the parity log stays clean through a real pre-open, open and close,
+and whether the schedule follows DSE's day. If it does, Phase 3 (the service writes) can go ahead.
+**Still to build before users see 20-second prices:** Phase 4 (slippage guard in the trade route) and Phase 5 (client polling of
+the snapshot). Both are code in the web app, independent of the dry-run result.
 Goal: prices on `/trade`, `/stocks/*` and `/portfolio` refresh every 15–25 s during
 the DSE session, with **no gap between the price a trader sees and the price a
 trade fills at**, inside the Firebase Spark free tier, and still working if the

@@ -47,6 +47,24 @@ of the web app (VM ↔ Vercel) changes nothing here.
   `systemd-run --unit=price-feed-rehearsal ... -p EnvironmentFile=<copy with BIND=127.0.0.1:8011, REHEARSAL=1> -p RuntimeMaxSec=130`.
   The first run (2026-11-18 night) gave intervals of 15–25 s, all `304`, and parity of 419/419 with no field differences.
 
+## Verified before the first session (2026-11-18 night)
+
+| Check | Result |
+|---|---|
+| `--check-dse` from the VPS IP | 419 stocks, `304` on the conditional request |
+| `--self-test-write` (env from `.env`) | Production doc: decode → encode identical to what stock-sync wrote (419 stocks). A full 167 KB write to the throwaway `price_feed_selftest/latest` took 742 ms; read-back identical; doc deleted |
+| Rehearsal (2 min, live schedule) | Intervals 15–25 s, all `304`, parity 419/419 with no field differences, payload captured |
+| Cloudflare cache rule (temporary Caddy probe with the snapshot's headers) | `MISS` → `HIT` (Age 1, 2) → `EXPIRED` after 10 s; probe removed |
+| `live.shahoriar.bd/health` from the web VM | `200` in 0.2 s (the standby rule's path) |
+| Telegram (`getMe`, `getChat`, nothing sent) | Token valid, chat reachable |
+| VPS | NTP synced, unit enabled, ~8–16 MB RSS, `price-feed.prev` kept for rollback |
+
+Run the self-test again after any change to `firestore.rs`:
+
+```bash
+cd ~/price-feed && (set -a; . ./.env; set +a; ./price-feed --self-test-write)
+```
+
 ## Develop
 
 ```bash
