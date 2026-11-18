@@ -17,6 +17,34 @@ const VPS_RETRY_COOLDOWN_MS = 15 * 60 * 1000;
 
 type PriceSource = 'dse' | 'dse-direct' | 'lankabd-failsafe';
 
+// ── Standby while price-feed is primary ─────────────────────────────────────
+// services/price-feed (Rust, on the scraper VPS) writes market_info/latest
+// every 15–25 s while DSE is live and sends nothing while it's closed. When
+// its /health says "healthy", this cron has nothing to add: skip before any
+// Firestore read or DSE request. Anything else (unset URL, timeout, "degraded",
+// "starting", "dry-run") runs the normal sync below. price-failsafe-sync still
+// checks lastUpdated independently, so a feed that wrongly reports itself
+// healthy is still caught within 15 minutes.
+const PRICE_FEED_TIMEOUT_MS = 2000;
+
+async function priceFeedStatus(): Promise<{ healthy: boolean; detail: string } | null> {
+  const url = process.env.PRICE_FEED_HEALTH_URL?.trim();
+  if (!url) return null;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'StockSimulatorBD-Sync/1.0' },
+      signal: AbortSignal.timeout(PRICE_FEED_TIMEOUT_MS),
+      cache: 'no-store',
+    });
+    if (!res.ok) return { healthy: false, detail: `HTTP ${res.status}` };
+    const body = await res.json();
+    const status = typeof body?.status === 'string' ? body.status : 'unknown';
+    return { healthy: status === 'healthy', detail: status };
+  } catch (err: any) {
+    return { healthy: false, detail: err?.message || 'unreachable' };
+  }
+}
+
 // DSE's live feed drops some instruments (corporate bonds, debentures) between
 // its pre-open reset and the session start, then adds them back. A write in
 // that window would make those holdings vanish from market_info/latest and be
@@ -117,6 +145,22 @@ export async function GET(request: NextRequest) {
   const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID;
   if (!appId) {
     return NextResponse.json({ error: 'DB write failed: NEXT_PUBLIC_SIMULATOR_APP_ID env var is not set' }, { status: 500 });
+  }
+
+  const priceFeed = await priceFeedStatus();
+  if (priceFeed?.healthy) {
+    return NextResponse.json(
+      {
+        success: true,
+        skipped: true,
+        message: 'price-feed is healthy and is the primary writer; nothing to do.',
+        timestamp: new Date().toISOString(),
+      },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    );
+  }
+  if (priceFeed) {
+    console.warn(`[stock-sync] price-feed not healthy (${priceFeed.detail}); syncing as usual`);
   }
 
   const marketRef = getAdminDb()

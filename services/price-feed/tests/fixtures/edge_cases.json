@@ -1,0 +1,21 @@
+{
+  "cols": ["code","ltp","ycp","open","high","low","close","volume","value","trades","percent","category","board","sector","assetType"],
+  "rows": [
+    ["gp ", 312.4, 310, 311, 313, 309.5, 312.4, 120000, 37.488, 900, 0.7741935483870968, "A", "PUBLIC", "Telecom", "EQ"],
+    ["UNTRADED", 0, 45.6, 0, 0, 0, 45.6, 0, 0, 0, null, "B", "PUBLIC", "Bank", "EQ"],
+    ["CLOSEONLY", 0, 10, 0, 0, 0, 10.5, 0, 0, 3, 5, "B", "PUBLIC", "Bank", "EQ"],
+    ["DASHES", "--", "--", "--", "--", "--", "--", "--", "--", "--", "--", "Z", "PUBLIC", "Misc", "EQ"],
+    ["STRNUM", "12.30", "12", "12", "12.5", "11.9", "12.3", "1500", "0.018", "7", "2.5", "N", "PUBLIC", "Misc", "EQ"],
+    ["BADNUM", "abc", 10, 0, 0, 0, 0, 0, 0, 0, 0, "A", "PUBLIC", "Misc", "EQ"],
+    ["TB5Y0728", 101.2, 101, 0, 0, 0, 0, 0, 0, 0, 0, "A", "YIELDDBT", "TBond", "GOVDBT"],
+    ["GSEC1", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, "A", "PUBLIC", "Misc", "EQ"],
+    ["BGTB1", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, "A", "PUBLIC", "Misc", "EQ"],
+    ["SECTORGOV", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, "A", "PUBLIC", "Treasury Bills", "EQ"],
+    ["TRADING CODE", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, "A", "PUBLIC", "Misc", "EQ"],
+    ["", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, "A", "PUBLIC", "Misc", "EQ"],
+    ["SHORT", 5.5],
+    ["ROUNDTIE", 2.675, 0.125, 0, 0, 0, 0, 10, 0.0000025, 1, -0.125, "A", "DEBT", "Corp. Bond", "CB"],
+    ["NEGZERO", 10.001, 10.004, 0, 0, 0, 0, 10, 0, 1, -0.001, "A", "PUBLIC", "Misc", "EQ"]
+  ],
+  "session": {"isOpen": true, "phase": "open", "tradingDay": true, "closing": "14:00", "today": {"closing": "14:00", "postClosing": "14:10"}}
+}

@@ -17,6 +17,9 @@ LICENSE
 !app/api/
 !app/api/**
 
+# Rust price-feed service: runs on the scraper VPS, never part of a web build
+/services/
+
 # Local test & audit logs
 lighthouse-report.html
 lighthouse-report.json

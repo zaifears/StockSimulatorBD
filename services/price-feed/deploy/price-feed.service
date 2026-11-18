@@ -1,0 +1,41 @@
+[Unit]
+Description=StockSimulatorBD price-feed (single writer of market_info/latest)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/price-feed
+EnvironmentFile=/home/ubuntu/price-feed/.env
+ExecStart=/home/ubuntu/price-feed/price-feed
+Restart=always
+RestartSec=5s
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# A few MB in practice; the cap only guards against a runaway.
+MemoryMax=64M
+CPUQuota=25%
+
+# Sandboxing: the binary needs the network, its .env and the key file, nothing else.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=price-feed
+
+[Install]
+WantedBy=multi-user.target
