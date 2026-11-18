@@ -2,6 +2,9 @@
 Description=StockSimulatorBD price-feed (single writer of market_info/latest)
 After=network-online.target
 Wants=network-online.target
+# Give up after 10 crashes in 5 minutes instead of looping forever.
+StartLimitIntervalSec=300
+StartLimitBurst=10
 
 [Service]
 Type=simple
@@ -12,8 +15,6 @@ EnvironmentFile=/home/ubuntu/price-feed/.env
 ExecStart=/home/ubuntu/price-feed/price-feed
 Restart=always
 RestartSec=5s
-StartLimitIntervalSec=300
-StartLimitBurst=10
 
 # A few MB in practice; the cap only guards against a runaway.
 MemoryMax=64M

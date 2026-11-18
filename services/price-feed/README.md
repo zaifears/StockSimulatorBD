@@ -49,13 +49,25 @@ python -I tests/tools/gen_expected.py tests/fixtures/edge_cases.json tests/fixtu
 
 ## Build for the VPS
 
-Check the target first: `ssh <vps> 'uname -m; free -m'`.
+The scraper VPS (`zaifears-oracle`, `ubuntu@130.210.33.96`, key `E:\.ssh\ssh-zaifears-oracle.key`) is an
+**x86_64, 1 GB RAM** Ubuntu 22.04 box (glibc 2.35) that also runs Uptime Kuma, Vaultwarden and the Python
+daemon. **Never build there.** Cross-compile on Windows with Zig (TLS uses `ring`, so there's no CMake step):
 
-- If it has a GB or more free: install rustup there and run `cargo build --release`.
-- Otherwise cross-compile (TLS uses `ring`, so there's no CMake step):
-  `cargo zigbuild --release --target aarch64-unknown-linux-gnu` (or `x86_64-unknown-linux-gnu`).
+```bash
+python -m pip install --user ziglang
+cargo install cargo-zigbuild --locked
+rustup target add x86_64-unknown-linux-gnu
+CARGO_ZIGBUILD_ZIG_PATH="$(python -c "import ziglang,os;print(os.path.join(os.path.dirname(ziglang.__file__),'zig.exe'))")" \
+  cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.35
+```
 
-## Install (Phase 2, dry-run)
+The output is `target/x86_64-unknown-linux-gnu/release/price-feed` (~6.6 MB). To release it: `scp` it
+to `~/price-feed/price-feed.new`, then run `mv` over the old binary and `sudo systemctl restart price-feed`.
+
+## Install (Phase 2, dry-run): done 2026-11-18
+
+Running on the scraper VPS as `price-feed.service` with `DRY_RUN=1`. It uses about 8–13 MB, and
+`https://live.shahoriar.bd/health` answers through Cloudflare. The steps, for a rebuild:
 
 1. `mkdir ~/price-feed`, copy the binary there, and copy `deploy/env.example` to `~/price-feed/.env` (`chmod 600`).
 2. Create a dedicated service account (`roles/datastore.user`). Put its key at

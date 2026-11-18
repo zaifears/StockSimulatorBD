@@ -8,3 +8,7 @@
 *.yml text eol=lf
 *.json text eol=lf
 *.sh text eol=lf
+# Files copied to Linux hosts as-is (systemd units, env templates, Caddy)
+services/price-feed/deploy/* text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf

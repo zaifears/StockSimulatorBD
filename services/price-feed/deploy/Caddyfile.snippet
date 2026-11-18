@@ -1,8 +1,17 @@
-# Add to the scraper VPS Caddyfile. live.shahoriar.bd is a PROXIED (orange
-# cloud) record on the shahoriar.bd Cloudflare zone; dse.shahoriar.bd stays
-# DNS-only and unchanged.
+# As deployed on the scraper VPS (zaifears-oracle) on 2026-11-18, appended to
+# /etc/caddy/Caddyfile. live.shahoriar.bd is a PROXIED (orange cloud) record on
+# the shahoriar.bd Cloudflare zone; dse.shahoriar.bd stays DNS-only.
+#
+# TLS: Cloudflare Origin Certificate (zone SSL mode "Full (strict)"), because
+# Let's Encrypt challenges are unreliable behind the orange cloud. Files:
+# /etc/caddy/certs/live.shahoriar.bd.{pem,key}, root:caddy, key mode 640.
+# Expires 2041-11-14.
+
 live.shahoriar.bd {
-	# Only the two public paths; everything else is 404.
+	tls /etc/caddy/certs/live.shahoriar.bd.pem /etc/caddy/certs/live.shahoriar.bd.key
+	import vps_security_headers
+	encode zstd gzip
+
 	@public path /v1/snapshot.json /health
 	handle @public {
 		reverse_proxy 127.0.0.1:8010
@@ -10,5 +19,4 @@ live.shahoriar.bd {
 	handle {
 		respond 404
 	}
-	encode zstd gzip
 }

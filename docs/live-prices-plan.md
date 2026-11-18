@@ -1,7 +1,11 @@
 # Live prices every ~20 seconds: production plan
 
 Status: **Phase 1 built** (2026-11-18): `services/price-feed/` (Rust, 38 tests), plus the standby rule in
-`app/api/stock-sync/route.ts`, which does nothing until `PRICE_FEED_HEALTH_URL` is set. Nothing is deployed.
+`app/api/stock-sync/route.ts`, which does nothing until `PRICE_FEED_HEALTH_URL` is set.
+**Phase 2 started 2026-11-18:** the service runs in dry-run on the scraper VPS (x86_64, 1 GB, ~8–13 MB RSS) behind
+`live.shahoriar.bd` (Cloudflare proxied, Full (strict), origin certificate). Its first real session is 2026-11-19.
+It has read Firestore with the dedicated `price-feed@` service account; it has **not yet written** (dry-run by design).
+The Cloudflare cache rule for a `200` snapshot can't be tested until a snapshot is served (Phase 3).
 Goal: prices on `/trade`, `/stocks/*` and `/portfolio` refresh every 15–25 s during
 the DSE session, with **no gap between the price a trader sees and the price a
 trade fills at**, inside the Firebase Spark free tier, and still working if the
