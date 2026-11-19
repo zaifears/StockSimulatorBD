@@ -59,3 +59,13 @@ fn live_feed_closed_session_matches_python() {
 fn edge_cases_match_python() {
     check("edge_cases.json", "edge_cases.expected.json");
 }
+
+#[test]
+fn real_session_2026_11_19_matches_python() {
+    // Pre-open (bonds missing, status Closed), mid-session (Open, 22 bonds absent
+    // all session) and the 14:00 close (all 419 back).
+    for (name, rows) in [("preopen_2026-11-19", 395), ("open_2026-11-19", 397), ("close_2026-11-19", 419)] {
+        let n = check(&format!("{name}.json"), &format!("{name}.expected.json"));
+        assert_eq!(n, rows, "{name}");
+    }
+}

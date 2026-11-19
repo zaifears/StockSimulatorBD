@@ -19,6 +19,34 @@ web app ever moves back to Vercel Hobby.
 
 ---
 
+## 0. Dry run, day 1 (Thursday 2026-11-19): results
+
+| Question | Result |
+|---|---|
+| Parser matches Python? | **Yes, bit for bit.** 17 captured payloads (pre-open → close), 6,765 rows. 3 of them are now golden fixtures. The live parity log matched symbol sets in all ~45 checks; 11 showed live-field differences only, which is the daemon's 15 s cache (offline comparison of the same payloads is exact). |
+| Schedule follows DSE's day? | **Yes.** 09:45 warmup (60 s), DSE Open seen at 10:01:01, live 10:01–14:00 (714 gaps: min 15.0 s, max 25.2 s, mean 20.1 s), closing tail to 14:15, then sleep until 09:45 Friday. 747 DSE requests, 0 errors, 0 refusals, 0 restarts. |
+| How often does DSE's data really change? | **About every 2 minutes** (median 119 s, 125 updates in the session, 30–33 per hour). The 15 s is only CloudFront's cache time. **Prices cannot be fresher than ~2 min from this feed**, whatever we poll. Still far better than today (3-min cron + 3-min client read = up to ~6 min). |
+| Firestore writes it would have made | **132** for the whole day (0 heartbeats needed). The 1,500 cap is ~11× that. |
+| Bonds missing from the feed | **22 bonds/debentures are absent for the whole session**, not just pre-open (`*PBOND`, `DEB*`, `BANKASI1PB`). They return at 14:00. Carry-forward kept all 419 in every document, as stock-sync already does. `BEXGSUKUK` and `IBBL2PBOND` are missing pre-open only. |
+| Production | Unaffected: `/api/health` healthy all day, stock-sync last wrote at 14:57. |
+| Seen in passing | ~14:54 DSE briefly served **0 rows**. The Python daemon logged an error and served its cache. price-feed was asleep by then; its < 50-row guard would have treated it as a transient failure. |
+
+**Verdict:** the parsing and the schedule are ready for Phase 3. Before Phase 3:
+1. Deploy the web app so `/api/stock-sync` has the standby rule (blocked on 2026-11-18; needs the owner's go-ahead).
+2. ~~Adaptive polling~~ **done (4.4.26)**: simulated on Thursday's real timeline, 718 → 384 requests per session (−47%), mean lag 10.3 → 10.0 s.
+   Also fixed: heartbeats now cover the whole 10:00–14:15 session clock on trading days, not only while DSE says Open,
+   and a weekday DSE never opens is probed every 10 min. Without this, a long halt or an unlisted closure would have let
+   `lastUpdated` age past 15 min and set off price-failsafe-sync and `/api/health`, which stock-sync's 3-min rewrites always prevented.
+   Original note: **adaptive polling.** After a change, wait ~90 s, then poll every 15 s until the next change.
+   That's about 3–4 requests per DSE update instead of ~6: roughly **450 instead of 750 DSE requests a day**, with the same or better
+   detection lag (~8 s). It's kinder to DSE and to the shared VPS IP.
+3. Flip `DRY_RUN=0` before 09:45 on a trading day (next one: Sunday 2026-11-22), then set `PRICE_FEED_HEALTH_URL` on the web app.
+
+Still open: Friday's 09:45 request shows whether DSE reports `tradingDay: false` on weekends. It runs on its own tomorrow; check
+`journalctl -u price-feed --since today`.
+
+---
+
 ## 1. Decisions in one screen
 
 | Question | Decision |

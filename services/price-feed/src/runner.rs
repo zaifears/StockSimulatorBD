@@ -22,9 +22,10 @@ use crate::firestore::{Firestore, FirestoreError};
 use crate::schedule::{self, DayState, Mode};
 use crate::transform::{iso_millis, merge_with_previous, Row, SessionInfo};
 
-/// While DSE is Open, write at least this often even if nothing changed, so the
-/// trade route's 20-minute status check and the failsafe's 15-minute staleness
-/// alarm keep seeing a live feed.
+/// While DSE is Open, or inside the trade route's session clock on a trading
+/// day (halts, a closure DSE never lifts), write at least this often even if
+/// nothing changed: the trade route trusts DSE's status for 20 min, and
+/// price-failsafe-sync and /api/health call a feed older than 15 min dead.
 pub const HEARTBEAT_MS: i64 = 5 * 60 * 1000;
 /// After a transient failure, wait at least this long before the next try.
 pub const TRANSIENT_RETRY_SECS: i64 = 30;
@@ -183,6 +184,10 @@ fn dhaka_date_of(ms: i64) -> chrono::NaiveDate {
         .date_naive()
 }
 
+fn dhaka_naive(ms: i64) -> NaiveDateTime {
+    chrono::DateTime::from_timestamp_millis(ms).unwrap_or_default().with_timezone(&schedule::dhaka()).naive_local()
+}
+
 fn as_market_status(v: Option<&Value>) -> Option<&'static str> {
     match v.and_then(Value::as_str) {
         Some("Open") => Some("Open"),
@@ -265,6 +270,7 @@ impl<S: DocStore> Runner<S> {
             Ok(Fetched::Fresh { feed, etag, raw }) => {
                 self.maybe_capture(&raw, feed.market_status, now_ms);
                 self.etag = etag;
+                self.day.last_change = Some(dhaka_naive(now_ms));
                 let SessionInfo { is_open, trading_day, closing_minute, .. } = feed.session.clone();
                 self.day.observe(is_open, trading_day, closing_minute);
                 let previous: Vec<Value> = self
@@ -378,7 +384,7 @@ impl<S: DocStore> Runner<S> {
         let Some((stocks, status)) = self.current.as_ref() else { return };
         let hash = content_hash(stocks, *status);
         let changed = self.last_written_hash != Some(hash);
-        let heartbeat_due = self.day.dse_open == Some(true)
+        let heartbeat_due = (self.day.dse_open == Some(true) || self.day.needs_heartbeat(dhaka_naive(now_ms)))
             && self.last_write_ms.is_none_or(|t| now_ms - t >= HEARTBEAT_MS);
         if !changed && !heartbeat_due {
             return;
@@ -525,7 +531,7 @@ impl<S: DocStore> Runner<S> {
     /// Runs until `shutdown` flips to true.
     pub async fn run(mut self, mut shutdown: watch::Receiver<bool>) {
         let now = schedule::dhaka_now();
-        let (mut mode, mut next) = schedule::next_poll(now, &self.day, 20);
+        let (mut mode, mut next) = schedule::next_poll(now, &self.day, schedule::Jitter::random());
         if schedule::in_active_window(now) || (self.cfg.rehearsal && self.cfg.dry_run) {
             // Started mid-session (deploy, crash): look straight away rather
             // than waiting for the next probe slot.
@@ -557,9 +563,9 @@ impl<S: DocStore> Runner<S> {
             let backoff = self.handle_fetch(result, chrono::Utc::now().timestamp_millis()).await;
 
             let now = schedule::dhaka_now();
-            let jitter = rand::random_range(schedule::LIVE_MIN_SECS..=schedule::LIVE_MAX_SECS);
+            let jitter = schedule::Jitter::random();
             (mode, next) = if self.cfg.rehearsal && self.cfg.dry_run {
-                (Mode::Live, now + Duration::seconds(jitter as i64))
+                (Mode::Live, now + Duration::seconds(jitter.fast_secs as i64))
             } else {
                 schedule::next_poll(now, &self.day, jitter)
             };
@@ -708,11 +714,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn no_heartbeat_while_closed() {
+    async fn no_heartbeat_while_closed_outside_the_session_clock() {
         let (mut r, store, _) = runner(false, 100);
-        r.handle_fetch(fresh(300.0, false), T0).await;
-        r.handle_fetch(Ok(Fetched::NotModified), T0 + HEARTBEAT_MS * 3).await;
+        let evening = T0 + 5 * 3_600_000; // 15:00 Dhaka
+        r.handle_fetch(fresh(300.0, false), evening).await;
+        r.handle_fetch(Ok(Fetched::NotModified), evening + HEARTBEAT_MS * 3).await;
         assert_eq!(store.writes.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn heartbeat_while_closed_inside_the_session_clock() {
+        // A Thursday DSE never opens (unlisted closure, long halt): lastUpdated
+        // must not age past the failsafe's 15 minutes.
+        let (mut r, store, _) = runner(false, 100);
+        r.handle_fetch(fresh(300.0, false), T0 + 3_600_000).await; // 11:00 Dhaka
+        r.handle_fetch(Ok(Fetched::NotModified), T0 + 3_600_000 + HEARTBEAT_MS).await;
+        assert_eq!(store.writes.load(Ordering::SeqCst), 2);
     }
 
     #[tokio::test]
