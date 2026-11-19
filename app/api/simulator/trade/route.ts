@@ -20,6 +20,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { isMarketOpenCorroborated } from '@/lib/utils/marketHours';
 import { COMMISSION_RATE, moneyAdd, moneySubtract, moneyMultiply, roundMoney } from '@/lib/utils/money';
+import { checkSlippage, isValidQuote } from '@/lib/utils/slippage';
 import {
   addTradingDays,
   dhakaDateKey,
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { symbol: rawSymbol, type, quantity } = body || {};
+    const { symbol: rawSymbol, type, quantity, quotedPrice } = body || {};
 
     if (typeof rawSymbol !== 'string' || !rawSymbol.trim()) {
       return NextResponse.json({ success: false, error: 'Invalid Stock' }, { status: 400 });
@@ -116,6 +117,11 @@ export async function POST(req: NextRequest) {
     }
     if (!Number.isInteger(quantity) || quantity <= 0 || quantity > MAX_QUANTITY) {
       return NextResponse.json({ success: false, error: 'Quantity must be a positive integer' }, { status: 400 });
+    }
+    // Optional: the price the trader saw. Only ever compared (slippage guard
+    // below), never used for the fill. Older clients don't send it.
+    if (quotedPrice !== undefined && !isValidQuote(quotedPrice)) {
+      return NextResponse.json({ success: false, error: 'Invalid quoted price' }, { status: 400 });
     }
 
     const db = getFirestore();
@@ -179,6 +185,25 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'This stock has not traded today, so there is no live price to trade at.' },
         { status: 400 }
       );
+    }
+
+    // Slippage guard: if the price moved more than max(0.5%, ৳0.10) since the
+    // trader's quote, refuse with the current price instead of filling at a
+    // price they didn't see. The fill below still uses stock.ltp either way.
+    if (quotedPrice !== undefined) {
+      const slip = checkSlippage(quotedPrice, stock.ltp);
+      if (!slip.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'PRICE_MOVED',
+            error: `The price of ${symbol} moved from ৳${quotedPrice.toFixed(2)} to ৳${stock.ltp.toFixed(2)}. Check the new price and place the order again.`,
+            quotedPrice,
+            currentPrice: stock.ltp,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Settlement is decided by DSE market category (A/B/G/N settle T+2, Z settles

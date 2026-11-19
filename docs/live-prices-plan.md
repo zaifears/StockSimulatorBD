@@ -38,6 +38,13 @@ web app ever moves back to Vercel Hobby.
 - the snapshot is cached by Cloudflare (HIT, `304` on revalidation, 14.8 KB zstd to browsers). Caddy's `encode` had to go: it rewrote the ETag and blocked caching
 - the first real writes happen at Friday 09:45 (one, if the feed changed); the first full written session is Sunday 2026-11-22
 
+**Phases 4 and 5 built 2026-11-19 (4.4.28):**
+- trade route slippage guard (`lib/utils/slippage.ts`, 0.5% with a ৳0.10 floor, compared in integer paisa)
+- `useSimulator` polls the snapshot every 20 s from 09:45 to 14:30 and every 3 min otherwise, with ETag revalidation. Firestore fallback: 3 failures pause the snapshot for 10 min; a snapshot older than 6 min in session triggers a Firestore read (at most every 3 min); a `PRICE_MOVED` rejection triggers an immediate Firestore read; it never steps back to an older document
+- CSP `connect-src` gets the snapshot origin from `NEXT_PUBLIC_LIVE_SNAPSHOT_URL`
+
+To turn browser polling off: remove that var from `.env.local` and redeploy; browsers go back to Firestore every 3 min.
+
 Rollback, fastest first: `sudo systemctl stop price-feed` (stock-sync resumes on its next tick), or restore
 `~/price-feed/.env.dry-run.bak` and restart, and/or remove `PRICE_FEED_HEALTH_URL` from the web VM's `.env` and restart `stocksimulator-web`.
 

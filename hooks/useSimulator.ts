@@ -84,6 +84,29 @@ export interface MarketInfo {
   marketStatus?: string | null;
 }
 
+// Live snapshot served by services/price-feed (docs/live-prices-plan.md). Unset = Firestore only.
+const LIVE_SNAPSHOT_URL = (process.env.NEXT_PUBLIC_LIVE_SNAPSHOT_URL || '').trim();
+/** Inside the session clock a snapshot older than this means price-feed stopped writing. */
+const STALE_SNAPSHOT_MS = 6 * 60_000;
+/** While the snapshot is stale, read Firestore at most this often (today's old cadence). */
+const STALE_FALLBACK_INTERVAL_MS = 3 * 60_000;
+
+function dhakaMinuteOfDay(now = new Date()): number {
+  return (now.getUTCHours() * 60 + now.getUTCMinutes() + 360) % 1440;
+}
+
+/** The trade route's session clock, 10:00–14:15 Dhaka (lib/utils/marketHours.ts). */
+function inSessionClock(now = new Date()): boolean {
+  const m = dhakaMinuteOfDay(now);
+  return m >= 600 && m < 855;
+}
+
+/** 20 s around the session (09:45–14:30 Dhaka) when the live snapshot is on; 3 min otherwise. */
+function pollIntervalSecs(): number {
+  const m = dhakaMinuteOfDay();
+  return LIVE_SNAPSHOT_URL && m >= 585 && m < 870 ? 20 : 180;
+}
+
 export const useSimulator = () => {
   const { user } = useAuth();
   // Firestore, loaded once there is a signed-in user (see lib/firebaseLoader.ts).
@@ -114,7 +137,7 @@ export const useSimulator = () => {
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [transactionMessage, setTransactionMessage] = useState('');
   const [bangladeshHolidays, setBangladeshHolidays] = useState<string[]>([]);
-  const [nextUpdateIn, setNextUpdateIn] = useState(180); // 3 minutes countdown
+  const [nextUpdateIn, setNextUpdateIn] = useState(pollIntervalSecs);
   
   const marketUnsubscribe = useRef<Unsubscribe | null>(null);
   const categoriesUnsubscribe = useRef<Unsubscribe | null>(null);
@@ -126,6 +149,8 @@ export const useSimulator = () => {
   const categoryMapRef = useRef<Record<string, string>>({});
   const sectorMapRef = useRef<Record<string, string>>({});
   const marketInfoRef = useRef<MarketInfo | null>(null);
+  // Set by the market-data effect; lets a PRICE_MOVED trade rejection re-read Firestore at once.
+  const refreshMarketRef = useRef<(opts?: { preferFirestore?: boolean }) => Promise<void>>(async () => {});
 
   useEffect(() => {
     categoryMapRef.current = categoryMap;
@@ -173,71 +198,139 @@ export const useSimulator = () => {
     loadHolidays();
   }, []);
 
-  // ── 2. Polling Market Data (With Efficient Countdown) ──
+  // ── 2. Market data: live snapshot first, Firestore as the fallback ──
+  // services/price-feed writes market_info/latest and only then serves the same
+  // document at NEXT_PUBLIC_LIVE_SNAPSHOT_URL through Cloudflare, so the snapshot
+  // can be behind Firestore (edge cache, ≤10 s) but never ahead of it, and the
+  // trade route (which fills at the Firestore price) never sees a price the
+  // trader wasn't shown. The snapshot costs no Firestore reads; DSE itself only
+  // updates about every 2 min, so 20 s polling during the session is plenty.
+  // Fallbacks, so a dead or stale price-feed never freezes prices:
+  //   - snapshot unset / failing (3 failures pause it for 10 min) → Firestore
+  //   - snapshot older than 6 min inside the 10:00–14:15 session clock (price-feed
+  //     stopped writing and stock-sync took over Firestore) → Firestore, at most
+  //     every 3 min
+  //   - after a PRICE_MOVED trade rejection → Firestore straight away (the same
+  //     document the trade route reads)
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     if (!fs) return;
     const { db, doc, getDoc } = fs;
     let isMounted = true;
-    let timerId: NodeJS.Timeout;
+    let timerId: ReturnType<typeof setInterval>;
+    let snapshotFailures = 0;
+    let snapshotPausedUntil = 0;
+    let lastFirestoreReadAt = 0;
+    const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
 
-    const fetchMarketData = async () => {
-      if (document.hidden) return; // Efficiency Upgrade
-      
+    const normalize = (data: MarketInfo): MarketInfo => {
+      const rawStocks = Array.isArray(data.stocks) ? data.stocks : [];
+      // Normalize turnover (`value`): older DSE new-API snapshots stored `valueMn`
+      // in millions of BDT (where total market turnover across 390+ stocks is ~3,000-15,000)
+      // instead of raw BDT (~3,000,000,000+). Detect and scale to raw BDT automatically.
+      const totalRawValue = rawStocks.reduce(
+        (sum, s) => sum + (typeof s.value === 'number' && Number.isFinite(s.value) ? s.value : 0),
+        0
+      );
+      const valueScale = totalRawValue > 0 && totalRawValue < 500_000 ? 1_000_000 : 1;
+
+      const mergedStocks = rawStocks.map(stock => {
+        const calculatedChangePercent = stock.changePercent !== undefined
+          ? stock.changePercent
+          : (stock.ltp - stock.change > 0 ? (stock.change / (stock.ltp - stock.change)) * 100 : 0);
+        const normalizedValue =
+          typeof stock.value === 'number' && Number.isFinite(stock.value)
+            ? Math.round(stock.value * valueScale * 100) / 100
+            : stock.value;
+
+        return {
+          ...stock,
+          value: normalizedValue,
+          changePercent: calculatedChangePercent,
+          category: categoryMapRef.current[stock.symbol] || stock.category,
+          sector: sectorMapRef.current[stock.symbol] || stock.sector
+        };
+      });
+      return { ...data, stocks: mergedStocks };
+    };
+
+    const readFirestore = async (): Promise<MarketInfo | null> => {
+      lastFirestoreReadAt = Date.now();
+      const snapshot = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'market_info', 'latest'));
+      return snapshot.exists() ? (snapshot.data() as MarketInfo) : null;
+    };
+
+    const readSnapshot = async (): Promise<MarketInfo | null> => {
+      if (!LIVE_SNAPSHOT_URL || Date.now() < snapshotPausedUntil) return null;
       try {
-        const appId = process.env.NEXT_PUBLIC_SIMULATOR_APP_ID || 'stocksimulatorbd-dse-v1';
-        const marketRef = doc(db, 'artifacts', appId, 'public', 'data', 'market_info', 'latest');
-        const snapshot = await getDoc(marketRef);
+        // no-cache: always revalidate (ETag), so an unchanged snapshot is a tiny 304.
+        const res = await fetch(LIVE_SNAPSHOT_URL, { cache: 'no-cache', signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!Array.isArray(data?.stocks) || data.stocks.length < 50 || typeof data.lastUpdated !== 'string') {
+          throw new Error('malformed snapshot');
+        }
+        snapshotFailures = 0;
+        return data as MarketInfo;
+      } catch (err) {
+        snapshotFailures += 1;
+        if (snapshotFailures >= 3) {
+          console.warn('[market] live snapshot failing, using Firestore for 10 min:', err);
+          snapshotPausedUntil = Date.now() + 10 * 60_000;
+          snapshotFailures = 0;
+        }
+        return null;
+      }
+    };
 
-        if (snapshot.exists() && isMounted) {
-          const data = snapshot.data() as MarketInfo;
-          const rawStocks = Array.isArray(data.stocks) ? data.stocks : [];
-          // Normalize turnover (`value`): older DSE new-API snapshots stored `valueMn`
-          // in millions of BDT (where total market turnover across 390+ stocks is ~3,000-15,000)
-          // instead of raw BDT (~3,000,000,000+). Detect and scale to raw BDT automatically.
-          const totalRawValue = rawStocks.reduce(
-            (sum, s) => sum + (typeof s.value === 'number' && Number.isFinite(s.value) ? s.value : 0),
-            0
-          );
-          const valueScale = totalRawValue > 0 && totalRawValue < 500_000 ? 1_000_000 : 1;
+    const fetchMarketData = async (opts: { preferFirestore?: boolean } = {}) => {
+      if (document.hidden && !opts.preferFirestore) return; // Efficiency Upgrade
 
-          const mergedStocks = rawStocks.map(stock => {
-            const calculatedChangePercent = stock.changePercent !== undefined 
-              ? stock.changePercent 
-              : (stock.ltp - stock.change > 0 ? (stock.change / (stock.ltp - stock.change)) * 100 : 0);
-            const normalizedValue =
-              typeof stock.value === 'number' && Number.isFinite(stock.value)
-                ? Math.round(stock.value * valueScale * 100) / 100
-                : stock.value;
+      try {
+        let data = opts.preferFirestore ? null : await readSnapshot();
+        const stale = !!data && inSessionClock() && Date.now() - Date.parse(data.lastUpdated) > STALE_SNAPSHOT_MS;
+        if (
+          opts.preferFirestore ||
+          !data ||
+          (stale && Date.now() - lastFirestoreReadAt >= STALE_FALLBACK_INTERVAL_MS)
+        ) {
+          const fromFirestore = await readFirestore();
+          if (fromFirestore && (!data || Date.parse(fromFirestore.lastUpdated) >= Date.parse(data.lastUpdated))) {
+            data = fromFirestore;
+          }
+        }
+        if (!isMounted) return;
 
-            return {
-              ...stock,
-              value: normalizedValue,
-              changePercent: calculatedChangePercent,
-              category: categoryMapRef.current[stock.symbol] || stock.category,
-              sector: sectorMapRef.current[stock.symbol] || stock.sector
-            };
-          });
-          setMarketInfo({ ...data, stocks: mergedStocks });
-          setNextUpdateIn(180); // Reset timer on successful fetch
-        } else if (isMounted && !marketInfoRef.current) {
+        if (data) {
+          // Never step backwards (an older edge copy after a newer Firestore read).
+          const current = marketInfoRef.current;
+          const older =
+            !!current?.lastUpdated && Date.parse(data.lastUpdated) < Date.parse(current.lastUpdated);
+          if (!older) {
+            const next = normalize(data);
+            marketInfoRef.current = next;
+            setMarketInfo(next);
+          }
+        } else if (!marketInfoRef.current) {
           setMarketInfo({ stocks: [], lastUpdated: new Date().toISOString(), totalStocks: 0 });
         }
+        setNextUpdateIn(pollIntervalSecs()); // Reset timer on a completed fetch
       } catch (err) {
         if (isMounted) setError('Failed to load market data');
       }
     };
 
+    refreshMarketRef.current = fetchMarketData;
     fetchMarketData();
 
     // 1-second interval handles both the UI countdown and triggering the fetch
     timerId = setInterval(() => {
       if (document.hidden) return; // Pause countdown if user is in another tab
-      
+
       setNextUpdateIn((prev) => {
         if (prev <= 1) {
           fetchMarketData();
-          return 180;
+          return pollIntervalSecs();
         }
         return prev - 1;
       });
@@ -247,14 +340,15 @@ export const useSimulator = () => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         fetchMarketData();
-        setNextUpdateIn(180);
+        setNextUpdateIn(pollIntervalSecs());
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => { 
-      isMounted = false; 
-      clearInterval(timerId); 
+    return () => {
+      isMounted = false;
+      refreshMarketRef.current = async () => {};
+      clearInterval(timerId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user, fs]);
@@ -459,11 +553,19 @@ export const useSimulator = () => {
     try {
       const response = await fetchWithFreshToken('/api/simulator/trade', {
         method: 'POST',
-        body: JSON.stringify({ symbol, type, quantity }),
+        // quotedPrice: the price on screen. The server still fills at its own
+        // Firestore price; it only refuses (409 PRICE_MOVED) if that moved more
+        // than max(0.5%, ৳0.10) from this quote. See lib/utils/slippage.ts.
+        body: JSON.stringify({ symbol, type, quantity, quotedPrice: stock.ltp }),
       });
 
       const json = await response.json().catch(() => ({}));
 
+      if (response.status === 409 && json.code === 'PRICE_MOVED') {
+        // Show the trader the price the server sees, then let them confirm again.
+        await refreshMarketRef.current({ preferFirestore: true });
+        throw new Error(json.error || 'The price moved. Check the new price and place the order again.');
+      }
       if (!response.ok || !json.success) {
         throw new Error(json.error || `Failed to execute ${type} order.`);
       }

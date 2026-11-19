@@ -3,6 +3,18 @@
 // Vercel builds are untouched because the flag is never set there.
 const selfHost = process.env.SELF_HOST === '1';
 
+// Origin of the live price snapshot (services/price-feed via Cloudflare), allowed
+// in the CSP's connect-src. Without it the browser blocks the fetch and
+// hooks/useSimulator.ts silently falls back to Firestore.
+const liveSnapshotOrigin = (() => {
+  try {
+    const raw = process.env.NEXT_PUBLIC_LIVE_SNAPSHOT_URL?.trim();
+    return raw ? new URL(raw).origin : '';
+  } catch {
+    return '';
+  }
+})();
+
 const nextConfig = {
   ...(selfHost ? { output: 'standalone' } : {}),
   // 1 GB VM: skip Next's 50 MB in-memory page cache. Prerendered pages are read
@@ -98,7 +110,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' ws: wss: https://open-remark.zeon.studio https://*.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.google.com https://www.gstatic.com https://accounts.google.com https://dse.shahoriar.bd",
+      `connect-src 'self' ws: wss: https://open-remark.zeon.studio https://*.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.google.com https://www.gstatic.com https://accounts.google.com https://dse.shahoriar.bd${liveSnapshotOrigin ? ` ${liveSnapshotOrigin}` : ''}`,
       "frame-src 'self' https://open-remark.zeon.studio https://www.google.com https://www.gstatic.com https://accounts.google.com https://*.firebaseapp.com https://*.web.app",
       "worker-src 'self' blob:",
     ];
