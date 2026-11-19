@@ -10,7 +10,8 @@
 live.shahoriar.bd {
 	tls /etc/caddy/certs/live.shahoriar.bd.pem /etc/caddy/certs/live.shahoriar.bd.key
 	import vps_security_headers
-	encode zstd gzip
+	# No encode here: Cloudflare compresses for browsers, and Caddy compression
+	# rewrites the ETag (W/"...-gzip"), which stops Cloudflare caching it.
 
 	@public path /v1/snapshot.json /health
 	handle @public {

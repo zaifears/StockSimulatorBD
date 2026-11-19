@@ -31,7 +31,17 @@ web app ever moves back to Vercel Hobby.
 | Production | Unaffected: `/api/health` healthy all day, stock-sync last wrote at 14:57. |
 | Seen in passing | ~14:54 DSE briefly served **0 rows**. The Python daemon logged an error and served its cache. price-feed was asleep by then; its < 50-row guard would have treated it as a transient failure. |
 
-**Verdict:** the parsing and the schedule are ready for Phase 3. Before Phase 3:
+**Phase 3 started 2026-11-19, 20:00 Dhaka.** The web app was deployed with the standby rule, price-feed switched to `DRY_RUN=0` with
+`MAX_WRITES_PER_DAY=600`, and `PRICE_FEED_HEALTH_URL=https://live.shahoriar.bd/health` was set on the web VM. Verified that night:
+- stock-sync answers `skipped: true` while price-feed is healthy
+- **failover:** with price-feed stopped, health returns 502, stock-sync syncs as usual (419 stocks), and it goes back to skipping after a restart
+- the snapshot is cached by Cloudflare (HIT, `304` on revalidation, 14.8 KB zstd to browsers). Caddy's `encode` had to go: it rewrote the ETag and blocked caching
+- the first real writes happen at Friday 09:45 (one, if the feed changed); the first full written session is Sunday 2026-11-22
+
+Rollback, fastest first: `sudo systemctl stop price-feed` (stock-sync resumes on its next tick), or restore
+`~/price-feed/.env.dry-run.bak` and restart, and/or remove `PRICE_FEED_HEALTH_URL` from the web VM's `.env` and restart `stocksimulator-web`.
+
+Earlier verdict: the parsing and the schedule are ready for Phase 3. Before Phase 3:
 1. Deploy the web app so `/api/stock-sync` has the standby rule (blocked on 2026-11-18; needs the owner's go-ahead).
 2. ~~Adaptive polling~~ **done (4.4.26)**: simulated on Thursday's real timeline, 718 → 384 requests per session (−47%), mean lag 10.3 → 10.0 s.
    Also fixed: heartbeats now cover the whole 10:00–14:15 session clock on trading days, not only while DSE says Open,
