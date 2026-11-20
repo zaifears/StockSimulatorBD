@@ -179,7 +179,21 @@ export default function RootLayout({
                   "@type": "Organization",
                   "@id": `${SITE_URL}/#organization`,
                   "name": "StockSimulatorBD",
+                  "alternateName": ["Stock Simulator BD", "StockSimulatorBD DSE Simulator"],
+                  "description": "Free paper trading simulator and educational stock market platform built specifically for the Dhaka Stock Exchange (DSE) in Bangladesh.",
                   "url": SITE_URL,
+                  "areaServed": {
+                    "@type": "Country",
+                    "name": "Bangladesh"
+                  },
+                  "knowsAbout": [
+                    "Dhaka Stock Exchange",
+                    "DSE Paper Trading",
+                    "Bangladesh Stock Market",
+                    "BO Account Bangladesh",
+                    "T+2 Settlement Cycle",
+                    "DSE Brokerage Houses"
+                  ],
                   "sameAs": [
                     "https://facebook.com/stocksimulatorbd/"
                   ],

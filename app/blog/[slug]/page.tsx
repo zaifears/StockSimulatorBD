@@ -48,9 +48,9 @@ interface SearchIntentOptimization {
 
 const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
   'dse-trading-hours-bangladesh': {
-    title: 'Is DSE Open Today? Trading Hours & Schedule (2026)',
+    title: 'Is DSE Open Today? Live Market Status, Hours & 2026 Holidays',
     description:
-      'Is the Dhaka Stock Exchange open today? Official DSE trading hours are Sunday to Thursday, 10:00 AM – 2:15 PM BST. Closed on Fridays, Saturdays & holidays.',
+      'Check if the Dhaka Stock Exchange is open right now. See DSE continuous & post-closing sessions, 2026 holiday calendar, Ramadan timing, and practice live.',
     faqs: [
       {
         question: 'Is DSE open today?',
@@ -85,9 +85,9 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
     ],
   },
   'how-to-open-bo-account-bangladesh': {
-    title: 'How to Open a BO Account in Bangladesh (2026 Online Guide)',
+    title: 'How to Open a BO Account Online in Bangladesh (2026 Guide)',
     description:
-      'Step-by-step guide to opening a BO account in Bangladesh online or via DSE brokers. Required NID documents, CDBL fees (৳450), account limits & rules.',
+      'Open a DSE BO account online from home in 2026. Exact NID & bank checklist, ৳450 CDBL fee, approval time, broker comparison & free practice before funding.',
     faqs: [
       {
         question: 'What is a BO account in Bangladesh?',
@@ -127,9 +127,9 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
     ],
   },
   'top-dse-stock-brokers-2026': {
-    title: 'Best Brokerage Houses in Bangladesh: Top DSE Brokers (2026)',
+    title: 'Top 10 Brokerage Houses in Bangladesh (2026 Fees & Apps)',
     description:
-      'Compare the best brokerage houses and DSE stock brokers in Bangladesh for 2026. Review trading commissions (0.3%–0.5%), BO account charges & online apps.',
+      'Compare top DSE stock brokers in Bangladesh for 2026: LankaBangla, BRAC EPL, IDLC & City Brokerage commission rates (0.3%–0.5%), online BO fees & apps.',
     faqs: [
       {
         question: 'What are the best brokerage houses in Bangladesh?',
@@ -204,6 +204,45 @@ const SEARCH_INTENT_OPTIMIZATIONS: Record<string, SearchIntentOptimization> = {
         question: 'How to read charts in stock market for beginners?',
         answer:
           'Beginners should start with candlestick charts: identify the overall market trend (uptrend, downtrend, or sideways), observe volume during price movements, and watch for key reversal patterns like Hammers, Dojis, and Bullish/Bearish Engulfing candles.',
+      },
+    ],
+  },
+  'stock-market-game-bangladesh': {
+    title: 'Free Bangladesh Stock Market Game: DSE Simulator (৳10,000)',
+    description:
+      'Play the free DSE stock market game with ৳10,000 virtual cash. Trade 300+ Bangladesh stocks at live prices with real T+2/T+3 rules — no BO account needed.',
+    faqs: [
+      {
+        question: 'Is there a free stock market game for Bangladesh and DSE?',
+        answer:
+          'Yes. StockSimulatorBD (stocksimulator.tech) is a free paper trading simulator and stock market game built specifically for the Dhaka Stock Exchange (DSE). Every verified account starts with ৳10,000 in virtual BDT to practice trading 300+ DSE stocks risk-free.',
+      },
+      {
+        question: 'Do I need a BO account or real money to play?',
+        answer:
+          'No. You do not need a BO account, brokerage login, or any real deposit to practice on StockSimulatorBD. All trades use virtual currency with no real-world cash value.',
+      },
+      {
+        question: 'Does this Bangladesh stock market game use real DSE prices and rules?',
+        answer:
+          'Yes. Orders execute against live published DSE prices during official market hours (Sunday to Thursday, 10:00 AM – 2:15 PM BST) and enforce authentic 0.40% brokerage commission plus T+2/T+3 settlement cycles.',
+      },
+    ],
+  },
+  'stock-market-game-bangladesh-dse-simulator-bn': {
+    title: 'বাংলাদেশ শেয়ার বাজার গেম: ফ্রি DSE পেপার ট্রেডিং (৳১০,০০০)',
+    description:
+      'বিনা খরচে ঢাকা স্টক এক্সচেঞ্জ (DSE) শেয়ার ট্রেডিং প্র্যাকটিস করুন। ৳১০,০০০ ভার্চুয়াল ব্যালেন্স, লাইভ প্রাইস ও বাস্তব T+2 নিয়ম — কোনো বিও একাউন্ট লাগবে না।',
+    faqs: [
+      {
+        question: 'বাংলাদেশে ফ্রি শেয়ার বাজার প্র্যাকটিস বা পেপার ট্রেডিং অ্যাপ কোনটি?',
+        answer:
+          'StockSimulatorBD (stocksimulator.tech) হলো ঢাকা স্টক এক্সচেঞ্জের (DSE) জন্য তৈরি ফ্রি পেপার ট্রেডিং সিমুলেটর। এখানে ৳১০,০০০ ভার্চুয়াল ব্যালেন্স নিয়ে ৩০০+ কোম্পানির শেয়ার ঝুঁকিমুক্তভাবে প্র্যাকটিস করা যায়।',
+      },
+      {
+        question: 'পেপার ট্রেডিং করতে কি বিও একাউন্ট লাগে?',
+        answer:
+          'না। StockSimulatorBD-তে প্র্যাকটিস করার জন্য কোনো বিও একাউন্ট বা আসল টাকার প্রয়োজন নেই।',
       },
     ],
   },

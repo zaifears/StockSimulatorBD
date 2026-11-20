@@ -18,9 +18,9 @@ export const revalidate = 86400; // daily; the Contentful webhook refreshes it o
  * substantive edit. Blog posts are exempt: they carry a real per-entry date
  * from Contentful.
  */
-const MARKETING_UPDATED = new Date('2026-10-29T00:00:00Z'); // /, /about-us
+const MARKETING_UPDATED = new Date('2026-11-20T00:00:00Z'); // /, /about-us
 const DIRECTORY_UPDATED = new Date('2026-10-29T00:00:00Z'); // /stocks, /blog index
-const STOCK_TEMPLATE_UPDATED = new Date('2026-10-29T00:00:00Z'); // /stocks/[symbol]
+const STOCK_TEMPLATE_UPDATED = new Date('2026-11-20T00:00:00Z'); // /stocks/[symbol]
 
 function withBaseUrl(path: string): string {
   return `${baseUrl}${path}`;

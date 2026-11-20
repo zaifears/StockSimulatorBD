@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import {
   getAllDseStocks as fetchAllStocks,
@@ -199,6 +199,19 @@ export default async function StockDetailsPage({ params }: StockPageProps) {
 
   if (!stock) {
     notFound();
+  }
+
+  // Enforce canonical lowercase URL (/stocks/batbc instead of /stocks/BATBC or /stocks/islamiBank)
+  // so search engines get a 308 permanent redirect instead of flagging mixed-case variants as
+  // "Alternative page with proper canonical tag".
+  let decodedRawSymbol = '';
+  try {
+    decodedRawSymbol = decodeURIComponent(symbol).trim();
+  } catch {
+    notFound();
+  }
+  if (decodedRawSymbol !== stock.symbol.toLowerCase()) {
+    permanentRedirect(stockHref(stock.symbol));
   }
 
   const [basePrice, fundamentals, initialNews] = await Promise.all([

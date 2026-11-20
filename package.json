@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
     "bundle-size": "node scripts/analyze-bundle.js",
+    "indexnow": "node scripts/indexnow.mjs",
     "lighthouse": "lighthouse https://www.stocksimulator.tech --output html --output-path ./lighthouse-report.html --chrome-flags=\"--headless\"",
     "lighthouse-ci": "lighthouse https://www.stocksimulator.tech --output json --output-path ./lighthouse-report.json",
     "perf-test": "pnpm run lighthouse && pnpm run bundle-size",

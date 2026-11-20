@@ -144,10 +144,16 @@ const faqs = [
 
 const articles = [
   {
-    href: '/blog/dse-trading-hours-bangladesh',
-    tag: 'Market schedule',
-    title: 'Is DSE open today? Trading hours, schedule & holidays (2026)',
-    description: 'Current DSE trading sessions, opening and closing times, Friday–Saturday weekends, and Bangladesh public holidays.',
+    href: '/blog/stock-market-game-bangladesh',
+    tag: 'Paper trading',
+    title: 'Free Bangladesh stock market game: practice DSE trading with ৳10,000',
+    description: 'How to practise Dhaka Stock Exchange share trading risk-free without a BO account or real money.',
+  },
+  {
+    href: '/blog/top-dse-stock-brokers-2026',
+    tag: 'Broker comparison',
+    title: 'Compare the best brokerage houses and DSE brokers in Bangladesh',
+    description: 'BO account opening fees, commission rates (0.30%–0.50%), mobile trading apps, and customer service compared.',
   },
   {
     href: '/blog/how-to-open-bo-account-bangladesh',
@@ -156,10 +162,16 @@ const articles = [
     description: 'The exact steps, required NID documents, CDBL fees, single vs joint account limits, and how to start trading.',
   },
   {
-    href: '/blog/top-dse-stock-brokers-2026',
-    tag: 'Broker comparison',
-    title: 'Compare the best brokerage houses and DSE brokers in Bangladesh',
-    description: 'BO account opening fees, commission rates (0.30%–0.50%), mobile trading apps, and customer service compared.',
+    href: '/blog/bo-account-kholar-niyom-online-bangladesh',
+    tag: 'বাংলা গাইড',
+    title: 'অনলাইনে বিও একাউন্ট খোলার নিয়ম (বাংলাদেশ ২০২৬)',
+    description: 'ঘরে বসে এনআইডি ও ব্যাংক একাউন্ট দিয়ে বিও একাউন্ট খোলার ধাপে ধাপে নিয়ম এবং ফি।',
+  },
+  {
+    href: '/blog/dse-trading-hours-bangladesh',
+    tag: 'Market schedule',
+    title: 'Is DSE open today? Trading hours, schedule & holidays (2026)',
+    description: 'Current DSE trading sessions, opening and closing times, Friday–Saturday weekends, and Bangladesh public holidays.',
   },
   {
     href: '/blog/dse-circuit-breaker',
@@ -178,14 +190,26 @@ const articles = [
 const webAppSchema = {
   '@context': 'https://schema.org',
   '@type': ['WebApplication', 'SoftwareApplication'],
+  '@id': `${SITE}/#webapp`,
   name: 'StockSimulatorBD: DSE Trading Simulator',
-  alternateName: ['Bangladesh Stock Market Game', 'Stocks Sim BD', 'Stock Market Game BD', 'DSE Paper Trading Simulator'],
+  alternateName: [
+    'Stock Simulator BD',
+    'Bangladesh Stock Market Game',
+    'Stocks Sim BD',
+    'Stock Market Game BD',
+    'DSE Paper Trading Simulator',
+    'Dhaka Stock Exchange Demo Trading App',
+  ],
   applicationCategory: 'FinanceApplication',
   operatingSystem: 'Web Browser',
+  isAccessibleForFree: true,
   url: SITE,
   inLanguage: ['en', 'bn'],
+  areaServed: { '@type': 'Country', name: 'Bangladesh' },
+  keywords:
+    'DSE paper trading simulator, Bangladesh stock market simulator, stock market game Bangladesh, Dhaka Stock Exchange demo trading, virtual share trading BD',
   description:
-    'Free paper trading simulator for the Dhaka Stock Exchange. Practice DSE share trading with live prices, real market hours, T+2/T+3 settlement and 0.4% commission, all settled in virtual money.',
+    'StockSimulatorBD is Bangladesh’s free paper trading simulator and stock market game built specifically for the Dhaka Stock Exchange (DSE). Practice trading 300+ DSE shares with live prices, ৳10,000 virtual BDT, real Sun–Thu 10:00–14:15 BST hours, T+2/T+3 settlement, and 0.40% commission — no BO account required.',
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -259,7 +283,7 @@ export default async function HomePage() {
               Paper trade the Dhaka Stock Exchange
             </h1>
             <p className="hm-lead">
-              Free practice with live DSE prices, real rules and virtual money.
+              StockSimulatorBD is Bangladesh’s free DSE paper trading simulator and stock market game — live prices, real rules and virtual money.
             </p>
 
             <div className="hm-actions">
@@ -273,7 +297,7 @@ export default async function HomePage() {
             </div>
 
             <p className="hm-fine">
-              Free to use. The balance is virtual and has no real world value.
+              Free to use with ৳10,000 in virtual BDT across 300+ DSE stocks — no BO account or deposit required. Virtual balance has no real world value.
             </p>
           </div>
 
@@ -287,7 +311,8 @@ export default async function HomePage() {
           <div className="hm-head">
             <h2 id="rules-title">The floor runs on the exchange’s own rules</h2>
             <p className="hm-lead">
-              Nothing has been loosened to make practice comfortable. When the DSE is closed,
+              Unlike global simulators such as TradingView or Investopedia that only cover US and international exchanges,
+              StockSimulatorBD runs strictly on Dhaka Stock Exchange rules. When the DSE is closed,
               so is this. When settlement takes two days, you wait the two days. Regular continuous trading
               runs Sunday to Thursday from 10:00 to 14:15 BST. Practice only counts if the constraints
               are the real ones.
