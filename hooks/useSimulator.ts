@@ -16,6 +16,7 @@ import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 // =====================================================
 import { moneyAdd, moneyMultiply, moneySubtract, roundMoney } from '@/lib/utils/money';
 import { getDseReportedOpen } from '@/lib/utils/marketHours';
+import { inSessionClock, pollIntervalSecs, staleFallbackIntervalMs } from '@/lib/utils/livePolling';
 
 export interface Stock {
   symbol: string;
@@ -88,24 +89,7 @@ export interface MarketInfo {
 const LIVE_SNAPSHOT_URL = (process.env.NEXT_PUBLIC_LIVE_SNAPSHOT_URL || '').trim();
 /** Inside the session clock a snapshot older than this means price-feed stopped writing. */
 const STALE_SNAPSHOT_MS = 6 * 60_000;
-/** While the snapshot is stale, read Firestore at most this often (today's old cadence). */
-const STALE_FALLBACK_INTERVAL_MS = 3 * 60_000;
-
-function dhakaMinuteOfDay(now = new Date()): number {
-  return (now.getUTCHours() * 60 + now.getUTCMinutes() + 360) % 1440;
-}
-
-/** The trade route's session clock, 10:00–14:15 Dhaka (lib/utils/marketHours.ts). */
-function inSessionClock(now = new Date()): boolean {
-  const m = dhakaMinuteOfDay(now);
-  return m >= 600 && m < 855;
-}
-
-/** 20 s around the session (09:45–14:30 Dhaka) when the live snapshot is on; 3 min otherwise. */
-function pollIntervalSecs(): number {
-  const m = dhakaMinuteOfDay();
-  return LIVE_SNAPSHOT_URL && m >= 585 && m < 870 ? 20 : 180;
-}
+const SNAPSHOT_ENABLED = LIVE_SNAPSHOT_URL !== '';
 
 export const useSimulator = () => {
   const { user } = useAuth();
@@ -137,7 +121,7 @@ export const useSimulator = () => {
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [transactionMessage, setTransactionMessage] = useState('');
   const [bangladeshHolidays, setBangladeshHolidays] = useState<string[]>([]);
-  const [nextUpdateIn, setNextUpdateIn] = useState(pollIntervalSecs);
+  const [nextUpdateIn, setNextUpdateIn] = useState(() => pollIntervalSecs(SNAPSHOT_ENABLED));
   
   const marketUnsubscribe = useRef<Unsubscribe | null>(null);
   const categoriesUnsubscribe = useRef<Unsubscribe | null>(null);
@@ -292,7 +276,7 @@ export const useSimulator = () => {
         if (
           opts.preferFirestore ||
           !data ||
-          (stale && Date.now() - lastFirestoreReadAt >= STALE_FALLBACK_INTERVAL_MS)
+          (stale && Date.now() - lastFirestoreReadAt >= staleFallbackIntervalMs(data?.lastUpdated))
         ) {
           const fromFirestore = await readFirestore();
           if (fromFirestore && (!data || Date.parse(fromFirestore.lastUpdated) >= Date.parse(data.lastUpdated))) {
@@ -314,7 +298,7 @@ export const useSimulator = () => {
         } else if (!marketInfoRef.current) {
           setMarketInfo({ stocks: [], lastUpdated: new Date().toISOString(), totalStocks: 0 });
         }
-        setNextUpdateIn(pollIntervalSecs()); // Reset timer on a completed fetch
+        setNextUpdateIn(pollIntervalSecs(SNAPSHOT_ENABLED, marketInfoRef.current?.lastUpdated)); // Reset timer on a completed fetch
       } catch (err) {
         if (isMounted) setError('Failed to load market data');
       }
@@ -330,7 +314,7 @@ export const useSimulator = () => {
       setNextUpdateIn((prev) => {
         if (prev <= 1) {
           fetchMarketData();
-          return pollIntervalSecs();
+          return pollIntervalSecs(SNAPSHOT_ENABLED, marketInfoRef.current?.lastUpdated);
         }
         return prev - 1;
       });
@@ -340,7 +324,7 @@ export const useSimulator = () => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         fetchMarketData();
-        setNextUpdateIn(pollIntervalSecs());
+        setNextUpdateIn(pollIntervalSecs(SNAPSHOT_ENABLED, marketInfoRef.current?.lastUpdated));
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

@@ -40,7 +40,7 @@ web app ever moves back to Vercel Hobby.
 
 **Phases 4 and 5 built 2026-11-19 (4.4.28):**
 - trade route slippage guard (`lib/utils/slippage.ts`, 0.5% with a ৳0.10 floor, compared in integer paisa)
-- `useSimulator` polls the snapshot every 20 s from 09:45 to 14:30 and every 3 min otherwise, with ETag revalidation. Firestore fallback: 3 failures pause the snapshot for 10 min; a snapshot older than 6 min in session triggers a Firestore read (at most every 3 min); a `PRICE_MOVED` rejection triggers an immediate Firestore read; it never steps back to an older document
+- `useSimulator` polls the snapshot every 20 s from 09:45 to 14:30 and every 3 min otherwise (4.4.29: also every 3 min on days DSE isn't trading: calendar-closed days, or a calendar trading day with no data by 10:30; data written today switches it back to 20 s, so a wrong calendar costs at most ~3 min; rules in `lib/utils/livePolling.ts`), with ETag revalidation. Firestore fallback: 3 failures pause the snapshot for 10 min; a snapshot older than 6 min in session triggers a Firestore read (at most every 3 min); a `PRICE_MOVED` rejection triggers an immediate Firestore read; it never steps back to an older document
 - CSP `connect-src` gets the snapshot origin from `NEXT_PUBLIC_LIVE_SNAPSHOT_URL`
 
 To turn browser polling off: remove that var from `.env.local` and redeploy; browsers go back to Firestore every 3 min.
