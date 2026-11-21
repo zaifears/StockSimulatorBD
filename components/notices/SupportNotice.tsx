@@ -31,7 +31,7 @@ const COPY: Record<Lang, {
 }> = {
   bn: {
     title: 'আপনার ২০ টাকাও গুরুত্বপূর্ণ',
-    text: 'StockSimulatorBD ফ্রি, আর ফ্রিই থাকবে। কিন্তু প্ল্যাটফর্মটা চালু রাখতে বছরে প্রায় ৬০ ডলার খরচ হয়। সিমুলেটর থেকে কিছু শিখে থাকলে Boss নিন, অথবা কয়েন কিনুন।',
+    text: 'StockSimulatorBD ফ্রি, আর ফ্রিই থাকবে। কিন্তু প্ল্যাটফর্মটা চালু রাখতে বছরে প্রায় ৬০ ডলার খরচ হয়। যদি আপনি এই সিমুলেটর থেকে উপকৃত হয়ে থাকেন তাহলে Boss অথবা কয়েন কেনার অনুরোধ রইলো।',
     priceUnit: 'মাসে Boss, বা ৳২০ থেকে কয়েন',
     boss: 'Boss নিন',
     coins: 'কয়েন কিনুন',
@@ -40,7 +40,7 @@ const COPY: Record<Lang, {
   },
   en: {
     title: 'Your 20 taka matters too',
-    text: 'StockSimulatorBD is free and will stay free. But keeping it online costs about $60 a year. If the simulator has taught you something, get Boss or buy some coins.',
+    text: 'StockSimulatorBD is free and will stay free. But keeping it online costs about $60 a year. If this simulator has been useful to you, I would be grateful if you would consider Boss or some coins.',
     priceUnit: 'a month for Boss, or coins from ৳20',
     boss: 'Get Boss',
     coins: 'Buy coins',
