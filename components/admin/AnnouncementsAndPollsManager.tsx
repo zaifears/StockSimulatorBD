@@ -33,6 +33,7 @@ import {
 import { fetchWithFreshToken } from '@/lib/utils/fetchWithToken';
 import { useAuth } from '@/contexts/AuthContext';
 import { VALID_DOMAIN_CHOICES } from '@/lib/surveyConstants';
+import { NOTICE_CAMPAIGNS, getLiveCampaign, type NoticeCampaign } from '@/lib/noticeCampaigns';
 
 interface NoticeInteraction {
   id: string;
@@ -45,15 +46,6 @@ interface NoticeInteraction {
   userAgent: string | null;
   metadata?: any;
   createdAtIso: string | null;
-}
-
-interface NoticeStats {
-  totalImpressions: number;
-  totalClicks: number;
-  totalCopies?: number;
-  totalDismissals: number;
-  totalSubmissions: number;
-  ctr: number;
 }
 
 interface SurveyResponse {
@@ -76,6 +68,18 @@ interface ChoiceStat {
   percentage: number;
 }
 
+interface CampaignStat {
+  campaignId: string;
+  totalImpressions: number;
+  totalClicks: number;
+  totalCopies: number;
+  totalDismissals: number;
+  totalSubmissions: number;
+  ctr: number;
+  usersReached: number | null;
+  lastEventAt: string | null;
+}
+
 interface PollStats {
   totalResponses: number;
   averageExperience: number;
@@ -92,14 +96,9 @@ export default function AnnouncementsAndPollsManager() {
   const [activeTab, setActiveTab] = useState<'announcements' | 'previous_poll'>('announcements');
 
   // Announcement interaction state
-  const [noticeStats, setNoticeStats] = useState<NoticeStats>({
-    totalImpressions: 0,
-    totalClicks: 0,
-    totalDismissals: 0,
-    totalSubmissions: 0,
-    ctr: 0,
-  });
   const [interactions, setInteractions] = useState<NoticeInteraction[]>([]);
+  const [campaignStats, setCampaignStats] = useState<CampaignStat[]>([]);
+  const liveCampaign = getLiveCampaign();
   const [interactionSearch, setInteractionSearch] = useState<string>('');
   const [interactionActionFilter, setInteractionActionFilter] = useState<string>('all');
 
@@ -129,14 +128,8 @@ export default function AnnouncementsAndPollsManager() {
       }
 
       if (data.announcement) {
-        setNoticeStats(data.announcement.stats || {
-          totalImpressions: 0,
-          totalClicks: 0,
-          totalDismissals: 0,
-          totalSubmissions: 0,
-          ctr: 0,
-        });
         setInteractions(data.announcement.interactions || []);
+        setCampaignStats(data.announcement.campaigns || []);
       }
 
       if (data.previousPoll || data.stats) {
@@ -428,87 +421,102 @@ export default function AnnouncementsAndPollsManager() {
         )}
 
         {/* ======================================================== */}
-        {/* KPI SUMMARY METRIC CARDS                                 */}
+        {/* POP-UP STATUS + RESULTS PER CAMPAIGN                     */}
         {/* ======================================================== */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          
-          {/* Card 1: Impressions */}
-          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Notice Impressions</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                <Eye className="w-4 h-4" />
+        {liveCampaign ? (
+          <div className="bg-white dark:bg-[#111622] border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Live on {liveCampaign.page}
+                </span>
+                <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-700">
+                  {liveCampaign.id}
+                </span>
               </div>
+              <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white">{liveCampaign.title}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Since {liveCampaign.startedAt}</p>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">
-              {noticeStats.totalImpressions.toLocaleString()}
-            </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Unique notice presentations</p>
+            <Link
+              href={liveCampaign.page}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 transition-colors self-start sm:self-auto"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Preview</span>
+            </Link>
           </div>
-
-          {/* Card 2: CTA Clicks & CTR */}
+        ) : (
           <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Clicks & CTR</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <MousePointerClick className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {noticeStats.totalClicks.toLocaleString()}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                <span className="w-2 h-2 rounded-full bg-gray-400" />
+                No pop-up is live
               </span>
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                ({noticeStats.ctr}%)
-              </span>
             </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Direct CTA conversions</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              To launch one, register it in <code className="font-mono">lib/noticeCampaigns.ts</code> and fill in{' '}
+              <code className="font-mono">components/notices/activeNotice.tsx</code>.
+            </p>
           </div>
+        )}
 
-          {/* Card 3: Link Copies */}
-          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Link Copies</span>
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Copy className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">
-              {(noticeStats.totalCopies || 0).toLocaleString()}
-            </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Facebook URL copied</p>
+        <div className="space-y-3">
+          <h2 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+            <Layers className="w-4 h-4 text-blue-500" />
+            Campaign results
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            {NOTICE_CAMPAIGNS.map((meta) => {
+              const live = meta.endedAt === null;
+              if (meta.kind === 'poll') {
+                return (
+                  <div key={meta.id} className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
+                    <CampaignHeader meta={meta} live={live} />
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <ResultStat label="Responses" value={(pollStats?.totalResponses || 0).toLocaleString()} />
+                      <ResultStat label="Avg. rating" value={`${pollStats?.averageExperience || 0} / 5`} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('previous_poll')}
+                      className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      See full poll results
+                    </button>
+                  </div>
+                );
+              }
+              const c = campaignStats.find((x) => x.campaignId === meta.id);
+              return (
+                <div
+                  key={meta.id}
+                  className={`bg-white dark:bg-[#111622] border rounded-2xl p-4 sm:p-5 shadow-xs ${
+                    live ? 'border-emerald-200 dark:border-emerald-900/60' : 'border-gray-200 dark:border-gray-800'
+                  }`}
+                >
+                  <CampaignHeader meta={meta} live={live} />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                    <ResultStat label="Impressions" value={(c?.totalImpressions || 0).toLocaleString()} />
+                    <ResultStat label="Clicks" value={`${(c?.totalClicks || 0).toLocaleString()} (${c?.ctr || 0}%)`} />
+                    <ResultStat label="Dismissed" value={(c?.totalDismissals || 0).toLocaleString()} />
+                    <ResultStat
+                      label="Traders reached"
+                      value={c?.usersReached != null ? c.usersReached.toLocaleString() : '—'}
+                    />
+                  </div>
+                  {(c?.totalCopies || 0) > 0 && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2">Link copied {c?.totalCopies} times</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          {/* Card 4: Dismissals */}
-          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Dismissed</span>
-              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center justify-center">
-                <XCircle className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-gray-700 dark:text-gray-300">
-              {noticeStats.totalDismissals.toLocaleString()}
-            </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Closed without conversion</p>
-          </div>
-
-          {/* Card 5: Historical Poll Responses */}
-          <div className="bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-xs col-span-2 sm:col-span-1">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Historic Poll Votes</span>
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Vote className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">
-              {pollStats?.totalResponses || 0}
-            </div>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Concluded Domain Poll #1</p>
-          </div>
-
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            Clicks count the main button and links inside the pop-up. Traders reached counts signed-in users who clicked or closed it.
+          </p>
         </div>
-
         {/* ======================================================== */}
         {/* NAVIGATION TABS                                          */}
         {/* ======================================================== */}
@@ -523,7 +531,7 @@ export default function AnnouncementsAndPollsManager() {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>Active Announcement Interactions</span>
+            <span>Recent Pop-up Interactions</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
               activeTab === 'announcements' ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
             }`}>
@@ -555,52 +563,6 @@ export default function AnnouncementsAndPollsManager() {
         {/* ======================================================== */}
         {activeTab === 'announcements' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Active Campaign Info Banner */}
-            <div className="bg-white dark:bg-[#111622] border border-blue-200/80 dark:border-blue-900/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Live Campaign Active
-                    </span>
-                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-700">
-                      ID: dse_settlement_reality_v1
-                    </span>
-                  </div>
-                  <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white">
-                    DSE Settlement Cycle Realism Update (T+2 / T+3)
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Live educational notice on /trade enforcing T+2 / T+3 settlement reality. Tracking Confirm button clicks, Cross (✕) dismissals, impressions, and Facebook page visits.
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/80 text-[11px] text-gray-500">
-                    <span className="font-bold text-gray-400">Previous Campaigns:</span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                      ID: facebook_page_launch_v1 (Concluded Oct 31)
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                      ID: domain_survey (Concluded Oct 25)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
-                <Link
-                  href="/trade"
-                  target="_blank"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Preview on /trade</span>
-                </Link>
-              </div>
-            </div>
-
             {/* Search and Action Filter Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#111622] border border-gray-200 dark:border-gray-800 rounded-2xl p-3 sm:p-4 shadow-xs">
               
@@ -953,6 +915,40 @@ export default function AnnouncementsAndPollsManager() {
         )}
 
       </div>
+    </div>
+  );
+}
+
+function CampaignHeader({ meta, live }: { meta: NoticeCampaign; live: boolean }) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-1">
+        <span
+          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+            live
+              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+          }`}
+        >
+          {live ? 'Live' : 'Ended'}
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{meta.kind}</span>
+        <span className="font-mono text-[11px] text-gray-500 dark:text-gray-400">{meta.id}</span>
+      </div>
+      <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">{meta.title}</h3>
+      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+        {meta.startedAt} to {meta.endedAt ?? 'now'} · {meta.page}
+      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">{meta.summary}</p>
+    </div>
+  );
+}
+
+function ResultStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-gray-50 dark:bg-[#161B24] px-3 py-2">
+      <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="text-sm sm:text-base font-black text-gray-900 dark:text-white">{value}</div>
     </div>
   );
 }

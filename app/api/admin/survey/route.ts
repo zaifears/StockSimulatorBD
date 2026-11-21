@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { verifyAdminAccess } from '@/lib/utils/adminVerification';
 import { VALID_DOMAIN_CHOICES } from '@/lib/surveyConstants';
+import { NOTICE_CAMPAIGNS } from '@/lib/noticeCampaigns';
 
 // Ensure Firebase Admin is initialized
 import '@/lib/firebaseAdmin';
@@ -73,6 +74,31 @@ export async function GET(req: NextRequest) {
     });
 
     const overallCtr = aggImpressions > 0 ? Number(((aggClicks / aggImpressions) * 100).toFixed(2)) : 0;
+
+    // Traders who finished each campaign (clicked, copied, submitted or closed it):
+    // users/{uid}.noticesSeen.{id} is written by the notice-event route. One
+    // count aggregation per campaign (Firestore indexes map subfields itself).
+    const reachedCounts = await Promise.all(
+      campaigns.map(async (c) => {
+        try {
+          const agg = await db.collection('users').where(`noticesSeen.${c.campaignId}`, '>', '').count().get();
+          return agg.data().count;
+        } catch {
+          return null;
+        }
+      })
+    );
+    campaigns.forEach((c, i) => {
+      c.usersReached = reachedCounts[i];
+      const meta = NOTICE_CAMPAIGNS.find((m) => m.id === c.campaignId);
+      c.live = meta ? meta.endedAt === null : false;
+    });
+    // Registry order (newest first), unregistered IDs last.
+    const order = (id: string) => {
+      const i = NOTICE_CAMPAIGNS.findIndex((m) => m.id === id);
+      return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+    };
+    campaigns.sort((a, b) => order(a.campaignId) - order(b.campaignId));
 
     // Resolve user details for events where userEmail wasn't embedded
     const uidsToFetch = new Set<string>();
@@ -184,7 +210,7 @@ export async function GET(req: NextRequest) {
       success: true,
       announcement: {
         campaigns,
-        activeCampaign: campaigns[0]?.campaignId || 'current_announcement',
+        activeCampaign: NOTICE_CAMPAIGNS.find((m) => m.endedAt === null)?.id ?? null,
         stats: {
           totalImpressions: aggImpressions,
           totalClicks: aggClicks,
